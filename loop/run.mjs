@@ -1,73 +1,116 @@
 // 루프 실행기: claude -p 를 한 바퀴씩 반복 실행한다.
 // 사용법: npm run loop | npm run loop:once | node loop/run.mjs --cleanup-only
-// 멈춤: 저장소 루트에 STOP 파일을 만든다.
-import { spawn, spawnSync, execFileSync } from 'node:child_process'
-import { appendFileSync, createWriteStream, existsSync, mkdirSync, readFileSync, unlinkSync } from 'node:fs'
+// 멈춤: 저장소 루트에 STOP 파일을 만든다. 실행기가 스스로 위험하다고 판단해 멈출 때도 STOP 파일에 이유를 적는다.
+import { spawn, execFileSync } from 'node:child_process'
+import { appendFileSync, copyFileSync, createWriteStream, existsSync, mkdirSync, readFileSync, unlinkSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { decideNext, parseRateLimit, shouldPush } from './lib.mjs'
+import { decideNext, leftoverPaths, moveFeedback, parseRateLimit, shouldPush } from './lib.mjs'
+import { isAncestor, killTree, revertInProgress, safeRevert } from './git.mjs'
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
 const LOGS = join(ROOT, 'loop', 'logs')
 const STOP = join(ROOT, 'STOP')
-const IDLE = join(ROOT, 'loop', 'IDLE')
+const IDLE = join(ROOT, 'IDLE') // 세션은 loop/ 에 쓸 수 없으므로 루트에 둔다
 const FEEDBACK = '피드백.md'
-const config = JSON.parse(readFileSync(join(ROOT, 'loop', 'config.json'), 'utf8'))
+const TODO = '할일.md'
+const USER_FILES = [FEEDBACK, '기획서.md'] // 사용자 소유: 실행기가 치우거나 되돌리지 않는다
 const args = new Set(process.argv.slice(2))
+
+// 시작할 때 한 번만 읽는다. 세션이 이 파일들을 고쳐도 이번 실행에는 반영되지 않는다
+const config = JSON.parse(readFileSync(join(ROOT, 'loop', 'config.json'), 'utf8'))
+const PROMPT = readFileSync(join(ROOT, 'loop', 'PROMPT.md'), 'utf8')
+// 루프 세션 전용 권한. .claude/settings.json 에 두면 사람이 쓰는 대화에도 같이 걸리므로 따로 둔다
+const PERMISSIONS = JSON.parse(readFileSync(join(ROOT, 'loop', 'permissions.json'), 'utf8'))
 
 mkdirSync(LOGS, { recursive: true })
 
 const stamp = () => new Date().toISOString().replace(/[:.]/g, '-')
+const today = () => new Date().toLocaleDateString('sv-SE') // YYYY-MM-DD
 const log = (msg) => console.log(`[${new Date().toLocaleString('ko-KR')}] ${msg}`)
 const git = (...a) => execFileSync('git', a, { cwd: ROOT, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }).trim()
+const record = (entry) => appendFileSync(join(LOGS, 'runs.jsonl'), JSON.stringify(entry) + '\n')
 
-/** prompt 를 stdin 으로 넣고 stream-json 출력을 모은다. 시간 초과면 프로세스를 끝낸다 */
-function runClaude({ model, prompt, timeoutMs, logPath, permissionMode }) {
+/** 위험한 상태라 사람이 봐야 할 때: STOP 에 이유를 적고, 푸시하지 않고 끝낸다 */
+function halt(reason, extra = {}) {
+  writeFileSync(STOP, `${new Date().toISOString()} 실행기가 멈춤: ${reason}\n`)
+  record({ event: 'halt', at: new Date().toISOString(), reason, ...extra })
+  log(`위험 정지: ${reason}`)
+  process.exit(1)
+}
+
+/** 프로세스를 띄워 출력을 모은다. 시간 초과면 트리 전체를 끝내고, close 가 안 와도 결과를 돌려준다 */
+function runProcess(file, argv, { input, timeoutMs, logPath, shell = false }) {
   return new Promise((resolve) => {
-    const cli = ['-p', '--model', model, '--output-format', 'stream-json', '--verbose']
-    // 사용자 전역 설정(플러그인·스킬·훅·MCP)을 빼고 이 저장소 설정만 쓴다. 질문을 요구하는 스킬이 혼자 도는 세션을 멈추지 않게
-    cli.push('--setting-sources', 'project,local', '--disable-slash-commands', '--strict-mcp-config')
-    // 신뢰 승인 전 작업 공간에서는 settings.json 의 허용 목록이 무시되므로 같은 목록을 옵션으로 직접 넘긴다
-    const { allow, deny } = JSON.parse(readFileSync(join(ROOT, '.claude', 'settings.json'), 'utf8')).permissions
-    cli.push('--allowedTools', ...allow, '--disallowedTools', ...deny)
-    if (permissionMode) cli.push('--permission-mode', permissionMode)
-    const child = spawn('claude', cli, { cwd: ROOT, stdio: ['pipe', 'pipe', 'pipe'] })
-    const file = logPath ? createWriteStream(logPath) : null
+    const child = spawn(file, argv, { cwd: ROOT, stdio: ['pipe', 'pipe', 'pipe'], shell })
+    const out = logPath ? createWriteStream(logPath, { flags: 'a' }) : null
     let text = ''
     let timedOut = false
+    let settled = false
+    const finish = (code) => {
+      if (settled) return
+      settled = true
+      clearTimeout(timer)
+      clearTimeout(fallback)
+      out?.end()
+      resolve({ text, code, timedOut })
+    }
+    let fallback
     const timer = setTimeout(() => {
       timedOut = true
-      child.kill()
+      killTree(child.pid)
+      fallback = setTimeout(() => finish(null), 30_000)
     }, timeoutMs)
     child.stdout.on('data', (d) => {
       text += d
-      file?.write(d)
+      out?.write(d)
     })
-    child.stderr.on('data', (d) => file?.write(d))
-    child.on('close', (code) => {
-      clearTimeout(timer)
-      file?.end()
-      resolve({ text, code, timedOut })
+    child.stderr.on('data', (d) => out?.write(d))
+    child.on('error', (e) => {
+      out?.write(`spawn 오류: ${e.message}\n`)
+      finish(null)
     })
-    child.stdin.end(prompt)
+    child.on('close', finish)
+    child.stdin.end(input ?? '')
   })
 }
 
-/** 피드백.md 를 뺀 남은 변경을 stash 로 치운다(되살릴 수 있게). reset·clean 은 쓰지 않는다 */
-function cleanup() {
-  const dirty = git('status', '--porcelain')
-    .split('\n')
-    .filter((l) => l && !l.slice(3).replace(/"/g, '').endsWith(FEEDBACK))
-  if (dirty.length === 0) return false
-  git('stash', 'push', '-u', '-m', `loop-leftover-${stamp()}`, '--', '.', `:(exclude)${FEEDBACK}`)
-  log(`남은 변경 ${dirty.length}개를 stash 로 치움`)
-  return true
+function runClaude({ model, prompt, timeoutMs, logPath, permissionMode }) {
+  const cli = ['-p', '--model', model, '--output-format', 'stream-json', '--verbose']
+  // 사용자 전역 설정(플러그인·스킬·훅·MCP)을 빼고 이 저장소 설정만 쓴다. 질문을 요구하는 스킬이 혼자 도는 세션을 멈추지 않게
+  cli.push('--setting-sources', 'project,local', '--disable-slash-commands', '--strict-mcp-config')
+  cli.push('--allowedTools', ...PERMISSIONS.allow, '--disallowedTools', ...PERMISSIONS.deny)
+  if (permissionMode) cli.push('--permission-mode', permissionMode)
+  return runProcess('claude', cli, { input: prompt, timeoutMs, logPath })
 }
 
-function check(logPath) {
-  const r = spawnSync('npm', ['run', 'check'], { cwd: ROOT, encoding: 'utf8', shell: true })
-  appendFileSync(logPath, `\n--- npm run check (exit ${r.status}) ---\n${r.stdout}\n${r.stderr}`)
-  return r.status === 0
+/** 바퀴마다 사용자 파일 사본을 남긴다. 무슨 일이 생겨도 되살릴 수 있게 */
+function backupUserFiles() {
+  const dir = join(LOGS, 'user-files', stamp())
+  mkdirSync(dir, { recursive: true })
+  for (const f of USER_FILES) if (existsSync(join(ROOT, f))) copyFileSync(join(ROOT, f), join(dir, f))
+}
+
+/** 새 피드백을 할 일로 옮기고 바로 커밋한다. 세션이 실패해도 피드백이 사라지지 않게 세션 전에 한다 */
+function moveFeedbackAndCommit() {
+  const r = moveFeedback(readFileSync(join(ROOT, FEEDBACK), 'utf8'), readFileSync(join(ROOT, TODO), 'utf8'), today())
+  if (r.moved === 0) return 0
+  writeFileSync(join(ROOT, FEEDBACK), r.feedback)
+  writeFileSync(join(ROOT, TODO), r.todo)
+  git('add', '--', FEEDBACK, TODO)
+  git('commit', '-q', '-m', `chore: 피드백 ${r.moved}건을 할 일로 옮김`, '--', FEEDBACK, TODO)
+  log(`피드백 ${r.moved}건을 할 일로 옮김`)
+  return r.moved
+}
+
+/** 사용자 파일을 뺀 남은 변경을 stash 로 치운다(되살릴 수 있게). reset·clean 은 쓰지 않는다 */
+function cleanup() {
+  const paths = leftoverPaths(git('status', '--porcelain', '-z', '-uall'), USER_FILES)
+  if (paths.length === 0) return null
+  const message = `loop-leftover-${stamp()}`
+  git('stash', 'push', '-u', '-m', message, '--', ...paths)
+  log(`남은 변경 ${paths.length}개를 stash 로 치움`)
+  return { message, paths }
 }
 
 function unpushedCount() {
@@ -82,10 +125,11 @@ function push() {
   try {
     git('push', 'origin', 'main')
     log('원격에 푸시함')
-    return true
+    return { pushed: true }
   } catch (e) {
-    log(`푸시 실패: ${e.message.split('\n')[0]}`)
-    return false
+    const error = String(e.stderr || e.message).trim().split('\n').pop()
+    log(`푸시 실패: ${error}`)
+    return { pushed: false, error }
   }
 }
 
@@ -93,21 +137,17 @@ async function sleepUntil(untilMs) {
   while (Date.now() < untilMs && !existsSync(STOP)) await new Promise((r) => setTimeout(r, 60_000))
 }
 
-function record(entry) {
-  appendFileSync(join(LOGS, 'runs.jsonl'), JSON.stringify(entry) + '\n')
-}
-
 async function main() {
   if (args.has('--cleanup-only')) {
     cleanup()
     return
   }
-
   if (existsSync(STOP)) {
     record({ event: 'stop', at: new Date().toISOString(), reason: 'STOP 파일', iteration: 0 })
     log('멈춤: STOP 파일')
     return
   }
+  if (revertInProgress(ROOT)) halt('되돌리기(revert)가 진행 중인 상태로 남아 있음')
   // 다시 시작했다는 건 할 일이 생겼다는 뜻이다(예: 기획서를 고침)
   if (existsSync(IDLE)) {
     unlinkSync(IDLE)
@@ -121,6 +161,7 @@ async function main() {
 
   let iteration = 0
   let consecutiveFailures = 0
+  let consecutivePushFailures = 0
   let lastPushMs = null
 
   for (;;) {
@@ -132,12 +173,14 @@ async function main() {
       maxIterations: args.has('--once') ? 1 : config.maxIterations,
       consecutiveFailures,
       maxConsecutiveFailures: config.maxConsecutiveFailures,
+      consecutivePushFailures,
+      maxConsecutivePushFailures: config.maxConsecutivePushFailures,
       weeklyStopAt: config.weeklyStopAt,
     })
 
     if (decision.action === 'stop') {
-      if (unpushedCount() > 0) push()
-      record({ event: 'stop', at: new Date().toISOString(), reason: decision.reason, iteration })
+      const p = unpushedCount() > 0 ? push() : { pushed: 'skipped' }
+      record({ event: 'stop', at: new Date().toISOString(), reason: decision.reason, iteration, ...p })
       log(`멈춤: ${decision.reason}`)
       return
     }
@@ -151,28 +194,33 @@ async function main() {
     iteration++
     const startedAt = new Date().toISOString()
     const logPath = join(LOGS, `${stamp()}.jsonl`)
+    backupUserFiles()
+    const feedbackMoved = moveFeedbackAndCommit()
     const prevHead = git('rev-parse', 'HEAD')
     log(`${iteration}바퀴 시작`)
 
     const out = await runClaude({
       model: config.model,
-      prompt: readFileSync(join(ROOT, 'loop', 'PROMPT.md'), 'utf8'),
+      prompt: PROMPT,
       timeoutMs: config.iterationTimeoutMinutes * 60_000,
       logPath,
       permissionMode: 'acceptEdits',
     })
     rate = parseRateLimit(out.text) ?? rate
 
-    cleanup()
+    const stashed = cleanup()
     const head = git('rev-parse', 'HEAD')
     let result
     if (head !== prevHead) {
-      if (check(logPath)) {
+      if (!isAncestor(ROOT, prevHead, head)) halt('세션이 이전 커밋을 고쳐 썼음(amend 등)', { prevHead, head, log: logPath })
+      const check = await runProcess('npm', ['run', 'check'], { timeoutMs: config.checkTimeoutMinutes * 60_000, logPath, shell: true })
+      if (check.code === 0) {
         result = 'committed'
         consecutiveFailures = 0
       } else {
-        git('revert', '--no-edit', `${prevHead}..HEAD`)
-        result = 'check-failed-reverted'
+        const r = safeRevert(ROOT, prevHead)
+        if (!r.ok) halt(`검사 실패 후 되돌리기도 실패: ${r.error}`, { prevHead, head, log: logPath })
+        result = check.timedOut ? 'check-timeout-reverted' : 'check-failed-reverted'
         consecutiveFailures++
       }
     } else if (existsSync(IDLE)) {
@@ -182,7 +230,14 @@ async function main() {
       consecutiveFailures++
     }
 
-    if (unpushedCount() > 0 && shouldPush(lastPushMs, Date.now(), config.pushIntervalMinutes) && push()) lastPushMs = Date.now()
+    let p = { pushed: 'skipped' }
+    if (unpushedCount() > 0 && shouldPush(lastPushMs, Date.now(), config.pushIntervalMinutes)) {
+      p = push()
+      if (p.pushed) {
+        lastPushMs = Date.now()
+        consecutivePushFailures = 0
+      } else consecutivePushFailures++
+    }
 
     record({
       iteration,
@@ -191,6 +246,9 @@ async function main() {
       prevHead,
       head: git('rev-parse', 'HEAD'),
       result,
+      feedbackMoved,
+      stashed,
+      ...p,
       exitCode: out.code,
       fiveHour: rate?.fiveHour ?? null,
       sevenDay: rate?.sevenDay ?? null,
@@ -200,8 +258,4 @@ async function main() {
   }
 }
 
-main().catch((e) => {
-  record({ event: 'crash', at: new Date().toISOString(), error: String(e?.stack ?? e) })
-  console.error(e)
-  process.exit(1)
-})
+main().catch((e) => halt(`실행기 오류: ${String(e?.message ?? e).split('\n')[0]}`, { stack: String(e?.stack ?? e) }))

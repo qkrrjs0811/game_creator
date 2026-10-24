@@ -40,3 +40,36 @@ test('shouldPush', () => {
   expect(shouldPush(0, 59 * 60_000, 60)).toBe(false)
   expect(shouldPush(0, 60 * 60_000, 60)).toBe(true)
 })
+
+import { moveFeedback, leftoverPaths } from './lib.mjs'
+
+const FB = (newItems, done = '') => `# 피드백\n\n> 안내\n\n## 새 피드백\n${newItems}\n## 처리됨\n${done}`
+
+test('moveFeedback: 새 피드백을 원문 그대로 할일 맨 위로, 피드백은 처리됨으로', () => {
+  const todo = '# 할 일\n\n> 안내\n\n- [ ] 기존 일\n'
+  const r = moveFeedback(FB('- 버튼이 너무 작아\n보스가 너무 세\n\n'), todo, '2026-10-25')
+  expect(r.moved).toBe(2)
+  expect(r.todo).toBe('# 할 일\n\n> 안내\n\n- [ ] (피드백 2026-10-25) 버튼이 너무 작아\n- [ ] (피드백 2026-10-25) 보스가 너무 세\n- [ ] 기존 일\n')
+  expect(r.feedback).toBe('# 피드백\n\n> 안내\n\n## 새 피드백\n\n## 처리됨\n- (2026-10-25) 버튼이 너무 작아\n- (2026-10-25) 보스가 너무 세\n')
+})
+
+test('moveFeedback: 새 피드백이 없으면 그대로', () => {
+  const fb = FB('\n')
+  const r = moveFeedback(fb, '# 할 일\n', '2026-10-25')
+  expect(r).toEqual({ moved: 0, feedback: fb, todo: '# 할 일\n' })
+})
+
+test('moveFeedback: 할일에 목록이 비어 있으면 끝에 붙임', () => {
+  const r = moveFeedback(FB('- 하나\n'), '# 할 일\n\n> 안내\n', '2026-10-25')
+  expect(r.todo).toBe('# 할 일\n\n> 안내\n- [ ] (피드백 2026-10-25) 하나\n')
+})
+
+test('leftoverPaths: 사용자 파일과 무시할 경로를 뺀 변경만', () => {
+  const z = [' M 피드백.md', ' M 기획서.md', ' M src/a.ts', '?? loop/new.txt', 'R  b.ts', 'old.ts', ''].join('\0')
+  expect(leftoverPaths(z, ['피드백.md', '기획서.md'])).toEqual(['src/a.ts', 'loop/new.txt', 'b.ts'])
+})
+
+test('decideNext: 푸시가 연속으로 실패하면 멈춤', () => {
+  expect(decideNext({ ...base, consecutivePushFailures: 3, maxConsecutivePushFailures: 3 })).toEqual({ action: 'stop', reason: '푸시 연속 실패' })
+  expect(decideNext({ ...base, consecutivePushFailures: 2, maxConsecutivePushFailures: 3 })).toEqual({ action: 'run' })
+})

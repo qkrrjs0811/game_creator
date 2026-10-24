@@ -4,5 +4,7 @@
   "pushIntervalMinutes": 60,
   "iterationTimeoutMinutes": 60,
   "maxIterations": null,
-  "maxConsecutiveFailures": 3
+  "maxConsecutiveFailures": 3,
+  "checkTimeoutMinutes": 20,
+  "maxConsecutivePushFailures": 3
 }

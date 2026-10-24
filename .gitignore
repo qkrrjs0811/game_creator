@@ -3,6 +3,6 @@ dist/
 test-results/
 playwright-report/
 loop/logs/
-loop/IDLE
+IDLE
 STOP
 .superpowers/
