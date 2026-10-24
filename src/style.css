@@ -511,6 +511,29 @@ body {
   line-height: 1.4;
 }
 .battle-result .battle-result-reward[hidden] { display: none; }
+.battle-result .battle-result-damage {
+  margin-top: 2px;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+.battle-result .battle-result-damage[hidden] { display: none; }
+.battle-result .battle-result-damage .battle-result-damage-text { font-size: 13px; font-weight: 700; color: var(--ink); }
+.battle-result .battle-result-damage .battle-result-damage-bar {
+  width: 100%;
+  height: 10px;
+  border-radius: 999px;
+  background: var(--chip);
+  overflow: hidden;
+}
+.battle-result .battle-result-damage-bar i {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #ffc2a3, var(--accent));
+}
 @keyframes result-pop {
   from { transform: translateX(-50%) scale(0.6); opacity: 0; }
   to { transform: translateX(-50%) scale(1); opacity: 1; }

@@ -25,6 +25,7 @@ test('이기면 결과 카드와 함께 다음 스테이지가 열리고 저장�
   await expect(page.getByTestId('battle-result-detail')).toContainText('이겼어요')
   await expect(page.getByTestId('battle-result-note')).toContainText('2스테이지가 열렸어요')
   await expect(page.getByTestId('battle-result-reward')).toContainText('새싹 머리핀')
+  await expect(page.getByTestId('battle-result-damage')).toBeHidden()
   await page.waitForTimeout(600)
   await page.screenshot({ path: 'test-results/screens/result-win.png' })
 
@@ -57,6 +58,13 @@ test('지면 결과 카드가 다시 오라고 하고, 스테이지는 그대로
   await expect(page.getByTestId('battle-result-title')).toContainText('아쉬워요')
   await expect(page.getByTestId('battle-result-note')).toContainText('운동으로')
   await expect(page.getByTestId('battle-result-reward')).toBeHidden()
+  // 지더라도 몬스터를 얼마나 깎았는지 보여 준다
+  const damage = page.getByTestId('battle-result-damage')
+  await expect(damage).toBeVisible()
+  await expect(page.getByTestId('battle-result-damage-text')).toHaveText(/💥 버섯 뽀짝 체력을 \d+% 깎았어요/)
+  const percent = Number(await damage.getAttribute('data-percent'))
+  expect(percent).toBeGreaterThan(0)
+  expect(percent).toBeLessThan(100)
   await page.waitForTimeout(600)
   await page.screenshot({ path: 'test-results/screens/result-lose.png' })
   expect(await page.evaluate(() => window.__debug.getSave().stageProgress)).toBe(1)

@@ -1,5 +1,5 @@
 import { describe, test, expect } from 'vitest'
-import { MAX_ROUNDS, playerFighter, simulateBattle, type Fighter } from './battle'
+import { MAX_ROUNDS, enemyDamagePercent, playerFighter, simulateBattle, type Fighter } from './battle'
 import { BASE_STAT } from './progression'
 
 const base = { str: BASE_STAT, vit: BASE_STAT, int: BASE_STAT }
@@ -83,5 +83,33 @@ describe('simulateBattle', () => {
     const r = simulateBattle(me, slime, 5)
     expect(JSON.stringify([me, slime])).toBe(before)
     expect(Object.keys(r).sort()).toEqual(['enemyHp', 'log', 'playerHp', 'rounds', 'win'])
+  })
+})
+
+describe('enemyDamagePercent', () => {
+  const lost = (enemyHp: number) => ({ win: false, rounds: 3, playerHp: 0, enemyHp, log: [] })
+
+  test('몬스터 처음 HP에 대해 깎은 비율을 내림한 퍼센트로 돌려준다', () => {
+    expect(enemyDamagePercent(slime, lost(13))).toBe(35)
+  })
+
+  test('지면 조금이라도 깎았으면 1 이상, 다 깎지 못했으면 99 이하', () => {
+    const big: Fighter = { ...slime, hp: 1000 }
+    expect(enemyDamagePercent(big, lost(999))).toBe(1)
+    expect(enemyDamagePercent(big, lost(1))).toBe(99)
+    expect(enemyDamagePercent(big, lost(1000))).toBe(0)
+  })
+
+  test('이기면 100', () => {
+    const r = simulateBattle(playerFighter(base, []), slime, 1)
+    expect(r.win).toBe(true)
+    expect(enemyDamagePercent(slime, r)).toBe(100)
+  })
+
+  test('강해질수록 같은 몬스터를 더 많이 깎는다', () => {
+    const tough: Fighter = { ...giant, atk: 30, def: 0 }
+    const weak = enemyDamagePercent(tough, simulateBattle(playerFighter(base, []), tough, 7))
+    const strong = enemyDamagePercent(tough, simulateBattle(playerFighter({ str: 40, vit: 40, int: 5 }, []), tough, 7))
+    expect(strong).toBeGreaterThan(weak)
   })
 })

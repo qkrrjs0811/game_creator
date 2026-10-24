@@ -14,7 +14,7 @@ import { learnSkill, remainingSkillPoints, skillRanks } from './core/skills'
 import { STAGES } from './core/stages'
 import { createStages } from './ui/stages'
 import { createBattleBar } from './ui/battle'
-import { playerFighter, simulateBattle } from './core/battle'
+import { enemyDamagePercent, playerFighter, simulateBattle } from './core/battle'
 import { battleTimeline, stepDelay } from './core/replay'
 import { homeMonster, stageEnemy, stageMonster } from './core/monsters'
 import { applyBattleResult, type BattleOutcome } from './core/result'
@@ -185,7 +185,14 @@ const stages = createStages(app, {
       persist()
     }
     const reward = outcome.reward ? `🎁 새 꾸미기 · ${outcome.reward.icon} ${outcome.reward.name}` : null
-    const view = { win: result.win, rounds: result.rounds, note: resultNote(outcome, result.win), reward }
+    const view = {
+      win: result.win,
+      rounds: result.rounds,
+      note: resultNote(outcome, result.win),
+      reward,
+      foe: foe.name,
+      damage: enemyDamagePercent(enemy, result),
+    }
     stages.close()
     battleBar.start(`${s.boss ? '보스' : `${no}스테이지`} · ${s.name}`, foe.name)
     const scene = homeScene()

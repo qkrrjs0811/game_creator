@@ -84,3 +84,15 @@ export function simulateBattle(player: Fighter, enemy: Fighter, seed: number): B
 
   return { win: hp.enemy === 0, rounds, playerHp: hp.player, enemyHp: hp.enemy, log }
 }
+
+/**
+ * 몬스터 처음 HP를 몇 % 깎았는지(내림). 지더라도 얼마나 다가갔는지 보여 주는 데 쓴다.
+ * 지면 조금이라도 깎았을 때 1 이상, 다 깎지 못했으니 99 이하로 맞춘다. 이기면 100
+ */
+export function enemyDamagePercent(enemy: Fighter, result: BattleResult): number {
+  if (result.win) return 100
+  const max = Math.max(1, enemy.hp)
+  const dealt = Math.min(max, Math.max(0, max - result.enemyHp))
+  if (dealt === 0) return 0
+  return Math.min(99, Math.max(1, Math.floor((dealt / max) * 100)))
+}

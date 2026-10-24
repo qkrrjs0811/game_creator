@@ -6,6 +6,10 @@ export interface BattleResultView {
   note: string
   /** 처음 깨서 받은 꾸미기 한 줄. 없으면 숨긴다 */
   reward: string | null
+  /** 상대 몬스터 이름 */
+  foe: string
+  /** 몬스터 처음 HP를 몇 % 깎았는지(enemyDamagePercent). 졌을 때만 보여 준다 */
+  damage: number
 }
 
 /** 전투 중 장면 아래쪽 알림 띠(어느 스테이지인지, 건너뛰기·돌아가기 버튼)와 끝난 뒤 결과 카드 */
@@ -17,6 +21,10 @@ export function createBattleBar(scene: HTMLElement, h: { onSkip(): void; onLeave
   card.innerHTML = `
     <b data-testid="battle-result-title"></b>
     <span data-testid="battle-result-detail"></span>
+    <span class="battle-result-damage" data-testid="battle-result-damage">
+      <span class="battle-result-damage-text" data-testid="battle-result-damage-text"></span>
+      <span class="battle-result-damage-bar"><i></i></span>
+    </span>
     <span class="battle-result-note" data-testid="battle-result-note"></span>
     <span class="battle-result-reward" data-testid="battle-result-reward"></span>`
 
@@ -55,6 +63,12 @@ export function createBattleBar(scene: HTMLElement, h: { onSkip(): void; onLeave
       const { win } = r
       q(card, 'battle-result-title').textContent = win ? '🎉 승리!' : '💧 아쉬워요'
       q(card, 'battle-result-detail').textContent = win ? `${r.rounds}번 주고받아 이겼어요` : '말랑이가 지쳐 버렸어요'
+      // 졌을 때만 몬스터를 얼마나 깎았는지 보여 준다(다음엔 더 깎을 수 있게)
+      const damage = q(card, 'battle-result-damage')
+      damage.hidden = win
+      damage.dataset.percent = String(r.damage)
+      q(card, 'battle-result-damage-text').textContent = `💥 ${r.foe} 체력을 ${r.damage}% 깎았어요`
+      damage.querySelector<HTMLElement>('i')!.style.width = `${r.damage}%`
       q(card, 'battle-result-note').textContent = r.note
       const reward = q(card, 'battle-result-reward')
       reward.textContent = r.reward ?? ''
