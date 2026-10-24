@@ -52,3 +52,32 @@ test('처음부터 저장할 수 없는 환경이면 열자마자 경고', async
   await expect(page.getByTestId('save-warning')).toBeVisible()
   await expect(page.getByTestId('toggle')).toBeVisible()
 })
+
+test('경고가 떠서 장면이 낮아져도 말랑이·몬스터가 새 땅에 섬', async ({ page }) => {
+  await page.addInitScript(fullStorage)
+  await page.clock.install({ time: new Date('2026-10-25T08:00:00+09:00') })
+  await page.goto('./')
+  await expect(page.getByTestId('level')).toHaveText('Lv.1')
+  const scene = page.locator('[data-feet]')
+  await expect(scene).toHaveAttribute('data-monster-bottom', /\d/)
+  const before = (await page.getByTestId('scene').boundingBox())!
+
+  await page.evaluate(() => ((window as unknown as { __full: boolean }).__full = true))
+  await page.getByTestId('toggle').click()
+  await page.clock.fastForward('30:00')
+  await page.getByTestId('toggle').click()
+  await expect(page.getByTestId('save-warning')).toBeVisible()
+  // 레벨업 폴짝이 끝날 때까지 기다린다
+  await page.waitForTimeout(1500)
+  const after = (await page.getByTestId('scene').boundingBox())!
+  expect(after.height).toBeLessThan(before.height - 20)
+
+  // 말랑이 아래끝은 발끝(땅 + 38)에, 몬스터는 그보다 6 아래 자리에서 위로 살짝(최대 6) 떠다닌다
+  const feet = Number(await scene.getAttribute('data-feet'))
+  const mascot = Number(await scene.getAttribute('data-mascot-bottom'))
+  const monster = Number(await scene.getAttribute('data-monster-bottom'))
+  expect(Math.abs(mascot - feet)).toBeLessThanOrEqual(2)
+  expect(monster).toBeLessThanOrEqual(feet + 1)
+  expect(monster).toBeGreaterThanOrEqual(feet - 13)
+  await page.screenshot({ path: 'test-results/screens/save-warning-scene.png' })
+})

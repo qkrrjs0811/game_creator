@@ -45,8 +45,11 @@ const BUBBLES: Record<Mood, string> = {
 
 /** 홈 장면: 둥근 마스코트와 몬스터가 마주 보고, 마스코트가 숨 쉬듯 움직인다 */
 export class HomeScene extends Phaser.Scene {
+  /** 자리(땅 높이)는 바깥 상자가, 폴짝·둥실 움직임은 안쪽 몸이 맡는다. 장면 높이가 바뀌어도 움직임이 자리를 옛 땅으로 되돌리지 않는다 */
   private mascot!: Phaser.GameObjects.Container
+  private mascotBody!: Phaser.GameObjects.Container
   private monster!: Phaser.GameObjects.Container
+  private monsterBody!: Phaser.GameObjects.Container
   private bubble!: Phaser.GameObjects.Container
   private bubbleText!: Phaser.GameObjects.Text
   private bubbleBg!: Phaser.GameObjects.Graphics
@@ -78,11 +81,13 @@ export class HomeScene extends Phaser.Scene {
   }
 
   create() {
-    this.mascot = this.add.container(0, 0)
+    this.mascotBody = this.add.container(0, 0)
+    this.mascot = this.add.container(0, 0, [this.mascotBody])
     this.shownLook = undefined
     this.dress(this.look)
 
-    this.monster = this.add.container(0, 0)
+    this.monsterBody = this.add.container(0, 0)
+    this.monster = this.add.container(0, 0, [this.monsterBody])
     this.setMonster(this.homeLook ?? MONSTERS[0])
 
     this.bubbleText = this.add
@@ -122,9 +127,10 @@ export class HomeScene extends Phaser.Scene {
     if (this.battle) return
     // 뛰는 중에 또 오르면 땅으로 돌려놓고 다시 뛴다
     this.jump?.stop()
+    this.mascotBody.setY(0)
     this.layout(this.scale.width, this.scale.height)
     const { x, y } = this.mascot
-    this.jump = this.tweens.add({ targets: this.mascot, y: y - 46, duration: 260, yoyo: true, repeat: 1, ease: 'Quad.easeOut' })
+    this.jump = this.tweens.add({ targets: this.mascotBody, y: -46, duration: 260, yoyo: true, repeat: 1, ease: 'Quad.easeOut' })
 
     this.tweens.killTweensOf(this.bubble)
     this.bubble.setAlpha(0)
@@ -156,6 +162,8 @@ export class HomeScene extends Phaser.Scene {
     this.setMonster(foe)
     this.jump?.stop()
     for (const who of [this.mascot, this.monster]) this.tweens.killTweensOf(who)
+    // 전투 중에는 둥실·폴짝 없이 땅에 선다
+    for (const body of [this.mascotBody, this.monsterBody]) this.tweens.killTweensOf(body.setY(0))
     this.tweens.killTweensOf(this.bubble)
     this.bubble.setAlpha(0)
     this.battle = { steps: timeline.steps, win: timeline.win, next: 0, bars: this.add.graphics(), hp: [1, 1], onEnd, ended: false }
@@ -197,8 +205,8 @@ export class HomeScene extends Phaser.Scene {
     const key = [worn.hat?.id, worn.color?.id].filter(Boolean).join(' ')
     if (this.shownLook === key) return
     this.shownLook = key
-    this.mascot.removeAll(true)
-    this.mascot.add(this.mascotParts(worn))
+    this.mascotBody.removeAll(true)
+    this.mascotBody.add(this.mascotParts(worn))
     // e2e가 지금 입은 꾸미기를 볼 수 있게 남긴다
     this.game.canvas.parentElement?.setAttribute('data-look', key)
   }
@@ -247,8 +255,8 @@ export class HomeScene extends Phaser.Scene {
   private setMonster(m: Monster) {
     if (this.shownMonster === m.id) return
     this.shownMonster = m.id
-    this.monster.removeAll(true)
-    this.monster.add(this.monsterParts(m))
+    this.monsterBody.removeAll(true)
+    this.monsterBody.add(this.monsterParts(m))
     // e2e가 지금 어떤 몬스터가 나와 있는지 볼 수 있게 남긴다
     this.game.canvas.parentElement?.setAttribute('data-monster', m.id)
   }
@@ -301,7 +309,8 @@ export class HomeScene extends Phaser.Scene {
 
   private idle() {
     this.moveMascot()
-    this.tweens.add({ targets: this.monster, y: '-=6', duration: 1200, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' })
+    this.tweens.killTweensOf(this.monsterBody.setY(0))
+    this.tweens.add({ targets: this.monsterBody, y: -6, duration: 1200, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' })
   }
 
   /** 쉬는 중(상한을 채운 뒤도)에는 느리게 숨 쉬고, 운동 중에는 빠르게 꾹꾹 눌렀다 편다 */
@@ -393,5 +402,15 @@ export class HomeScene extends Phaser.Scene {
     // e2e가 말랑이·몬스터 발끝(장면 위에서부터 px)을 볼 수 있게 남긴다
     this.game.canvas.parentElement?.setAttribute('data-feet', String(Math.round(ground + FEET)))
     if (this.battle) this.drawBars(...this.battle.hp)
+  }
+
+  /** e2e가 말랑이·몬스터가 실제로 그려진 아래끝(장면 위에서부터 px)을 볼 수 있게 남긴다 */
+  update() {
+    const box = this.game.canvas.parentElement
+    if (!box) return
+    const mascot = String(Math.round(this.mascot.y + this.mascotBody.y + FEET))
+    const monster = String(Math.round(this.monster.y + this.monsterBody.y + 26))
+    if (box.getAttribute('data-mascot-bottom') !== mascot) box.setAttribute('data-mascot-bottom', mascot)
+    if (box.getAttribute('data-monster-bottom') !== monster) box.setAttribute('data-monster-bottom', monster)
   }
 }
