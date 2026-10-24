@@ -57,6 +57,7 @@ export function createStages(root: HTMLElement, h: { progress(): number; onChall
       draw()
       wrap.hidden = false
     },
+    close,
     say(text: string) {
       msg.textContent = text
     },

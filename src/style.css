@@ -359,3 +359,41 @@ body {
 .stage.cleared .stage-go { background: var(--chip); color: var(--ink); box-shadow: 0 3px 0 var(--track); }
 .stage-lock { flex: none; width: 72px; text-align: center; font-size: 20px; opacity: 0.6; }
 .stage-list + .sheet-msg { margin-top: 10px; }
+
+.battle-bar {
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  bottom: 12px;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 10px 10px 18px;
+  border-radius: 24px;
+  background: #fff;
+  box-shadow: 0 4px 0 var(--track);
+  word-break: keep-all;
+  animation: toast-pop 0.35s ease-out;
+}
+.battle-bar[hidden] { display: none; }
+.battle-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.battle-text b { font-size: 15px; }
+.battle-text span { font-size: 13px; line-height: 1.4; color: var(--ink-soft); }
+.battle-bar.won .battle-text span { color: var(--accent); font-weight: 700; }
+.battle-action {
+  flex: none;
+  min-width: 88px;
+  min-height: 44px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--chip);
+  color: var(--ink);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.battle-bar[data-state='done'] .battle-action { background: var(--accent); color: #fff; box-shadow: 0 3px 0 #e9764a; }
+.scene.in-battle .adventure { display: none; }

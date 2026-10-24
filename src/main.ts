@@ -13,6 +13,9 @@ import { createSkills } from './ui/skills'
 import { learnSkill, remainingSkillPoints, skillRanks } from './core/skills'
 import { STAGES } from './core/stages'
 import { createStages } from './ui/stages'
+import { createBattleBar } from './ui/battle'
+import { playerFighter, simulateBattle } from './core/battle'
+import { battleTimeline, stageEnemy, stepDelay } from './core/replay'
 
 declare global {
   interface Window {
@@ -93,12 +96,33 @@ const skills = createSkills(app, {
   },
 })
 
-// 전투는 "자동 전투 계산"·"전투 장면 연출"에서 붙인다. 지금은 고른 스테이지만 알려 준다
+const homeScene = () => {
+  const scene = game.scene.getScene('home') as HomeScene | null
+  return scene?.sys.isActive() ? scene : null
+}
+
+// 전투는 저장을 건드리지 않는다. 승패에 따른 스테이지 열기는 "승패 결과와 다음 스테이지 열기"에서 붙인다
+const battleBar = createBattleBar(hud.sceneHost, {
+  onSkip: () => homeScene()?.skipBattle(),
+  onLeave() {
+    homeScene()?.endBattle()
+    battleBar.hide()
+  },
+})
+
 const stages = createStages(app, {
   progress: () => save.stageProgress,
   onChallenge(no) {
     const s = STAGES[no - 1]
-    stages.say(`${s.boss ? '보스' : `${no}스테이지`} 전투는 곧 열려요. 조금만 기다려 주세요!`)
+    const p = computeProgress(liveRecords(save, Date.now()))
+    const me = playerFighter(p.stats, save.skills)
+    const enemy = stageEnemy(no)
+    const timeline = battleTimeline(me, enemy, simulateBattle(me, enemy, Date.now()))
+    stages.close()
+    battleBar.start(`${s.boss ? '보스' : `${no}스테이지`} · ${s.name}`)
+    const scene = homeScene()
+    if (scene) scene.playBattle(timeline, stepDelay(timeline.steps.length), (win) => battleBar.end(win))
+    else battleBar.end(timeline.win)
   },
 })
 
@@ -121,8 +145,7 @@ function render() {
   shownLevel = p.level
   if (up !== null) {
     hud.showLevelUp(up)
-    const scene = game.scene.getScene('home') as HomeScene | null
-    if (scene?.sys.isActive()) scene.celebrate()
+    homeScene()?.celebrate()
   }
   hud.render({
     level: p.level,

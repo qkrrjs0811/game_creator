@@ -10,8 +10,6 @@ test('처음에는 1스테이지만 열려 있고 나머지는 잠김', async ({
   await expect(page.getByTestId('stage-6')).toContainText('보스')
   await expect(page.getByTestId('stage-go-2')).toHaveCount(0)
 
-  await page.getByTestId('stage-go-1').click()
-  await expect(page.getByTestId('stage-msg')).toContainText('1스테이지')
   await page.getByTestId('stages-close').click()
   await expect(page.getByTestId('stages')).toBeHidden()
 })
