@@ -5,7 +5,7 @@ import { computeProgress, todayStatus } from './core/progression'
 import { levelUpTo } from './core/levelup'
 import { liveRecords, startSession, stopSession } from './core/session'
 import { backupFileName, exportBackup } from './core/backup'
-import { loadSave, writeSave, SAVE_KEY, type KV } from './core/storage'
+import { loadSave, syncSave, writeSave, SAVE_KEY, type KV } from './core/storage'
 import type { SaveData } from './core/types'
 import { createHud } from './ui/hud'
 import { createSettings } from './ui/settings'
@@ -42,11 +42,22 @@ function openStorage(): KV {
 const kv = openStorage()
 let save = loadSave(kv, Date.now())
 
+/** 다른 창이 저장했으면 그 내용으로 바꾼다. 바뀌었으면 true */
+function pullSave(): boolean {
+  const next = syncSave(kv, save)
+  if (next === save) return false
+  save = next
+  // 다른 창에서 오른 레벨은 여기서 축하하지 않는다
+  shownLevel = undefined
+  return true
+}
+
 const app = document.querySelector<HTMLElement>('#app')!
 
 const hud = createHud(
   app,
   () => {
+    pullSave()
     const now = Date.now()
     save = save.active ? stopSession(save, now) : startSession(save, 'exercise', now)
     writeSave(kv, save)
@@ -93,6 +104,7 @@ const currentLevel = () => computeProgress(liveRecords(save, Date.now())).level
 const skills = createSkills(app, {
   view: () => ({ points: remainingSkillPoints(currentLevel(), save.skills), ranks: skillRanks(save.skills) }),
   onLearn(id) {
+    pullSave()
     const next = learnSkill(save, currentLevel(), id)
     if (!next) return
     save = next
@@ -105,6 +117,7 @@ const skills = createSkills(app, {
 const cosmetics = createCosmetics(app, {
   view: () => ({ owned: ownedCosmetics(save), worn: wornCosmetics(save) }),
   onWear(id) {
+    pullSave()
     const next = toggleWear(save, id)
     if (next === save) return
     save = next
@@ -140,6 +153,7 @@ const battleBar = createBattleBar(hud.sceneHost, {
 const stages = createStages(app, {
   progress: () => save.stageProgress,
   onChallenge(no) {
+    pullSave()
     const s = STAGES[no - 1]
     const p = computeProgress(liveRecords(save, Date.now()))
     const me = playerFighter(p.stats, save.skills)
@@ -211,5 +225,12 @@ const game = new Phaser.Game({
 
 render()
 setInterval(render, 1000)
-document.addEventListener('visibilitychange', render)
+// 설치한 앱과 브라우저 탭을 함께 열어도 오래된 창이 새 기록을 덮어쓰지 않게 저장을 따라간다
+window.addEventListener('storage', (e) => {
+  if (e.key === SAVE_KEY && pullSave()) render()
+})
+document.addEventListener('visibilitychange', () => {
+  pullSave()
+  render()
+})
 window.__debug = { getSave: () => save }

@@ -1,5 +1,5 @@
 import { test, expect } from 'vitest'
-import { loadSave, writeSave, SAVE_KEY } from './storage'
+import { loadSave, syncSave, writeSave, SAVE_KEY } from './storage'
 import { newSave } from './session'
 
 const mem = () => {
@@ -44,4 +44,32 @@ test('구조가 깨진 저장(records 안에 null)도 깨진 것으로 보존하
   kv.m.set(SAVE_KEY, raw)
   expect(loadSave(kv, 9)).toEqual(newSave())
   expect(kv.m.get(`${SAVE_KEY}:corrupt:9`)).toBe(raw)
+})
+
+test('다른 창이 저장한 내용을 따라간다', () => {
+  const kv = mem()
+  const stale = newSave()
+  const fresh = { ...newSave(), records: [{ id: 'exercise-0', activity: 'exercise' as const, startedAt: 0, endedAt: 60_000 }] }
+  writeSave(kv, fresh)
+  expect(syncSave(kv, stale)).toEqual(fresh)
+})
+
+test('저장이 그대로면 지금 객체를 돌려준다', () => {
+  const kv = mem()
+  const s = { ...newSave(), skills: ['a'] }
+  writeSave(kv, s)
+  expect(syncSave(kv, s)).toBe(s)
+})
+
+test('저장이 없거나 깨졌으면 지금 것을 지키고 보존 키도 만들지 않는다', () => {
+  const kv = mem()
+  const s = { ...newSave(), stageProgress: 2 }
+  expect(syncSave(kv, s)).toBe(s)
+  kv.m.set(SAVE_KEY, '{not json')
+  expect(syncSave(kv, s)).toBe(s)
+  kv.m.set(SAVE_KEY, '{"version":2}')
+  expect(syncSave(kv, s)).toBe(s)
+  expect([...kv.m.keys()]).toEqual([SAVE_KEY])
+  const bad = { getItem: () => { throw new Error('x') }, setItem: () => {} }
+  expect(syncSave(bad, s)).toBe(s)
 })

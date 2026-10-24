@@ -28,6 +28,21 @@ export function loadSave(kv: KV, now: number): SaveData {
   return newSave()
 }
 
+/**
+ * 다른 창(설치한 앱과 브라우저 탭 등)이 저장한 내용을 따라간다.
+ * 오래된 창이 나중에 저장하면서 새 기록을 덮어쓰지 않게 한다.
+ * 저장이 없거나 깨졌으면 지금 것을 그대로 둔다(보존 키도 만들지 않는다).
+ */
+export function syncSave(kv: KV, current: SaveData): SaveData {
+  try {
+    const raw = kv.getItem(SAVE_KEY)
+    if (raw === null || raw === JSON.stringify(current)) return current
+    return toSave(JSON.parse(raw)) ?? current
+  } catch {
+    return current
+  }
+}
+
 export function writeSave(kv: KV, save: SaveData): boolean {
   try {
     kv.setItem(SAVE_KEY, JSON.stringify(save))
