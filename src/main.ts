@@ -21,7 +21,7 @@ import { applyBattleResult, type BattleOutcome } from './core/result'
 import { ownedCosmetics, toggleWear, wornCosmetics } from './core/cosmetics'
 import { createCosmetics } from './ui/cosmetics'
 import { statRows } from './core/stats'
-import { minutesToWin } from './core/coach'
+import { minutesToWin, nextStageAdvice } from './core/coach'
 import { formatMinutes } from './ui/format'
 
 declare global {
@@ -176,6 +176,8 @@ const battleBar = createBattleBar(hud.sceneHost, {
 
 const stages = createStages(app, {
   progress: () => save.stageProgress,
+  // 다음 스테이지를 운동 몇 분 더 하면 이길 만한지(화면에 보여 줄 값일 뿐)
+  advice: () => nextStageAdvice(currentProgress().creditedMinutes, save.skills, save.stageProgress),
   onChallenge(no) {
     pullSave()
     const s = STAGES[no - 1]

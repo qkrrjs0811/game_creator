@@ -9,6 +9,9 @@ test('처음에는 1스테이지만 열려 있고 나머지는 잠김', async ({
   await expect(page.getByTestId('stage-6')).toHaveAttribute('data-state', 'locked')
   await expect(page.getByTestId('stage-6')).toContainText('보스')
   await expect(page.getByTestId('stage-go-2')).toHaveCount(0)
+  // 다음에 깰 스테이지에만 이길 만한지 알려 준다
+  await expect(page.getByTestId('stage-hint')).toHaveCount(1)
+  await expect(page.getByTestId('stage-1').getByTestId('stage-hint')).toHaveText('🍀 지금도 이길 만해요')
 
   await page.getByTestId('stages-close').click()
   await expect(page.getByTestId('stages')).toBeHidden()
@@ -30,6 +33,8 @@ test('깬 스테이지 수(stageProgress)에 따라 깸·도전·잠김을 보�
   await expect(page.getByTestId('stage-4')).toHaveAttribute('data-state', 'locked')
   await expect(page.getByTestId('stage-go-1')).toHaveText('다시')
   await expect(page.getByTestId('stage-go-3')).toHaveText('도전')
+  await expect(page.getByTestId('stage-hint')).toHaveCount(1)
+  await expect(page.getByTestId('stage-3').getByTestId('stage-hint')).toHaveText(/^💪 운동 (\d+시간 )?\d+분 더 하면 이길 만해요$|^💪 운동 \d+시간 더 하면 이길 만해요$/)
   await page.screenshot({ path: 'test-results/screens/stages.png' })
 
   await page.getByTestId('stages-close').click()

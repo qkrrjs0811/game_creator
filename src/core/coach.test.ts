@@ -1,5 +1,5 @@
 import { describe, test, expect } from 'vitest'
-import { likelyWin, minutesToWin } from './coach'
+import { likelyWin, minutesToWin, nextStageAdvice } from './coach'
 import { playerFighter } from './battle'
 import { stageEnemy } from './monsters'
 import { statsFromMinutes } from './progression'
@@ -43,5 +43,16 @@ describe('minutesToWin', () => {
 
   test('찾는 범위 안에서 못 이기면 null', () => {
     expect(minutesToWin({ exercise: 0 }, [], stageEnemy(6), 30)).toBeNull()
+  })
+})
+
+describe('nextStageAdvice', () => {
+  test('다음에 깰 스테이지와 운동 몇 분 더 하면 이길 만한지', () => {
+    expect(nextStageAdvice({ exercise: 0 }, [], 0)).toEqual({ no: 1, toWin: 0 })
+    expect(nextStageAdvice({ exercise: 0 }, [], 1)).toEqual({ no: 2, toWin: minutesToWin({ exercise: 0 }, [], stageEnemy(2)) })
+  })
+
+  test('모든 스테이지를 깼으면 없음', () => {
+    expect(nextStageAdvice({ exercise: 0 }, [], 6)).toBeNull()
   })
 })

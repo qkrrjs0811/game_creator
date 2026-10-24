@@ -1,5 +1,7 @@
 import { playerFighter, simulateBattle, type Fighter } from './battle'
 import { MINUTES_PER_STAT, statsFromMinutes } from './progression'
+import { stageEnemy } from './monsters'
+import { STAGES } from './stages'
 import type { ActivityId } from './types'
 
 /** 이길 만한지 보려고 돌려 보는 시험 전투 수. 절반 이상 이기면 이길 만하다고 본다 */
@@ -33,4 +35,18 @@ export function minutesToWin(
     if (likelyWin(me, enemy)) return extra
   }
   return null
+}
+
+/**
+ * 모험 지도에서 다음에 깰 스테이지(stageProgress + 1)를 운동 몇 분 더 하면 이길 만한지.
+ * 다 깼으면 null. 화면에 보여 줄 값일 뿐이다
+ */
+export function nextStageAdvice(
+  minutes: Record<ActivityId, number>,
+  skills: string[],
+  stageProgress: number,
+): { no: number; toWin: number | null } | null {
+  const no = Math.max(0, stageProgress) + 1
+  if (no > STAGES.length) return null
+  return { no, toWin: minutesToWin(minutes, skills, stageEnemy(no)) }
 }

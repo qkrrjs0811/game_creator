@@ -1,8 +1,21 @@
 import { stageList } from '../core/stages'
 import { stageMonster } from '../core/monsters'
+import { formatMinutes } from './format'
+
+/** 다음에 깰 스테이지를 운동 몇 분 더 하면 이길 만한지(nextStageAdvice). 0이면 지금도 이길 만하다 */
+export type StageAdvice = { no: number; toWin: number | null } | null
+
+function adviceText(toWin: number | null): string {
+  if (toWin === null) return '💪 운동으로 더 키워서 와요'
+  if (toWin === 0) return '🍀 지금도 이길 만해요'
+  return `💪 운동 ${formatMinutes(toWin)} 더 하면 이길 만해요`
+}
 
 /** 스테이지 창: 스테이지 목록과 깸·도전 가능·잠김 상태 */
-export function createStages(root: HTMLElement, h: { progress(): number; onChallenge(no: number): void }) {
+export function createStages(
+  root: HTMLElement,
+  h: { progress(): number; advice(): StageAdvice; onChallenge(no: number): void },
+) {
   const wrap = document.createElement('div')
   wrap.className = 'sheet-backdrop'
   wrap.hidden = true
@@ -22,11 +35,17 @@ export function createStages(root: HTMLElement, h: { progress(): number; onChall
   const msg = q('stage-msg')
 
   const draw = () => {
+    const advice = h.advice()
     list.innerHTML = stageList(h.progress())
       .map((s) => {
         // 잠긴 곳의 몬스터는 열릴 때까지 비밀로 둔다
         const foe = stageMonster(s.no).name
         const tag = s.state === 'cleared' ? `${foe} · 깼어요 ⭐` : s.state === 'open' ? `${foe} · 도전!` : '앞 스테이지를 깨면 열려요'
+        // 아직 못 깬 다음 스테이지에는 얼마나 더 키우면 이길 만한지 알려 준다(도전은 언제든 할 수 있다)
+        const hint =
+          advice && advice.no === s.no
+            ? `<span class="stage-hint" data-testid="stage-hint">${adviceText(advice.toWin)}</span>`
+            : ''
         const btn =
           s.state === 'locked'
             ? `<span class="stage-lock" aria-label="잠김">🔒</span>`
@@ -38,7 +57,7 @@ export function createStages(root: HTMLElement, h: { progress(): number; onChall
             <span class="stage-icon" aria-hidden="true">${s.icon}</span>
             <span class="stage-text">
               <b>${s.boss ? '보스' : `${s.no}스테이지`} · ${s.name}</b>
-              <span>${tag}</span>
+              <span>${tag}</span>${hint}
             </span>
             ${btn}
           </li>`
