@@ -16,12 +16,13 @@ const TABS = [
 ]
 
 /** 레벨 바·타이머 카드·탭을 그리고, 가운데 Phaser 장면이 들어갈 자리를 돌려준다 */
-export function createHud(root: HTMLElement, onToggle: () => void) {
+export function createHud(root: HTMLElement, onToggle: () => void, onSettings: () => void) {
   root.innerHTML = `
     <header class="top">
       <div class="top-row">
         <span><b data-testid="level">Lv.1</b> 말랑이</span>
         <span class="exp-text" data-testid="exp-text"></span>
+        <button type="button" class="gear" data-testid="open-settings" aria-label="설정">⚙</button>
       </div>
       <div class="bar"><i data-testid="exp-bar"></i></div>
     </header>
@@ -48,6 +49,7 @@ export function createHud(root: HTMLElement, onToggle: () => void) {
   const timer = q('timer')
   const toggle = q('toggle')
   toggle.addEventListener('click', onToggle)
+  q('open-settings').addEventListener('click', onSettings)
 
   return {
     sceneHost: q('scene'),

@@ -1,0 +1,92 @@
+import { parseBackup } from '../core/backup'
+import type { SaveData } from '../core/types'
+
+export interface SettingsHandlers {
+  onExport(): void
+  /** 가져오기 확인 화면에 보여 줄 한 줄 요약 */
+  describe(save: SaveData): string
+  onImport(save: SaveData): void
+}
+
+/** 설정 창: 백업 내려받기와, 파일을 골라 확인 후 되돌리기 */
+export function createSettings(root: HTMLElement, h: SettingsHandlers) {
+  const wrap = document.createElement('div')
+  wrap.className = 'sheet-backdrop'
+  wrap.hidden = true
+  wrap.dataset.testid = 'settings'
+  wrap.innerHTML = `
+    <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="settings-title">
+      <h2 id="settings-title">설정</h2>
+      <section class="sheet-body" data-testid="backup-menu">
+        <p class="sheet-desc">기록을 파일로 저장해 두면 폰을 바꾸거나 앱을 지워도 되찾을 수 있어요.</p>
+        <button type="button" class="sheet-btn main" data-testid="backup-export">백업 파일 내려받기</button>
+        <button type="button" class="sheet-btn" data-testid="backup-import">백업 파일 가져오기</button>
+        <input type="file" accept=".json,application/json" hidden data-testid="backup-file" />
+        <p class="sheet-msg" data-testid="backup-msg" aria-live="polite"></p>
+      </section>
+      <section class="sheet-body" data-testid="import-confirm" hidden>
+        <p class="confirm-title">이 백업으로 되돌릴까요?</p>
+        <p class="confirm-summary" data-testid="import-summary"></p>
+        <p class="sheet-desc">지금 기록은 이 백업 내용으로 바뀌어요.</p>
+        <button type="button" class="sheet-btn main" data-testid="import-yes">되돌리기</button>
+        <button type="button" class="sheet-btn" data-testid="import-no">취소</button>
+      </section>
+      <button type="button" class="sheet-close" data-testid="settings-close">닫기</button>
+    </div>`
+  root.append(wrap)
+
+  const q = <T extends HTMLElement>(id: string) => wrap.querySelector<T>(`[data-testid=${id}]`)!
+  const menu = q('backup-menu')
+  const confirmBox = q('import-confirm')
+  const msg = q('backup-msg')
+  const file = q<HTMLInputElement>('backup-file')
+  let pending: SaveData | null = null
+
+  const showMenu = (text = '', bad = false) => {
+    pending = null
+    menu.hidden = false
+    confirmBox.hidden = true
+    msg.textContent = text
+    msg.classList.toggle('bad', bad)
+  }
+  const close = () => {
+    wrap.hidden = true
+    showMenu()
+  }
+
+  q('backup-export').addEventListener('click', () => {
+    h.onExport()
+    showMenu('백업 파일을 내려받았어요. 잘 보관해 주세요!')
+  })
+  q('backup-import').addEventListener('click', () => {
+    file.value = ''
+    file.click()
+  })
+  file.addEventListener('change', async () => {
+    const f = file.files?.[0]
+    if (!f) return
+    const r = parseBackup(await f.text())
+    if (!r.ok) {
+      showMenu('이 파일은 백업 파일이 아니에요. 다른 파일을 골라 주세요.', true)
+      return
+    }
+    pending = r.save
+    q('import-summary').textContent = h.describe(r.save)
+    menu.hidden = true
+    confirmBox.hidden = false
+  })
+  q('import-yes').addEventListener('click', () => {
+    if (pending) h.onImport(pending)
+    showMenu('백업으로 되돌렸어요.')
+  })
+  q('import-no').addEventListener('click', () => showMenu())
+  q('settings-close').addEventListener('click', close)
+  wrap.addEventListener('click', (e) => e.target === wrap && close())
+
+  return {
+    open() {
+      showMenu()
+      wrap.hidden = false
+    },
+  }
+}

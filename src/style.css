@@ -25,9 +25,20 @@ body {
   padding: env(safe-area-inset-top) 0 env(safe-area-inset-bottom);
 }
 .top { padding: 14px 16px 10px; font-size: 14px; }
-.top-row { display: flex; justify-content: space-between; align-items: baseline; }
+.top-row { display: flex; align-items: center; gap: 8px; }
 .top-row b { font-size: 18px; }
-.exp-text { font-size: 12px; color: var(--ink-soft); }
+.exp-text { margin-left: auto; font-size: 12px; color: var(--ink-soft); }
+.gear {
+  width: 40px;
+  height: 40px;
+  border: 0;
+  border-radius: 50%;
+  background: var(--chip);
+  color: var(--ink);
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+}
 .bar { margin-top: 8px; height: 12px; border-radius: 6px; background: var(--track); overflow: hidden; }
 .bar i { display: block; height: 100%; width: 0; background: var(--exp); border-radius: 6px; transition: width 0.4s; }
 .scene {
@@ -78,3 +89,63 @@ body {
 .tab.on { background: var(--ink); color: #fff; font-weight: 700; }
 .tab:disabled { opacity: 0.55; }
 .tab small { font-size: 10px; }
+
+.sheet-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  background: rgba(90, 70, 54, 0.35);
+}
+.sheet-backdrop[hidden], .sheet-body[hidden] { display: none; }
+.sheet {
+  width: 100%;
+  max-width: 480px;
+  padding: 22px 20px calc(18px + env(safe-area-inset-bottom));
+  background: var(--bg);
+  border-radius: 28px 28px 0 0;
+  text-align: center;
+  word-break: keep-all;
+}
+.sheet h2 { margin: 0 0 6px; font-size: 20px; }
+.sheet-body { display: flex; flex-direction: column; gap: 10px; }
+.sheet-desc { margin: 0 0 4px; font-size: 13px; line-height: 1.5; color: var(--ink-soft); }
+.sheet-btn {
+  min-height: 52px;
+  border: 0;
+  border-radius: 999px;
+  background: #fff;
+  color: var(--ink);
+  font: inherit;
+  font-size: 16px;
+  font-weight: 700;
+  box-shadow: 0 4px 0 var(--track);
+  cursor: pointer;
+}
+.sheet-btn.main { background: var(--accent); color: #fff; box-shadow: 0 4px 0 #e9764a; }
+.sheet-msg { min-height: 20px; margin: 0; font-size: 13px; color: var(--ink); }
+.sheet-msg.bad { color: #d9534f; }
+.confirm-title { margin: 6px 0 0; font-size: 17px; font-weight: 700; }
+.confirm-summary {
+  margin: 0;
+  padding: 12px;
+  border-radius: 18px;
+  background: #fff;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--accent);
+}
+.sheet-close {
+  margin-top: 12px;
+  min-height: 44px;
+  padding: 0 28px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--chip);
+  color: var(--ink);
+  font: inherit;
+  font-size: 14px;
+  cursor: pointer;
+}
