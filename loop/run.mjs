@@ -25,6 +25,8 @@ const git = (...a) => execFileSync('git', a, { cwd: ROOT, encoding: 'utf8' }).tr
 function runClaude({ model, prompt, timeoutMs, logPath, permissionMode }) {
   return new Promise((resolve) => {
     const cli = ['-p', '--model', model, '--output-format', 'stream-json', '--verbose']
+    // 사용자 전역 설정(플러그인·스킬·훅·MCP)을 빼고 이 저장소 설정만 쓴다. 질문을 요구하는 스킬이 혼자 도는 세션을 멈추지 않게
+    cli.push('--setting-sources', 'project,local', '--disable-slash-commands', '--strict-mcp-config')
     if (permissionMode) cli.push('--permission-mode', permissionMode)
     const child = spawn('claude', cli, { cwd: ROOT, stdio: ['pipe', 'pipe', 'pipe'] })
     const file = logPath ? createWriteStream(logPath) : null
