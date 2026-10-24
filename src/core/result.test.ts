@@ -1,5 +1,6 @@
 import { describe, test, expect } from 'vitest'
 import { applyBattleResult } from './result'
+import { stageReward } from './cosmetics'
 import { newSave } from './session'
 import type { SaveData } from './types'
 
@@ -45,7 +46,24 @@ describe('applyBattleResult', () => {
     }
   })
 
-  test('전투 결과는 기록·스킬·꾸미기를 건드리지 않음 (성장은 운동으로만)', () => {
+  test('처음 깨면 그 스테이지의 꾸미기를 받음', () => {
+    const r = applyBattleResult(saveAt(0), 1, true)
+    expect(r.reward).toEqual(stageReward(1))
+    expect(r.save.cosmetics).toEqual([stageReward(1)!.id])
+  })
+
+  test('지거나 다시 이기면 꾸미기를 받지 않음', () => {
+    expect(applyBattleResult(saveAt(1), 2, false).reward).toBeNull()
+    expect(applyBattleResult(saveAt(3), 1, true).reward).toBeNull()
+  })
+
+  test('이미 가진 꾸미기는 겹쳐 넣지 않음', () => {
+    const id = stageReward(1)!.id
+    const r = applyBattleResult({ ...saveAt(0), cosmetics: [id] }, 1, true)
+    expect(r.save.cosmetics).toEqual([id])
+  })
+
+  test('전투 결과는 기록·스킬을 건드리지 않음 (성장은 운동으로만)', () => {
     const s: SaveData = {
       ...saveAt(0),
       records: [{ id: 'a', activity: 'exercise', startedAt: 0, endedAt: 60_000 }],
@@ -55,7 +73,7 @@ describe('applyBattleResult', () => {
     const r = applyBattleResult(s, 1, true)
     expect(r.save.records).toEqual(s.records)
     expect(r.save.skills).toEqual(s.skills)
-    expect(r.save.cosmetics).toEqual(s.cosmetics)
     expect(s.stageProgress).toBe(0)
+    expect(s.cosmetics).toEqual([])
   })
 })

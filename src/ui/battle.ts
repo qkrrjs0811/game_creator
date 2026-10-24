@@ -4,6 +4,8 @@ export interface BattleResultView {
   rounds: number
   /** 결과 아래에 덧붙이는 한 줄(새로 열린 스테이지, 다시 오라는 말 등) */
   note: string
+  /** 처음 깨서 받은 꾸미기 한 줄. 없으면 숨긴다 */
+  reward: string | null
 }
 
 /** 전투 중 장면 아래쪽 알림 띠(어느 스테이지인지, 건너뛰기·돌아가기 버튼)와 끝난 뒤 결과 카드 */
@@ -15,7 +17,8 @@ export function createBattleBar(scene: HTMLElement, h: { onSkip(): void; onLeave
   card.innerHTML = `
     <b data-testid="battle-result-title"></b>
     <span data-testid="battle-result-detail"></span>
-    <span class="battle-result-note" data-testid="battle-result-note"></span>`
+    <span class="battle-result-note" data-testid="battle-result-note"></span>
+    <span class="battle-result-reward" data-testid="battle-result-reward"></span>`
 
   const bar = document.createElement('div')
   bar.className = 'battle-bar'
@@ -53,6 +56,9 @@ export function createBattleBar(scene: HTMLElement, h: { onSkip(): void; onLeave
       q(card, 'battle-result-title').textContent = win ? '🎉 승리!' : '💧 아쉬워요'
       q(card, 'battle-result-detail').textContent = win ? `${r.rounds}번 주고받아 이겼어요` : '말랑이가 지쳐 버렸어요'
       q(card, 'battle-result-note').textContent = r.note
+      const reward = q(card, 'battle-result-reward')
+      reward.textContent = r.reward ?? ''
+      reward.hidden = r.reward === null
       card.dataset.win = String(win)
       card.hidden = false
       status.textContent = win ? '이겼어요! 🎉' : '아쉽게 졌어요'

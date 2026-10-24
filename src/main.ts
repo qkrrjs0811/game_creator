@@ -113,7 +113,7 @@ function resultNote(o: BattleOutcome, win: boolean): string {
   return '⭐ 이미 깬 스테이지예요'
 }
 
-// 전투가 바꾸는 저장은 깬 스테이지 수뿐이다(applyBattleResult)
+// 전투가 바꾸는 저장은 깬 스테이지 수와 꾸미기뿐이다(applyBattleResult)
 const battleBar = createBattleBar(hud.sceneHost, {
   onSkip: () => homeScene()?.skipBattle(),
   onLeave() {
@@ -132,13 +132,14 @@ const stages = createStages(app, {
     const result = simulateBattle(me, enemy, Date.now())
     const timeline = battleTimeline(me, enemy, result)
     const foe = stageMonster(no)
-    // 결과는 재생 전에 저장한다(재생 중 앱을 닫아도 깬 스테이지가 남게). 바뀌는 건 깬 스테이지 수뿐이다
+    // 결과는 재생 전에 저장한다(재생 중 앱을 닫아도 깬 스테이지가 남게). 바뀌는 건 깬 스테이지 수와 꾸미기뿐이다
     const outcome = applyBattleResult(save, no, result.win)
     if (outcome.save !== save) {
       save = outcome.save
       writeSave(kv, save)
     }
-    const view = { win: result.win, rounds: result.rounds, note: resultNote(outcome, result.win) }
+    const reward = outcome.reward ? `🎁 새 꾸미기 · ${outcome.reward.icon} ${outcome.reward.name}` : null
+    const view = { win: result.win, rounds: result.rounds, note: resultNote(outcome, result.win), reward }
     stages.close()
     battleBar.start(`${s.boss ? '보스' : `${no}스테이지`} · ${s.name}`, foe.name)
     const scene = homeScene()

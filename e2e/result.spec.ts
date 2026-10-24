@@ -24,12 +24,14 @@ test('이기면 결과 카드와 함께 다음 스테이지가 열리고 저장�
   await expect(page.getByTestId('battle-result-title')).toContainText('승리')
   await expect(page.getByTestId('battle-result-detail')).toContainText('이겼어요')
   await expect(page.getByTestId('battle-result-note')).toContainText('2스테이지가 열렸어요')
+  await expect(page.getByTestId('battle-result-reward')).toContainText('새싹 머리핀')
   await page.waitForTimeout(600)
   await page.screenshot({ path: 'test-results/screens/result-win.png' })
 
-  // 바뀌는 건 깬 스테이지 수뿐
+  // 바뀌는 건 깬 스테이지 수와 꾸미기뿐
   const s = await page.evaluate(() => window.__debug.getSave())
   expect(s.stageProgress).toBe(1)
+  expect(s.cosmetics).toEqual(['hat-sprout'])
   expect(s.records).toEqual([])
   expect(s.skills).toEqual([])
   await expect(page.getByTestId('level')).toHaveText('Lv.1')
@@ -54,6 +56,7 @@ test('지면 결과 카드가 다시 오라고 하고, 스테이지는 그대로
 
   await expect(page.getByTestId('battle-result-title')).toContainText('아쉬워요')
   await expect(page.getByTestId('battle-result-note')).toContainText('운동으로')
+  await expect(page.getByTestId('battle-result-reward')).toBeHidden()
   await page.waitForTimeout(600)
   await page.screenshot({ path: 'test-results/screens/result-lose.png' })
   expect(await page.evaluate(() => window.__debug.getSave().stageProgress)).toBe(1)
@@ -65,7 +68,10 @@ test('이미 깬 스테이지를 다시 이기면 깬 수는 그대로', async (
   await page.getByTestId('stage-go-1').click()
   await page.getByTestId('battle-action').click()
   await expect(page.getByTestId('battle-result-note')).toContainText('이미 깬 스테이지')
-  expect(await page.evaluate(() => window.__debug.getSave().stageProgress)).toBe(3)
+  await expect(page.getByTestId('battle-result-reward')).toBeHidden()
+  const s = await page.evaluate(() => window.__debug.getSave())
+  expect(s.stageProgress).toBe(3)
+  expect(s.cosmetics).toEqual([])
 })
 
 test('보스를 이기면 모든 스테이지를 깸', async ({ page }) => {
@@ -85,6 +91,7 @@ test('보스를 이기면 모든 스테이지를 깸', async ({ page }) => {
 
   await expect(page.getByTestId('battle-result-title')).toContainText('승리')
   await expect(page.getByTestId('battle-result-note')).toContainText('모든 스테이지를 깼어요')
+  await expect(page.getByTestId('battle-result-reward')).toContainText('꼬마 왕관')
   await page.waitForTimeout(600)
   await page.screenshot({ path: 'test-results/screens/result-boss.png' })
   expect(await page.evaluate(() => window.__debug.getSave().stageProgress)).toBe(6)

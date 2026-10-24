@@ -430,6 +430,16 @@ body {
   font-size: 13px;
   line-height: 1.4;
 }
+.battle-result .battle-result-reward {
+  padding: 6px 14px;
+  border-radius: 999px;
+  background: #ffe9dc;
+  color: var(--accent);
+  font-weight: 700;
+  font-size: 13px;
+  line-height: 1.4;
+}
+.battle-result .battle-result-reward[hidden] { display: none; }
 @keyframes result-pop {
   from { transform: translateX(-50%) scale(0.6); opacity: 0; }
   to { transform: translateX(-50%) scale(1); opacity: 1; }
