@@ -1,11 +1,13 @@
 import { SKILLS, type SkillId } from '../core/skills'
+import type { StatRow } from '../core/stats'
 
 export interface SkillsView {
   points: number
   ranks: Record<SkillId, number>
+  stats: StatRow[]
 }
 
-/** 스킬 창: 남은 포인트와 스킬 3종, 골라서 배우기 */
+/** 나 창: 운동으로 오른 능력치, 남은 포인트와 스킬 3종, 골라서 배우기 */
 export function createSkills(root: HTMLElement, h: { view(): SkillsView; onLearn(id: SkillId): void }) {
   const wrap = document.createElement('div')
   wrap.className = 'sheet-backdrop'
@@ -13,7 +15,9 @@ export function createSkills(root: HTMLElement, h: { view(): SkillsView; onLearn
   wrap.dataset.testid = 'skills'
   wrap.innerHTML = `
     <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="skills-title">
-      <h2 id="skills-title">말랑이 스킬</h2>
+      <h2 id="skills-title">나의 말랑이</h2>
+      <ul class="stat-list" data-testid="stats"></ul>
+      <h3 class="sheet-sub">스킬</h3>
       <p class="skill-points" data-testid="skill-points"></p>
       <ul class="skill-list">
         ${SKILLS.map(
@@ -37,6 +41,16 @@ export function createSkills(root: HTMLElement, h: { view(): SkillsView; onLearn
 
   const draw = () => {
     const v = h.view()
+    q('stats').innerHTML = v.stats
+      .map(
+        (s) => `
+        <li class="stat${s.source ? '' : ' soon'}" data-testid="stat-${s.id}">
+          <span class="stat-name"><span aria-hidden="true">${s.icon}</span> ${s.name}</span>
+          <b data-testid="stat-value-${s.id}">${s.value}</b>
+          <small data-testid="stat-next-${s.id}">${s.toNext === null ? '준비 중' : `${s.source} ${s.toNext}분 더`}</small>
+        </li>`,
+      )
+      .join('')
     q('skill-points').innerHTML = `남은 포인트 <b>${v.points}</b>`
     q('skill-hint').textContent =
       v.points > 0 ? '하나를 골라 배워요. 같은 스킬을 또 배우면 더 강해져요.' : '운동해서 레벨을 올리면 포인트를 받아요.'

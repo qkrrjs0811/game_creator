@@ -3,6 +3,8 @@ import type { ActivityId, ActivityRecord, Progress, StatId } from './types'
 
 export const EXP_PER_MINUTE = 10
 export const BASE_STAT = 5
+/** 오르는 활동을 이만큼(인정 분) 하면 능력치가 1 오른다 */
+export const MINUTES_PER_STAT = 10
 
 const MINUTE = 60_000
 
@@ -68,7 +70,7 @@ export function computeProgress(records: ActivityRecord[]): Progress {
   const stats: Record<StatId, number> = { str: BASE_STAT, vit: BASE_STAT, int: BASE_STAT }
   for (const stat of Object.keys(stats) as StatId[]) {
     const linked = ids.filter((id) => ACTIVITIES[id].stats.includes(stat)).reduce((sum, id) => sum + minutes[id], 0)
-    stats[stat] += Math.floor(linked / 10)
+    stats[stat] += Math.floor(linked / MINUTES_PER_STAT)
   }
 
   const exp = ids.reduce((sum, id) => sum + minutes[id], 0) * EXP_PER_MINUTE

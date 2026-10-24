@@ -20,6 +20,7 @@ import { homeMonster, stageEnemy, stageMonster } from './core/monsters'
 import { applyBattleResult, type BattleOutcome } from './core/result'
 import { ownedCosmetics, toggleWear, wornCosmetics } from './core/cosmetics'
 import { createCosmetics } from './ui/cosmetics'
+import { statRows } from './core/stats'
 
 declare global {
   interface Window {
@@ -105,10 +106,14 @@ const settings = createSettings(app, {
   },
 })
 
-const currentLevel = () => computeProgress(liveRecords(save, Date.now())).level
+const currentProgress = () => computeProgress(liveRecords(save, Date.now()))
+const currentLevel = () => currentProgress().level
 
 const skills = createSkills(app, {
-  view: () => ({ points: remainingSkillPoints(currentLevel(), save.skills), ranks: skillRanks(save.skills) }),
+  view: () => {
+    const p = currentProgress()
+    return { points: remainingSkillPoints(p.level, save.skills), ranks: skillRanks(save.skills), stats: statRows(p) }
+  },
   onLearn(id) {
     pullSave()
     const next = learnSkill(save, currentLevel(), id)

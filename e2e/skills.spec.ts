@@ -52,3 +52,25 @@ test('포인트가 있으면 나 탭에 숫자 배지', async ({ page }) => {
   await page.clock.runFor(4000)
   await page.screenshot({ path: 'test-results/screens/skill-badge.png' })
 })
+
+test('나 창에서 운동으로 오른 힘·체력과 다음까지 남은 분을 본다', async ({ page }) => {
+  await page.clock.install({ time: new Date('2026-10-25T08:00:00+09:00') })
+  await page.goto('./')
+  await page.getByTestId('tab-me').click()
+  await expect(page.getByTestId('stat-value-str')).toHaveText('5')
+  await expect(page.getByTestId('stat-next-str')).toHaveText('운동 10분 더')
+  await expect(page.getByTestId('stat-next-int')).toHaveText('준비 중')
+  await page.getByTestId('skills-close').click()
+
+  // 37분 운동 → 힘·체력 5+3, 다음까지 3분. 열어 둔 채로 운동하면 바로 바뀐다
+  await page.getByTestId('toggle').click()
+  await page.clock.fastForward('37:00')
+  await page.getByTestId('tab-me').click()
+  await expect(page.getByTestId('stat-value-str')).toHaveText('8')
+  await expect(page.getByTestId('stat-value-vit')).toHaveText('8')
+  await expect(page.getByTestId('stat-next-vit')).toHaveText('운동 3분 더')
+  await page.clock.fastForward('03:00')
+  await expect(page.getByTestId('stat-value-str')).toHaveText('9')
+  await expect(page.getByTestId('stat-value-int')).toHaveText('5')
+  await page.screenshot({ path: 'test-results/screens/stats.png' })
+})
