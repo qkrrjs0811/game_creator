@@ -9,7 +9,9 @@
     "preview": "vite preview",
     "test": "vitest run",
     "check": "npm run build && vitest run && playwright test",
-    "icons": "pwa-assets-generator --preset minimal-2023 public/icon.svg"
+    "icons": "pwa-assets-generator --preset minimal-2023 public/icon.svg",
+    "loop": "node loop/run.mjs",
+    "loop:once": "node loop/run.mjs --once"
   },
   "dependencies": {
     "phaser": "^3.90.0"
