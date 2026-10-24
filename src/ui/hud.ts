@@ -33,7 +33,7 @@ export function createHud(
   root.innerHTML = `
     <header class="top">
       <div class="top-row">
-        <span><b data-testid="level">Lv.1</b> 말랑이</span>
+        <span><b data-testid="level">Lv.1</b> <span data-testid="char-name">말랑이</span></span>
         <span class="exp-text" data-testid="exp-text"></span>
         <button type="button" class="gear" data-testid="open-settings" aria-label="설정">⚙</button>
       </div>

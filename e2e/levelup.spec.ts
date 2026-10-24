@@ -32,6 +32,29 @@ test('레벨이 오르는 순간 축하 연출, 새로 열 때는 띄우지 않�
   await expect(page.getByTestId('levelup')).toBeHidden()
 })
 
+test('레벨 글자가 통통 튈 때도 말랑이 이름과 겹치지 않음', async ({ page }) => {
+  await page.clock.install({ time: new Date('2026-10-25T08:00:00+09:00') })
+  await page.goto('./')
+  await page.getByTestId('toggle').click()
+  await page.clock.fastForward('10:01')
+  await expect(page.getByTestId('level')).toHaveText('Lv.2')
+  await expect(page.getByTestId('level')).toHaveClass(/pop/)
+  // 가장 크게 커진 순간(40%)에 멈춰 잰다
+  await page.evaluate(() => {
+    for (const a of document.getAnimations()) {
+      if ((a as CSSAnimation).animationName === 'level-pop') {
+        a.pause()
+        a.currentTime = 240
+      }
+    }
+  })
+  const level = (await page.getByTestId('level').boundingBox())!
+  const name = (await page.getByTestId('char-name').boundingBox())!
+  await page.screenshot({ path: 'test-results/screens/level-pop.png', clip: { x: 0, y: 0, width: 390, height: 120 } })
+  expect(level.x).toBeGreaterThanOrEqual(0)
+  expect(level.x + level.width).toBeLessThanOrEqual(name.x - 2)
+})
+
 test('앱을 닫아 둔 사이 레벨이 오르면 다시 열 때 축하함', async ({ context }) => {
   await context.clock.install({ time: new Date('2026-10-25T08:00:00+09:00') })
   let page = await context.newPage()
