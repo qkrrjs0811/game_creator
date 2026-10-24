@@ -105,3 +105,54 @@ test('보스를 이기면 모든 스테이지를 깸', async ({ page }) => {
   await page.screenshot({ path: 'test-results/screens/result-boss.png' })
   expect(await page.evaluate(() => window.__debug.getSave().stageProgress)).toBe(6)
 })
+
+/** 이긴 쪽이 폴짝 뛰는 동안 머리끝이 자기 HP 막대를 뚫지 않고, 막대도 위쪽 결과 카드에 닿지 않는지 본다 */
+async function expectHopUnderBar(page: Page, winner: 'mascot' | 'monster') {
+  const scene = page.getByTestId('scene')
+  await expect(scene).toHaveAttribute('data-winner', winner)
+  // 폴짝(240ms 왕복 세 번)이 다 끝날 때까지 기다린다
+  await page.waitForTimeout(1800)
+  const attr = async (name: string) => Number(await scene.getAttribute(name))
+  // 머리끝과 막대 아래끝 사이가 한 번도 겹치지 않았다
+  expect(await attr('data-hop-gap')).toBeGreaterThanOrEqual(0)
+  // 그래도 눈에 띄게 뛴다
+  expect((await attr('data-winner-rest')) - (await attr('data-winner-peak'))).toBeGreaterThanOrEqual(16)
+  // 같이 뛰는 막대가 결과 카드(그림자 포함) 아래에 머문다
+  const sceneBox = (await scene.boundingBox())!
+  const card = (await page.getByTestId('battle-result').boundingBox())!
+  expect(await attr('data-bar-peak-top')).toBeGreaterThanOrEqual(card.y + card.height - sceneBox.y + 4)
+}
+
+test('이긴 말랑이가 폴짝 뛰어도 머리가 HP 막대에 닿지 않음(버섯 모자를 써도)', async ({ page }) => {
+  await page.goto('./')
+  await page.evaluate(() =>
+    localStorage.setItem(
+      'growth-game:save',
+      JSON.stringify({
+        version: 1,
+        records: [],
+        active: null,
+        skills: [],
+        stageProgress: 2,
+        cosmetics: ['hat-sprout', 'hat-mushroom'],
+        worn: ['hat-mushroom'],
+      }),
+    ),
+  )
+  await page.reload()
+  await page.getByTestId('open-stages').click()
+  await page.getByTestId('stage-go-1').click()
+  await page.getByTestId('battle-action').click()
+  await expect(page.getByTestId('battle-result-title')).toContainText('승리')
+  await expectHopUnderBar(page, 'mascot')
+  await page.screenshot({ path: 'test-results/screens/result-hop.png' })
+})
+
+test('이긴 몬스터가 뛰어도 HP 막대에 닿지 않음', async ({ page }) => {
+  await useSave(page, 1)
+  await page.getByTestId('open-stages').click()
+  await page.getByTestId('stage-go-2').click()
+  await page.getByTestId('battle-action').click()
+  await expect(page.getByTestId('battle-result-title')).toContainText('아쉬워요')
+  await expectHopUnderBar(page, 'monster')
+})

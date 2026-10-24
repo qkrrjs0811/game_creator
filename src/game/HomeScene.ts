@@ -23,6 +23,11 @@ function groundY(h: number): number {
 }
 const HP_ENEMY = 0xff9fbf
 const BAR_W = 78
+/** 이긴 쪽이 폴짝 뛰는 높이. 자기 HP 막대와 같이 뛰며, 막대가 위쪽 결과 카드(질 때 더 길다)에 닿지 않을 만큼만 뛴다 */
+const WIN_HOP = 18
+/** 자리(가운데)에서 머리끝(모자 포함)까지. 이긴 쪽 머리가 HP 막대에 닿는지 e2e가 보게 쓴다 */
+const HAT_TOP: Record<string, number> = { 'hat-sprout': -58, 'hat-mushroom': -58, 'hat-ribbon': -48, 'hat-crown': -58 }
+const MONSTER_TOP: Record<Monster['shape'], number> = { slime: -38, mushroom: -36, drop: -42, cloud: -36, rock: -22, king: -50 }
 
 /** 두 캐릭터 머리 위 HP 막대(높이 10, 흰 테두리 3)의 위쪽 y */
 function barY(h: number): number {
@@ -63,6 +68,7 @@ export class HomeScene extends Phaser.Scene {
   /** 홈에서 보여 줄 몬스터(다음에 도전할 스테이지)와 지금 그려진 몬스터 */
   private homeLook?: Monster
   private shownMonster = ''
+  private monsterShape: Monster['shape'] = 'slime'
   /** 입은 꾸미기와 지금 그려진 모습 */
   private look: Worn = { hat: null, color: null }
   private shownLook?: string
@@ -71,7 +77,12 @@ export class HomeScene extends Phaser.Scene {
     win: boolean
     next: number
     timer?: Phaser.Time.TimerEvent
-    bars: Phaser.GameObjects.Graphics
+    /** [말랑이, 몬스터] 머리 위 HP 막대. 이긴 쪽 막대는 주인과 같이 뛴다 */
+    bars: [Phaser.GameObjects.Graphics, Phaser.GameObjects.Graphics]
+    /** 이긴 쪽이 뛰는 동안 머리끝이 가장 높이 간 곳, 막대와 가장 가까웠던 틈, 막대가 가장 높이 간 곳(e2e용) */
+    peak?: number
+    gap?: number
+    barPeak?: number
     /** 지금 보이는 HP 비율 [말랑이, 몬스터] */
     hp: [number, number]
     onEnd: (win: boolean) => void
@@ -173,7 +184,7 @@ export class HomeScene extends Phaser.Scene {
     for (const body of [this.mascotBody, this.monsterBody]) this.tweens.killTweensOf(body.setY(0))
     this.tweens.killTweensOf(this.bubble)
     this.bubble.setAlpha(0)
-    this.battle = { steps: timeline.steps, win: timeline.win, next: 0, bars: this.add.graphics(), hp: [1, 1], onEnd, ended: false }
+    this.battle = { steps: timeline.steps, win: timeline.win, next: 0, bars: [this.add.graphics(), this.add.graphics()], hp: [1, 1], onEnd, ended: false }
     this.layout(this.scale.width, this.scale.height)
     this.battle.timer = this.time.addEvent({ delay, loop: true, startAt: delay * 0.4, callback: () => this.playStep() })
   }
@@ -193,7 +204,10 @@ export class HomeScene extends Phaser.Scene {
     const b = this.battle
     if (!b) return
     b.timer?.remove()
-    b.bars.destroy()
+    for (const bar of b.bars) {
+      this.tweens.killTweensOf(bar)
+      bar.destroy()
+    }
     this.battle = undefined
     for (const who of [this.mascot, this.monster]) {
       this.tweens.killTweensOf(who)
@@ -262,6 +276,7 @@ export class HomeScene extends Phaser.Scene {
   private setMonster(m: Monster) {
     if (this.shownMonster === m.id) return
     this.shownMonster = m.id
+    this.monsterShape = m.shape
     this.monsterBody.removeAll(true)
     this.monsterBody.add(this.monsterParts(m))
     // e2e가 지금 어떤 몬스터가 나와 있는지 볼 수 있게 남긴다
@@ -367,7 +382,12 @@ export class HomeScene extends Phaser.Scene {
     const winner = b.win ? this.mascot : this.monster
     const loser = b.win ? this.monster : this.mascot
     this.tweens.add({ targets: loser, scaleY: 0.6, scaleX: 1.2, alpha: 0.55, duration: 380, ease: 'Back.easeIn' })
-    this.tweens.add({ targets: winner, y: winner.y - 36, duration: 240, yoyo: true, repeat: 2, ease: 'Quad.easeOut' })
+    // 머리 위 막대도 같이 뛰어 머리(모자)가 막대를 뚫고 올라가지 않는다
+    const winnerBar = b.bars[b.win ? 0 : 1]
+    // 숨쉬기가 멈춘 자리에서 찌그러진 채로 뛰지 않게 모양을 되돌린다
+    winner.setScale(1)
+    this.tweens.add({ targets: [winner, winnerBar], y: `-=${WIN_HOP}`, duration: 240, yoyo: true, repeat: 2, ease: 'Quad.easeOut' })
+    this.game.canvas.parentElement?.setAttribute('data-winner', b.win ? 'mascot' : 'monster')
     b.onEnd(b.win)
   }
 
@@ -389,15 +409,15 @@ export class HomeScene extends Phaser.Scene {
   private drawBars(playerHp: number, enemyHp: number) {
     const b = this.battle
     if (!b) return
-    const g = b.bars.clear()
-    const bar = (cx: number, cy: number, ratio: number, color: number) => {
+    const bar = (g: Phaser.GameObjects.Graphics, cx: number, cy: number, ratio: number, color: number) => {
+      g.clear()
       g.fillStyle(0xffffff).fillRoundedRect(cx - BAR_W / 2 - 3, cy - 3, BAR_W + 6, 16, 8)
       g.fillStyle(0xf3e3d3).fillRoundedRect(cx - BAR_W / 2, cy, BAR_W, 10, 5)
       if (ratio > 0) g.fillStyle(color).fillRoundedRect(cx - BAR_W / 2, cy, Math.max(10, BAR_W * ratio), 10, 5)
     }
     const { width: w, height: h } = this.scale
-    bar(w * 0.3, barY(h), playerHp, HP_PLAYER)
-    bar(w * 0.72, barY(h), enemyHp, HP_ENEMY)
+    bar(b.bars[0], w * 0.3, barY(h), playerHp, HP_PLAYER)
+    bar(b.bars[1], w * 0.72, barY(h), enemyHp, HP_ENEMY)
     b.hp = [playerHp, enemyHp]
   }
 
@@ -419,5 +439,26 @@ export class HomeScene extends Phaser.Scene {
     const monster = String(Math.round(this.monster.y + this.monsterBody.y + 26))
     if (box.getAttribute('data-mascot-bottom') !== mascot) box.setAttribute('data-mascot-bottom', mascot)
     if (box.getAttribute('data-monster-bottom') !== monster) box.setAttribute('data-monster-bottom', monster)
+    this.trackWinnerHop(box)
+  }
+
+  /** e2e가 이긴 쪽이 뛰는 동안 머리끝·HP 막대 자리(장면 위에서부터 px)를 볼 수 있게 남긴다 */
+  private trackWinnerHop(box: HTMLElement) {
+    const b = this.battle
+    if (!b?.ended) return
+    const winner = b.win ? this.mascot : this.monster
+    const bar = b.bars[b.win ? 0 : 1]
+    const headTop = b.win ? (HAT_TOP[this.look.hat?.id ?? ''] ?? -FEET) : MONSTER_TOP[this.monsterShape]
+    const rest = groundY(this.scale.height) + (b.win ? 0 : 6) + headTop
+    const top = winner.y + winner.scaleY * headTop
+    // 막대 바깥 흰 테두리 위끝과 아래끝
+    const barTop = barY(this.scale.height) - 3 + bar.y
+    b.peak = Math.min(b.peak ?? top, top)
+    b.gap = Math.min(b.gap ?? Infinity, top - (barTop + 16))
+    b.barPeak = Math.min(b.barPeak ?? barTop, barTop)
+    box.setAttribute('data-winner-rest', String(Math.round(rest)))
+    box.setAttribute('data-winner-peak', String(Math.round(b.peak)))
+    box.setAttribute('data-hop-gap', String(Math.round(b.gap)))
+    box.setAttribute('data-bar-peak-top', String(Math.round(b.barPeak)))
   }
 }
