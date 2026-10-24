@@ -16,6 +16,7 @@ test('레벨이 오르는 순간 축하 연출, 새로 열 때는 띄우지 않�
   await expect(page.getByTestId('levelup')).toBeVisible()
   await expect(page.getByTestId('levelup-level')).toHaveText('Lv.2 달성!')
   await expect(page.getByTestId('levelup-points')).toHaveText('✨ 스킬 포인트 +1 · 나 탭에서 골라요')
+  await expect(page.getByTestId('scene')).toHaveAttribute('data-celebrations', '1')
   // 배지가 다 커지고 색종이가 퍼진 순간을 찍는다
   await page.clock.runFor(450)
   await page.waitForTimeout(700)
@@ -73,8 +74,11 @@ test('앱을 닫아 둔 사이 레벨이 오르면 다시 열 때 축하함', as
   await expect(page.getByTestId('levelup-level')).toHaveText('Lv.3 달성!')
   // Lv.1 → Lv.3 이라 포인트 2개
   await expect(page.getByTestId('levelup-points')).toHaveText('✨ 스킬 포인트 +2 · 나 탭에서 골라요')
-  await page.clock.runFor(450)
-  await page.waitForTimeout(700)
+  // 장면이 늦게 준비돼도 말랑이가 폴짝 뛰고 색종이가 터진다
+  await expect(page.getByTestId('scene')).toHaveAttribute('data-celebrations', '1')
+  // 색종이가 퍼진 순간을 찍는다
+  await page.clock.runFor(400)
+  await page.waitForTimeout(150)
   await page.screenshot({ path: 'test-results/screens/levelup-reopen.png' })
 
   // 이미 본 레벨은 다시 열어도 또 축하하지 않는다

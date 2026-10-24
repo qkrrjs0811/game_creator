@@ -37,6 +37,8 @@ const BODY_COLORS: Record<string, [number, number]> = {
 const CONFETTI =[0xff8a5b, 0xffd36b, 0x9be3c4, 0xa8d4ff, 0xffa8c8, 0xc9a7ff]
 /** 말랑이 기분: 쉬는 중, 같이 운동 중, 오늘 상한을 채워 쉬어도 되는 중 */
 export type Mood = 'rest' | 'exercise' | 'full'
+/** 장면이 다 준비됐을 때 game.events로 보내는 신호 */
+export const HOME_READY = 'home-ready'
 const BUBBLES: Record<Mood, string> = {
   rest: '💪 오늘도 같이 크는 중!',
   exercise: '🔥 말랑이도 같이 운동 중!',
@@ -101,6 +103,8 @@ export class HomeScene extends Phaser.Scene {
     this.scale.on('resize', (size: Phaser.Structs.Size) => this.layout(size.width, size.height))
 
     this.idle()
+    // 장면이 다 준비되면(RUNNING) 알린다. 그 전에 밀린 축하 등을 화면이 다시 그려 맞춘다
+    this.events.once(Phaser.Scenes.Events.CREATE, () => this.game.events.emit(HOME_READY))
   }
 
   /** 타이머를 켜면 말랑이가 꾹꾹 같이 운동하고, 상한을 채우면 쉬자고 한다. 모습만 바뀐다 */
@@ -130,6 +134,9 @@ export class HomeScene extends Phaser.Scene {
     this.mascotBody.setY(0)
     this.layout(this.scale.width, this.scale.height)
     const { x, y } = this.mascot
+    // e2e가 장면이 축하했는지 볼 수 있게 센다
+    const host = this.game.canvas.parentElement
+    host?.setAttribute('data-celebrations', String(Number(host.getAttribute('data-celebrations') ?? 0) + 1))
     this.jump = this.tweens.add({ targets: this.mascotBody, y: -46, duration: 260, yoyo: true, repeat: 1, ease: 'Quad.easeOut' })
 
     this.tweens.killTweensOf(this.bubble)

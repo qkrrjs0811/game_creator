@@ -1,6 +1,6 @@
 import Phaser from 'phaser'
 import './style.css'
-import { HomeScene } from './game/HomeScene'
+import { HomeScene, HOME_READY } from './game/HomeScene'
 import { computeProgress, todayStatus } from './core/progression'
 import { levelUpPoints, levelUpTo, restoreShownLevel } from './core/levelup'
 import { liveRecords, startSession, stopSession } from './core/session'
@@ -222,6 +222,8 @@ let capToastDay = ''
 // 처음 열 때는 지난번 창에서 본 레벨을 되살려, 앱을 닫아 둔 사이 오른 레벨도 축하한다
 const SEEN_LEVEL_KEY = `${SAVE_KEY}:seen-level`
 let shownLevel = restoreShownLevel(readKey(SEEN_LEVEL_KEY), currentLevel())
+// 축하 배지는 띄웠지만 장면이 아직 준비되지 않아 폴짝·색종이를 미뤄 둔 상태
+let celebratePending = false
 
 function readKey(key: string): string | null {
   try {
@@ -255,6 +257,11 @@ function render() {
   shownLevel = p.level
   if (up !== null) {
     hud.showLevelUp(up, points)
+    celebratePending = true
+  }
+  // 처음 열 때는 장면이 아직 준비 중일 수 있어, 준비되면 그때 말랑이가 폴짝 뛴다
+  if (celebratePending && homeScene()) {
+    celebratePending = false
     homeScene()?.celebrate()
   }
   hud.render({
@@ -284,6 +291,8 @@ const game = new Phaser.Game({
   scale: { mode: Phaser.Scale.RESIZE },
   scene: HomeScene,
 })
+// 장면이 준비되면 바로 다시 그려 몬스터·꾸미기·기분과 밀린 축하를 맞춘다
+game.events.on(HOME_READY, render)
 // 장면 칸 크기가 창 크기와 상관없이 바뀌어도(아래 카드 글자가 들어설 때 등) 캔버스를 칸에 맞춘다.
 // 맞추지 않으면 캔버스가 칸보다 커서 아래쪽이 잘리고 말랑이가 실제보다 아래에 놓인다
 new ResizeObserver(() => {
