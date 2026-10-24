@@ -1,0 +1,12 @@
+:root {
+  --bg: #fff6ec;
+  --ink: #5a4636;
+  --accent: #ff8a5b;
+  --exp: #ffb36b;
+}
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: "Segoe UI", "Malgun Gothic", sans-serif;
+}
