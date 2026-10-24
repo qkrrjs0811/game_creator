@@ -48,12 +48,14 @@ export function createSettings(root: HTMLElement, h: SettingsHandlers) {
   const confirmBox = q('import-confirm')
   const msg = q('backup-msg')
   const file = q<HTMLInputElement>('backup-file')
+  const closeBtn = q('settings-close')
   let pending: SaveData | null = null
 
   const showMenu = (text = '', bad = false) => {
     pending = null
     menu.hidden = false
     confirmBox.hidden = true
+    closeBtn.hidden = false
     msg.textContent = text
     msg.classList.toggle('bad', bad)
   }
@@ -84,13 +86,15 @@ export function createSettings(root: HTMLElement, h: SettingsHandlers) {
     q('import-warning').hidden = !h.losesProgress(r.save)
     menu.hidden = true
     confirmBox.hidden = false
+    // 확인 중엔 "취소"가 뒤로 가기라, 같은 자리의 "닫기"는 숨김
+    closeBtn.hidden = true
   })
   q('import-yes').addEventListener('click', () => {
     if (pending) h.onImport(pending)
     showMenu('백업으로 되돌렸어요.')
   })
   q('import-no').addEventListener('click', () => showMenu())
-  q('settings-close').addEventListener('click', close)
+  closeBtn.addEventListener('click', close)
   wrap.addEventListener('click', (e) => e.target === wrap && close())
 
   return {

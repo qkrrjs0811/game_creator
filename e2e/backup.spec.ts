@@ -29,11 +29,15 @@ test('백업 내려받기 후 새로 시작한 상태에서 가져오면 레벨�
   await expect(page.getByTestId('import-summary')).toHaveText('Lv.3 · 운동 기록 1개')
   await expect(page.getByTestId('import-current')).toHaveText('Lv.1 · 운동 기록 0개')
   await expect(page.getByTestId('import-warning')).toBeHidden()
+  // 확인 중엔 "취소" 하나만 — 같은 일을 하는 "닫기"는 숨김
+  await expect(page.getByTestId('import-no')).toBeVisible()
+  await expect(page.getByTestId('settings-close')).toBeHidden()
   await page.screenshot({ path: 'test-results/screens/import-confirm.png' })
 
   // 취소하면 그대로
   await page.getByTestId('import-no').click()
   await expect(page.getByTestId('backup-menu')).toBeVisible()
+  await expect(page.getByTestId('settings-close')).toBeVisible()
   await expect(page.getByTestId('level')).toHaveText('Lv.1')
 
   await page.getByTestId('backup-file').setInputFiles({ name: 'b.json', mimeType: 'application/json', buffer: Buffer.from(text) })
@@ -70,6 +74,10 @@ test('지금보다 덜 자란 오래된 백업을 고르면 경고하고, 취소
   await expect(page.getByTestId('import-current')).toHaveText('Lv.4 · 운동 기록 1개')
   await expect(page.getByTestId('import-warning')).toBeVisible()
   await expect(page.getByTestId('import-warning')).toContainText('덜 자랐어요')
+  await expect(page.getByTestId('settings-close')).toBeHidden()
+  // 경고까지 떠도 버튼이 폰 화면 안에 다 들어옴
+  const no = (await page.getByTestId('import-no').boundingBox())!
+  expect(no.y + no.height).toBeLessThanOrEqual(844)
   await page.screenshot({ path: 'test-results/screens/import-older.png' })
 
   await page.getByTestId('import-no').click()
