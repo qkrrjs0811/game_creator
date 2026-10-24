@@ -32,3 +32,12 @@ test('세션 중 새로고침해도 이어서 흐름', async ({ page }) => {
   await expect(page.getByTestId('toggle')).toHaveText('그만하기')
   await expect(page.getByTestId('timer')).toHaveText(/^10:0\d$/)
 })
+
+test('매니페스트와 서비스워커', async ({ page }) => {
+  await page.goto('./')
+  const href = await page.locator('link[rel=manifest]').getAttribute('href')
+  expect(href).toBeTruthy()
+  const res = await page.request.get(new URL(href!, page.url()).toString())
+  expect((await res.json()).display).toBe('standalone')
+  await expect.poll(() => page.evaluate(() => navigator.serviceWorker.getRegistration().then((r) => !!r))).toBe(true)
+})
