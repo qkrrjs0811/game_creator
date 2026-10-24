@@ -41,3 +41,26 @@ test('매니페스트와 서비스워커', async ({ page }) => {
   expect((await res.json()).display).toBe('standalone')
   await expect.poll(() => page.evaluate(() => navigator.serviceWorker.getRegistration().then((r) => !!r))).toBe(true)
 })
+
+test('아래 탭 글자가 칸 가운데에 옴', async ({ page }) => {
+  await page.goto('./')
+  // 탭마다 글자 묶음(이름 + 준비 중)의 세로 가운데가 칸의 세로 가운데에서 얼마나 떨어졌는지 잰다
+  const offsets = await page.locator('nav.tabs .tab').evaluateAll((tabs) =>
+    tabs.map((tab) => {
+      const box = tab.getBoundingClientRect()
+      const range = document.createRange()
+      range.selectNodeContents(tab)
+      // 배지(em)는 칸 밖으로 튀어나오므로 뺀다
+      const badge = tab.querySelector('em')
+      if (badge) range.setEndBefore(badge)
+      const text = range.getBoundingClientRect()
+      return {
+        label: tab.firstChild?.textContent ?? '',
+        diff: Math.abs((text.top + text.bottom) / 2 - (box.top + box.bottom) / 2),
+      }
+    }),
+  )
+  expect(offsets.length).toBe(4)
+  for (const o of offsets) expect(o.diff, o.label).toBeLessThanOrEqual(3)
+  await page.locator('nav.tabs').screenshot({ path: 'test-results/screens/tabs.png' })
+})
