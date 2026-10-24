@@ -21,9 +21,9 @@ function nextLocalMidnight(ms: number): number {
   return new Date(d.getFullYear(), d.getMonth(), d.getDate() + 1).getTime()
 }
 
-/** 로컬 날짜별로 나눠 하루 상한을 적용한 인정 분 */
-export function creditedMinutes(records: ActivityRecord[], activity: ActivityId): number {
-  const msByDay = new Map<string, number>()
+/** 활동 시간을 로컬 날짜별 ms 로 나눈다 */
+function msByDay(records: ActivityRecord[], activity: ActivityId): Map<string, number> {
+  const byDay = new Map<string, number>()
   for (const r of records) {
     if (r.activity !== activity) continue
     const end = Math.max(r.startedAt, r.endedAt)
@@ -31,15 +31,34 @@ export function creditedMinutes(records: ActivityRecord[], activity: ActivityId)
     while (t < end) {
       const cut = Math.min(end, nextLocalMidnight(t))
       const key = dayKey(t)
-      msByDay.set(key, (msByDay.get(key) ?? 0) + (cut - t))
+      byDay.set(key, (byDay.get(key) ?? 0) + (cut - t))
       t = cut
     }
   }
+  return byDay
+}
+
+/** 로컬 날짜별로 나눠 하루 상한을 적용한 인정 분 */
+export function creditedMinutes(records: ActivityRecord[], activity: ActivityId): number {
   // 상한은 날짜별로, 내림은 합계에 한 번만 한다(자정을 걸친 세션이 분을 잃지 않게)
   const capMs = ACTIVITIES[activity].dailyCapMinutes * MINUTE
   let totalMs = 0
-  for (const ms of msByDay.values()) totalMs += Math.min(ms, capMs)
+  for (const ms of msByDay(records, activity).values()) totalMs += Math.min(ms, capMs)
   return Math.floor(totalMs / MINUTE)
+}
+
+export interface TodayStatus {
+  minutes: number
+  cap: number
+  reached: boolean
+}
+
+/** now 가 속한 로컬 날짜에 인정된 분(상한까지)과 상한 도달 여부 */
+export function todayStatus(records: ActivityRecord[], activity: ActivityId, now: number): TodayStatus {
+  const cap = ACTIVITIES[activity].dailyCapMinutes
+  const ms = msByDay(records, activity).get(dayKey(now)) ?? 0
+  const minutes = Math.min(cap, Math.floor(ms / MINUTE))
+  return { minutes, cap, reached: minutes >= cap }
 }
 
 export function computeProgress(records: ActivityRecord[]): Progress {

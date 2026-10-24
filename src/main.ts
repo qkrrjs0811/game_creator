@@ -1,7 +1,7 @@
 import Phaser from 'phaser'
 import './style.css'
 import { HomeScene } from './game/HomeScene'
-import { computeProgress } from './core/progression'
+import { computeProgress, todayStatus } from './core/progression'
 import { liveRecords, startSession, stopSession } from './core/session'
 import { backupFileName, exportBackup } from './core/backup'
 import { loadSave, writeSave, SAVE_KEY, type KV } from './core/storage'
@@ -72,15 +72,28 @@ const settings = createSettings(app, {
   },
 })
 
+// 상한 안내는 운동 중에 닿았을 때 하루 한 번만 띄운다
+let capToastDay = ''
+
 function render() {
   const now = Date.now()
-  const p = computeProgress(liveRecords(save, now))
+  const records = liveRecords(save, now)
+  const p = computeProgress(records)
+  const today = todayStatus(records, 'exercise', now)
+  const day = new Date(now).toDateString()
+  if (today.reached && save.active && capToastDay !== day) {
+    capToastDay = day
+    hud.showCapToast()
+  }
   hud.render({
     level: p.level,
     expIntoLevel: p.expIntoLevel,
     expForNextLevel: p.expForNextLevel,
     running: save.active !== null,
     elapsedMs: save.active ? now - save.active.startedAt : 0,
+    todayMinutes: today.minutes,
+    todayCap: today.cap,
+    capReached: today.reached,
   })
 }
 

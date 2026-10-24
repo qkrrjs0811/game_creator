@@ -1,5 +1,5 @@
 import { describe, test, expect } from 'vitest'
-import { computeProgress, creditedMinutes, expToNext } from './progression'
+import { computeProgress, creditedMinutes, expToNext, todayStatus } from './progression'
 
 const kst = (s: string) => Date.parse(`${s}+09:00`)
 const rec = (a: string, b: string, id = a) => ({ id, activity: 'exercise' as const, startedAt: kst(a), endedAt: kst(b) })
@@ -46,5 +46,26 @@ describe('progression', () => {
 
   test('expToNext', () => {
     expect([1, 2, 3].map(expToNext)).toEqual([100, 150, 200])
+  })
+})
+
+describe('todayStatus', () => {
+  test('오늘 인정된 분과 상한', () => {
+    const rs = [rec('2026-10-24T09:00:00', '2026-10-24T09:30:00', 'a'), rec('2026-10-25T08:00:00', '2026-10-25T08:42:30', 'b')]
+    expect(todayStatus(rs, 'exercise', kst('2026-10-25T12:00:00'))).toEqual({ minutes: 42, cap: 180, reached: false })
+  })
+
+  test('어제 시작해 오늘로 넘어온 세션은 오늘 부분만 셈', () => {
+    const rs = [rec('2026-10-24T23:00:00', '2026-10-25T00:20:00')]
+    expect(todayStatus(rs, 'exercise', kst('2026-10-25T01:00:00')).minutes).toBe(20)
+  })
+
+  test('상한에 닿으면 180분에서 멈추고 reached', () => {
+    const rs = [rec('2026-10-25T08:00:00', '2026-10-25T12:00:00')]
+    expect(todayStatus(rs, 'exercise', kst('2026-10-25T13:00:00'))).toEqual({ minutes: 180, cap: 180, reached: true })
+  })
+
+  test('기록이 없으면 0분', () => {
+    expect(todayStatus([], 'exercise', kst('2026-10-25T13:00:00'))).toEqual({ minutes: 0, cap: 180, reached: false })
   })
 })
