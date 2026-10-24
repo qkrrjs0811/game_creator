@@ -68,6 +68,8 @@ body {
   animation: toast-pop 0.35s ease-out;
 }
 .toast[hidden] { display: none; }
+/* 운동 마침 요약은 모험·꾸미기 버튼 위에 띄워 바로 누를 수 있게 둔다 */
+.toast.summary { bottom: 72px; }
 .toast b { font-size: 16px; color: var(--accent); }
 .toast span { font-size: 13px; line-height: 1.4; color: var(--ink-soft); }
 .toast-close {

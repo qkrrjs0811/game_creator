@@ -22,7 +22,8 @@ import { ownedCosmetics, toggleWear, wornCosmetics } from './core/cosmetics'
 import { createCosmetics } from './ui/cosmetics'
 import { statRows } from './core/stats'
 import { minutesToWin, nextStageAdvice } from './core/coach'
-import { formatMinutes } from './ui/format'
+import { formatMinutes, sessionSummary } from './ui/format'
+import { sessionGain } from './core/gain'
 
 declare global {
   interface Window {
@@ -68,8 +69,12 @@ const hud = createHud(
   () => {
     pullSave()
     const now = Date.now()
+    // 그만둘 때 이번에 얻은 것을 보여 줘 성장을 느끼게 한다(화면에 보여 줄 값일 뿐)
+    const gain = sessionGain(save, now)
     save = save.active ? stopSession(save, now) : startSession(save, 'exercise', now)
     persist()
+    if (gain) hud.showSessionSummary(sessionSummary(gain, todayStatus(save.records, 'exercise', now).reached))
+    else hud.hideSessionSummary()
     render()
   },
   () => settings.open(),

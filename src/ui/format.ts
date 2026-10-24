@@ -1,4 +1,7 @@
-const pad = (n: number) => String(n).padStart(2, '0')
+import type { SessionGain } from '../core/gain'
+import { STAT_INFO } from '../core/stats'
+
+const pad =(n: number) => String(n).padStart(2, '0')
 
 /** 한 시간 미만은 MM:SS, 이상은 H:MM:SS */
 export function formatElapsed(ms: number): string {
@@ -15,4 +18,14 @@ export function formatMinutes(minutes: number): string {
   const m = minutes % 60
   if (h === 0) return `${m}분`
   return m === 0 ? `${h}시간` : `${h}시간 ${m}분`
+}
+
+/** 운동을 그만둘 때 띄우는 요약. capReached = 오늘 상한에 닿았는지 */
+export function sessionSummary(g: SessionGain, capReached: boolean): { title: string; detail: string } {
+  const title = g.minutes > 0 ? `🎉 운동 ${formatMinutes(g.minutes)} 했어요!` : '🎉 운동을 마쳤어요!'
+  if (g.exp <= 0) {
+    return { title, detail: capReached ? '오늘 상한을 채워서 경험치는 내일 다시 쌓여요' : '1분 넘게 하면 경험치가 쌓여요' }
+  }
+  const stats = STAT_INFO.filter((s) => g.stats[s.id] > 0).map((s) => `${s.icon} ${s.name} +${g.stats[s.id]}`)
+  return { title, detail: [`EXP +${g.exp}`, ...stats].join(' · ') }
 }

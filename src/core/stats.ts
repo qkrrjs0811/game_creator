@@ -13,7 +13,7 @@ export interface StatRow {
   toNext: number | null
 }
 
-const STAT_INFO: { id: StatId; name: string; icon: string }[] = [
+export const STAT_INFO: { id: StatId; name: string; icon: string }[] = [
   { id: 'str', name: '힘', icon: '💪' },
   { id: 'vit', name: '체력', icon: '❤️' },
   { id: 'int', name: '지능', icon: '🧠' },

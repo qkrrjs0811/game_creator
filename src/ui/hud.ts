@@ -57,6 +57,11 @@ export function createHud(
         <span>오늘 경험치는 다 모았어요. 내일 또 만나요</span>
         <button type="button" class="toast-close" data-testid="cap-toast-close" aria-label="닫기">✕</button>
       </div>
+      <div class="toast summary" data-testid="session-summary" role="status" hidden>
+        <b data-testid="session-summary-title"></b>
+        <span data-testid="session-summary-detail"></span>
+        <button type="button" class="toast-close" data-testid="session-summary-close" aria-label="닫기">✕</button>
+      </div>
       <button type="button" class="adventure dress" data-testid="open-cosmetics">🎀 꾸미기</button>
       <button type="button" class="adventure" data-testid="open-stages">⚔️ 모험</button>
     </section>
@@ -95,8 +100,15 @@ export function createHud(
     toast.hidden = true
     clearTimeout(toastTimer)
   }
+  const summary = q('session-summary')
+  let summaryTimer: ReturnType<typeof setTimeout> | undefined
+  const hideSummary = () => {
+    summary.hidden = true
+    clearTimeout(summaryTimer)
+  }
   toggle.addEventListener('click', onToggle)
   q('cap-toast-close').addEventListener('click', hideToast)
+  q('session-summary-close').addEventListener('click', hideSummary)
   q('open-settings').addEventListener('click', onSettings)
   q('save-warning-backup').addEventListener('click', onSettings)
   const saveWarning = q('save-warning')
@@ -127,10 +139,24 @@ export function createHud(
     },
     /** 하루 상한에 닿았다는 안내를 잠깐 띄운다 */
     showCapToast() {
+      hideSummary()
       toast.hidden = false
       clearTimeout(toastTimer)
       toastTimer = setTimeout(hideToast, 6000)
     },
+    /** 운동을 그만둔 순간 이번에 얻은 것을 잠깐 띄운다(상한 안내와 같은 자리라 그건 닫는다) */
+    showSessionSummary(s: { title: string; detail: string }) {
+      hideToast()
+      q('session-summary-title').textContent = s.title
+      q('session-summary-detail').textContent = s.detail
+      summary.hidden = true
+      void summary.offsetWidth
+      summary.hidden = false
+      clearTimeout(summaryTimer)
+      summaryTimer = setTimeout(hideSummary, 6000)
+    },
+    /** 운동을 다시 시작하면 지난 요약은 닫는다 */
+    hideSessionSummary: hideSummary,
     /** 레벨이 오른 순간 축하 배지를 띄우고 레벨 글자를 통통 튀게 한다. 받은 스킬 포인트는 "나" 탭으로 안내한다 */
     showLevelUp(newLevel: number, points: number) {
       levelUpLevel.textContent = `Lv.${newLevel} 달성!`
