@@ -30,6 +30,10 @@ export function createHud(root: HTMLElement, onToggle: () => void, onSettings: (
       <div class="bar"><i data-testid="exp-bar"></i></div>
     </header>
     <section class="scene" data-testid="scene">
+      <div class="levelup" data-testid="levelup" role="status" hidden>
+        <b>레벨 업!</b>
+        <span data-testid="levelup-level"></span>
+      </div>
       <div class="toast" data-testid="cap-toast" role="status" hidden>
         <b>오늘은 충분히 했어요!</b>
         <span>오늘 경험치는 다 모았어요. 내일 또 만나요</span>
@@ -60,7 +64,10 @@ export function createHud(root: HTMLElement, onToggle: () => void, onSettings: (
   const toggle = q('toggle')
   const today = q('today')
   const toast = q('cap-toast')
+  const levelUp = q('levelup')
+  const levelUpLevel = q('levelup-level')
   let toastTimer: ReturnType<typeof setTimeout> | undefined
+  let levelUpTimer: ReturnType<typeof setTimeout> | undefined
   const hideToast = () => {
     toast.hidden = true
     clearTimeout(toastTimer)
@@ -91,6 +98,21 @@ export function createHud(root: HTMLElement, onToggle: () => void, onSettings: (
       toast.hidden = false
       clearTimeout(toastTimer)
       toastTimer = setTimeout(hideToast, 6000)
+    },
+    /** 레벨이 오른 순간 축하 배지를 띄우고 레벨 글자를 통통 튀게 한다 */
+    showLevelUp(newLevel: number) {
+      levelUpLevel.textContent = `Lv.${newLevel} 달성!`
+      // 연달아 오르면 애니메이션을 처음부터 다시 돌린다
+      levelUp.hidden = true
+      level.classList.remove('pop')
+      void levelUp.offsetWidth
+      levelUp.hidden = false
+      level.classList.add('pop')
+      clearTimeout(levelUpTimer)
+      levelUpTimer = setTimeout(() => {
+        levelUp.hidden = true
+        level.classList.remove('pop')
+      }, 3500)
     },
   }
 }

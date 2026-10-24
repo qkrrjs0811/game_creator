@@ -2,6 +2,7 @@ import Phaser from 'phaser'
 import './style.css'
 import { HomeScene } from './game/HomeScene'
 import { computeProgress, todayStatus } from './core/progression'
+import { levelUpTo } from './core/levelup'
 import { liveRecords, startSession, stopSession } from './core/session'
 import { backupFileName, exportBackup } from './core/backup'
 import { loadSave, writeSave, SAVE_KEY, type KV } from './core/storage'
@@ -68,12 +69,15 @@ const settings = createSettings(app, {
     }
     save = s
     writeSave(kv, save)
+    shownLevel = undefined
     render()
   },
 })
 
 // 상한 안내는 운동 중에 닿았을 때 하루 한 번만 띄운다
 let capToastDay = ''
+// 마지막으로 그린 레벨. 처음 열 때와 백업을 가져온 직후에는 비워 두어 축하하지 않는다
+let shownLevel: number | undefined
 
 function render() {
   const now = Date.now()
@@ -84,6 +88,13 @@ function render() {
   if (today.reached && save.active && capToastDay !== day) {
     capToastDay = day
     hud.showCapToast()
+  }
+  const up = levelUpTo(shownLevel, p.level)
+  shownLevel = p.level
+  if (up !== null) {
+    hud.showLevelUp(up)
+    const scene = game.scene.getScene('home') as HomeScene | null
+    if (scene?.sys.isActive()) scene.celebrate()
   }
   hud.render({
     level: p.level,
@@ -97,12 +108,7 @@ function render() {
   })
 }
 
-render()
-setInterval(render, 1000)
-document.addEventListener('visibilitychange', render)
-window.__debug = { getSave: () => save }
-
-new Phaser.Game({
+const game = new Phaser.Game({
   type: Phaser.AUTO,
   parent: hud.sceneHost,
   transparent: true,
@@ -110,3 +116,8 @@ new Phaser.Game({
   scale: { mode: Phaser.Scale.RESIZE },
   scene: HomeScene,
 })
+
+render()
+setInterval(render, 1000)
+document.addEventListener('visibilitychange', render)
+window.__debug = { getSave: () => save }
