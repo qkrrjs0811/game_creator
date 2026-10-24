@@ -1,22 +1,4 @@
 import type { BattleEvent, BattleResult, Fighter } from './battle'
-import { STAGES } from './stages'
-
-/**
- * 스테이지 상대. 지금은 같은 몬스터의 능력치만 키운 임시 값이다.
- * 모양·색·이름과 균형은 "몬스터 5종과 보스 1종"에서 정한다
- */
-export function stageEnemy(no: number): Fighter {
-  const n = Math.min(STAGES.length, Math.max(1, Math.floor(no)))
-  const boss = STAGES[n - 1].boss
-  return {
-    name: boss ? '왕 몬스터' : '말랑 몬스터',
-    hp: Math.round((14 + 12 * n) * (boss ? 1.5 : 1)),
-    atk: 3 + 3 * n,
-    def: n - 1,
-    spd: 3 + n,
-    dodge: 0,
-  }
-}
 
 /** 장면 한 걸음. HP는 처음 HP에 대한 비율(0~1) */
 export interface ReplayStep extends BattleEvent {

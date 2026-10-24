@@ -1,7 +1,7 @@
 import { skillRanks } from './skills'
 import type { StatId } from './types'
 
-/** 전투에 나서는 한 쪽. 몬스터 능력치는 "몬스터 5종과 보스 1종"에서 붙인다 */
+/** 전투에 나서는 한 쪽. 몬스터 능력치는 `monsters.ts`에 있다 */
 export interface Fighter {
   name: string
   hp: number

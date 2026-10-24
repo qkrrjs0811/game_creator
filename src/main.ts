@@ -15,7 +15,8 @@ import { STAGES } from './core/stages'
 import { createStages } from './ui/stages'
 import { createBattleBar } from './ui/battle'
 import { playerFighter, simulateBattle } from './core/battle'
-import { battleTimeline, stageEnemy, stepDelay } from './core/replay'
+import { battleTimeline, stepDelay } from './core/replay'
+import { homeMonster, stageEnemy, stageMonster } from './core/monsters'
 
 declare global {
   interface Window {
@@ -118,10 +119,11 @@ const stages = createStages(app, {
     const me = playerFighter(p.stats, save.skills)
     const enemy = stageEnemy(no)
     const timeline = battleTimeline(me, enemy, simulateBattle(me, enemy, Date.now()))
+    const foe = stageMonster(no)
     stages.close()
-    battleBar.start(`${s.boss ? '보스' : `${no}스테이지`} · ${s.name}`)
+    battleBar.start(`${s.boss ? '보스' : `${no}스테이지`} · ${s.name}`, foe.name)
     const scene = homeScene()
-    if (scene) scene.playBattle(timeline, stepDelay(timeline.steps.length), (win) => battleBar.end(win))
+    if (scene) scene.playBattle(timeline, stepDelay(timeline.steps.length), foe, (win) => battleBar.end(win))
     else battleBar.end(timeline.win)
   },
 })
@@ -159,6 +161,7 @@ function render() {
     skillPoints: remainingSkillPoints(p.level, save.skills),
   })
   skills.refresh()
+  homeScene()?.showHomeMonster(homeMonster(save.stageProgress))
 }
 
 const game = new Phaser.Game({

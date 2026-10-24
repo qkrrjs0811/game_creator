@@ -1,29 +1,10 @@
 import { describe, test, expect } from 'vitest'
 import { playerFighter, simulateBattle } from './battle'
 import { BASE_STAT } from './progression'
-import { battleTimeline, stageEnemy, stepDelay } from './replay'
-import { STAGES } from './stages'
+import { stageEnemy } from './monsters'
+import { battleTimeline, stepDelay } from './replay'
 
 const base = { str: BASE_STAT, vit: BASE_STAT, int: BASE_STAT }
-
-describe('stageEnemy', () => {
-  test('스테이지마다 상대가 있고 뒤로 갈수록 세진다', () => {
-    const enemies = STAGES.map((s) => stageEnemy(s.no))
-    for (let i = 1; i < enemies.length; i++) {
-      expect(enemies[i].hp).toBeGreaterThan(enemies[i - 1].hp)
-      expect(enemies[i].atk).toBeGreaterThan(enemies[i - 1].atk)
-    }
-  })
-
-  test('처음 시작한 말랑이도 1스테이지는 이길 수 있고 2스테이지는 아직 어렵다', () => {
-    const me = playerFighter(base, [])
-    // 씨앗(흔들림)이 달라도 결과는 같다
-    for (let seed = 0; seed < 300; seed++) {
-      expect(simulateBattle(me, stageEnemy(1), seed).win).toBe(true)
-      expect(simulateBattle(me, stageEnemy(2), seed).win).toBe(false)
-    }
-  })
-})
 
 describe('battleTimeline', () => {
   test('기록 한 줄마다 장면 한 걸음, 양쪽 HP 비율이 따라간다', () => {

@@ -1,4 +1,5 @@
 import { stageList } from '../core/stages'
+import { stageMonster } from '../core/monsters'
 
 /** 스테이지 창: 스테이지 목록과 깸·도전 가능·잠김 상태 */
 export function createStages(root: HTMLElement, h: { progress(): number; onChallenge(no: number): void }) {
@@ -23,7 +24,9 @@ export function createStages(root: HTMLElement, h: { progress(): number; onChall
   const draw = () => {
     list.innerHTML = stageList(h.progress())
       .map((s) => {
-        const tag = s.state === 'cleared' ? '깼어요 ⭐' : s.state === 'open' ? '도전할 수 있어요' : '앞 스테이지를 깨면 열려요'
+        // 잠긴 곳의 몬스터는 열릴 때까지 비밀로 둔다
+        const foe = stageMonster(s.no).name
+        const tag = s.state === 'cleared' ? `${foe} · 깼어요 ⭐` : s.state === 'open' ? `${foe} · 도전!` : '앞 스테이지를 깨면 열려요'
         const btn =
           s.state === 'locked'
             ? `<span class="stage-lock" aria-label="잠김">🔒</span>`

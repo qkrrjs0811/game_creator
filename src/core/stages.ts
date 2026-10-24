@@ -5,7 +5,7 @@ export interface Stage {
   boss: boolean
 }
 
-/** 스테이지 5개와 마지막 보스. 몬스터와 능력치는 "몬스터 5종과 보스 1종"에서 붙인다 */
+/** 스테이지 5개와 마지막 보스. 스테이지마다 나오는 몬스터는 `monsters.ts`에 있다 */
 export const STAGES: Stage[] = [
   { no: 1, name: '말랑 풀밭', icon: '🌱', boss: false },
   { no: 2, name: '버섯 숲', icon: '🍄', boss: false },

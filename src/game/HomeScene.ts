@@ -1,11 +1,12 @@
 import Phaser from 'phaser'
 import type { ReplayStep, Timeline } from '../core/replay'
+import { MONSTERS, type Monster } from '../core/monsters'
 
 const MASCOT = 0xffd7a8
 const MASCOT_SHADE = 0xf7b97a
-const MONSTER = 0xc9a7ff
-const MONSTER_SHADE = 0xa985ea
 const INK = 0x5a4636
+const MONSTER_INK = 0x3d2a63
+const CROWN = 0xffd36b
 const HP_PLAYER = 0x7fd8b0
 const HP_ENEMY = 0xff9fbf
 const BAR_W = 78
@@ -18,6 +19,9 @@ export class HomeScene extends Phaser.Scene {
   private monster!: Phaser.GameObjects.Container
   private bubble!: Phaser.GameObjects.Container
   private jump?: Phaser.Tweens.Tween
+  /** 홈에서 보여 줄 몬스터(다음에 도전할 스테이지)와 지금 그려진 몬스터 */
+  private homeLook?: Monster
+  private shownMonster = ''
   private battle?: {
     steps: ReplayStep[]
     win: boolean
@@ -44,14 +48,8 @@ export class HomeScene extends Phaser.Scene {
       this.add.ellipse(22, 8, 10, 6, 0xffa8a8).setAlpha(0.7),
     ])
 
-    const body = this.add.graphics()
-    body.fillStyle(MONSTER).fillRoundedRect(-34, -28, 68, 54, { tl: 32, tr: 32, bl: 16, br: 16 })
-    body.fillStyle(MONSTER_SHADE).fillRoundedRect(-34, 16, 68, 10, { tl: 0, tr: 0, bl: 16, br: 16 })
-    this.monster = this.add.container(0, 0, [
-      body,
-      this.add.circle(-11, -6, 4, 0x3d2a63),
-      this.add.circle(11, -6, 4, 0x3d2a63),
-    ])
+    this.monster = this.add.container(0, 0)
+    this.setMonster(this.homeLook ?? MONSTERS[0])
 
     const text = this.add
       .text(0, 0, '💪 오늘도 같이 크는 중!', { fontFamily: 'Segoe UI, Malgun Gothic, sans-serif', fontSize: '14px', color: '#5a4636', fontStyle: 'bold' })
@@ -101,8 +99,9 @@ export class HomeScene extends Phaser.Scene {
   }
 
   /** 전투 기록을 한 걸음씩 재생한다. 끝나면 onEnd(이겼는지)를 부른다 */
-  playBattle(timeline: Timeline, delay: number, onEnd: (win: boolean) => void) {
+  playBattle(timeline: Timeline, delay: number, foe: Monster, onEnd: (win: boolean) => void) {
     this.endBattle()
+    this.setMonster(foe)
     this.jump?.stop()
     for (const who of [this.mascot, this.monster]) this.tweens.killTweensOf(who)
     this.tweens.killTweensOf(this.bubble)
@@ -133,9 +132,71 @@ export class HomeScene extends Phaser.Scene {
       this.tweens.killTweensOf(who)
       who.setAlpha(1).setScale(1).setAngle(0)
     }
+    if (this.homeLook) this.setMonster(this.homeLook)
     this.layout(this.scale.width, this.scale.height)
     this.idle()
     this.tweens.add({ targets: this.bubble, alpha: 1, duration: 300 })
+  }
+
+  /** 홈에서 기다리는 몬스터를 정한다. 전투 중이면 끝난 뒤에 바뀐다 */
+  showHomeMonster(m: Monster) {
+    this.homeLook = m
+    if (!this.battle && this.monster) this.setMonster(m)
+  }
+
+  private setMonster(m: Monster) {
+    if (this.shownMonster === m.id) return
+    this.shownMonster = m.id
+    this.monster.removeAll(true)
+    this.monster.add(this.monsterParts(m))
+    // e2e가 지금 어떤 몬스터가 나와 있는지 볼 수 있게 남긴다
+    this.game.canvas.parentElement?.setAttribute('data-monster', m.id)
+  }
+
+  /** 몬스터 모양. 모두 아래쪽(y≈26)이 땅에 닿는 둥근 도형이다 */
+  private monsterParts(m: Monster): Phaser.GameObjects.GameObject[] {
+    const g = this.add.graphics()
+    const eyes = (y: number, gap = 11) => [this.add.circle(-gap, y, 4, MONSTER_INK), this.add.circle(gap, y, 4, MONSTER_INK)]
+    const cheeks = (y: number, gap = 20) =>
+      [-gap, gap].map((x) => this.add.ellipse(x, y, 9, 5, 0xff8fa8).setAlpha(0.55))
+    switch (m.shape) {
+      case 'slime':
+        g.fillStyle(m.color).fillRoundedRect(-34, -28, 68, 54, { tl: 32, tr: 32, bl: 16, br: 16 })
+        g.fillStyle(m.shade).fillRoundedRect(-34, 16, 68, 10, { tl: 0, tr: 0, bl: 16, br: 16 })
+        // 머리 위 새싹 두 장
+        g.fillStyle(0x7cc576).fillEllipse(-7, -32, 14, 8).fillEllipse(7, -34, 14, 8)
+        return [g, ...eyes(-6), ...cheeks(6)]
+      case 'mushroom':
+        g.fillStyle(0xfff1dc).fillRoundedRect(-20, -6, 40, 32, 14)
+        g.fillStyle(m.color).fillRoundedRect(-38, -36, 76, 36, { tl: 36, tr: 36, bl: 12, br: 12 })
+        g.fillStyle(m.shade).fillRoundedRect(-38, -8, 76, 8, { tl: 0, tr: 0, bl: 12, br: 12 })
+        g.fillStyle(0xffffff).fillCircle(-18, -22, 6).fillCircle(8, -28, 5).fillCircle(22, -16, 4)
+        return [g, ...eyes(10, 8), ...cheeks(18, 14)]
+      case 'drop':
+        g.fillStyle(m.color).fillTriangle(-20, -8, 20, -8, 0, -42).fillCircle(0, 2, 26)
+        g.fillStyle(m.shade).fillEllipse(0, 22, 40, 8)
+        g.fillStyle(0xffffff, 0.8).fillEllipse(-12, -10, 7, 12)
+        return [g, ...eyes(2, 9), ...cheeks(12, 17)]
+      case 'cloud':
+        g.fillStyle(m.color).fillCircle(-20, -2, 17).fillCircle(2, -14, 22).fillCircle(22, -2, 16)
+        g.fillRoundedRect(-38, -4, 76, 30, 15)
+        g.fillStyle(m.shade).fillRoundedRect(-34, 18, 68, 8, 4)
+        return [g, ...eyes(4), ...cheeks(14, 22)]
+      case 'rock':
+        g.fillStyle(m.color).fillRoundedRect(-36, -22, 72, 48, { tl: 24, tr: 16, bl: 14, br: 14 })
+        g.fillStyle(m.shade).fillRoundedRect(-36, 16, 72, 10, { tl: 0, tr: 0, bl: 14, br: 14 })
+        g.fillCircle(18, -10, 5).fillCircle(-20, 4, 3)
+        // 졸린 듯 가는 눈
+        return [g, this.add.ellipse(-11, -2, 10, 4, MONSTER_INK), this.add.ellipse(11, -2, 10, 4, MONSTER_INK), ...cheeks(8)]
+      case 'king':
+        g.fillStyle(m.color).fillRoundedRect(-42, -30, 84, 56, { tl: 38, tr: 38, bl: 18, br: 18 })
+        g.fillStyle(m.shade).fillRoundedRect(-42, 15, 84, 11, { tl: 0, tr: 0, bl: 18, br: 18 })
+        // 왕관
+        g.fillStyle(CROWN).fillRoundedRect(-18, -36, 36, 10, 3)
+        g.fillTriangle(-18, -34, -10, -34, -16, -46).fillTriangle(-6, -34, 6, -34, 0, -50).fillTriangle(10, -34, 18, -34, 16, -46)
+        g.fillStyle(0xff8fa8).fillCircle(0, -31, 3)
+        return [g, ...eyes(-6, 13), ...cheeks(8, 25)]
+    }
   }
 
   private idle() {

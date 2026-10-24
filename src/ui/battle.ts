@@ -20,9 +20,9 @@ export function createBattleBar(scene: HTMLElement, h: { onSkip(): void; onLeave
   action.addEventListener('click', () => (bar.dataset.state === 'playing' ? h.onSkip() : h.onLeave()))
 
   return {
-    start(name: string) {
+    start(name: string, foe: string) {
       title.textContent = `⚔️ ${name}`
-      status.textContent = '말랑이가 싸우는 중…'
+      status.textContent = `말랑이 vs ${foe}`
       action.textContent = '건너뛰기'
       bar.dataset.state = 'playing'
       delete bar.dataset.win
