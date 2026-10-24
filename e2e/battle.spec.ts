@@ -52,3 +52,19 @@ test('건너뛰면 바로 결과, 전투는 경험치·기록을 바꾸지 않�
   expect(s.skills).toEqual([])
   expect(s.stageProgress).toBe(1)
 })
+
+test('데미지 숫자는 HP 막대 위에서 떠올라 막대를 가리지 않음', async ({ page }) => {
+  await page.goto('./')
+  await page.getByTestId('open-stages').click()
+  await page.getByTestId('stage-go-1').click()
+  await expect(page.getByTestId('battle')).toHaveAttribute('data-state', 'playing')
+
+  // 첫 공격 숫자가 뜨면 장면 칸에 숫자 아래끝과 HP 막대 위끝이 남는다
+  const scene = page.locator('[data-hit-bottom]')
+  await expect(scene).toHaveCount(1, { timeout: 5_000 })
+  const hitBottom = Number(await scene.getAttribute('data-hit-bottom'))
+  const barTop = Number(await scene.getAttribute('data-bar-top'))
+  expect(hitBottom).toBeLessThanOrEqual(barTop)
+  await page.waitForTimeout(150)
+  await page.screenshot({ path: 'test-results/screens/battle-hit.png' })
+})

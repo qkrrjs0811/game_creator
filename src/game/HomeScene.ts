@@ -23,6 +23,11 @@ function groundY(h: number): number {
 }
 const HP_ENEMY = 0xff9fbf
 const BAR_W = 78
+
+/** 두 캐릭터 머리 위 HP 막대(높이 10, 흰 테두리 3)의 위쪽 y */
+function barY(h: number): number {
+  return groundY(h) - 72
+}
 const FONT = 'Segoe UI, Malgun Gothic, sans-serif'
 /** 색 꾸미기의 [몸, 아래 그늘] 색 */
 const BODY_COLORS: Record<string, [number, number]> = {
@@ -322,11 +327,11 @@ export class HomeScene extends Phaser.Scene {
       if (this.battle !== b || b.ended) return
       if (s.kind === 'miss') {
         this.tweens.add({ targets: target, x: target.x + 22 * dir, duration: 110, yoyo: true, ease: 'Sine.easeOut' })
-        this.floatText(target.x, target.y - 58, '휙! 피했다', '#6f93c4')
+        this.floatText(target.x, '휙! 피했다', '#6f93c4')
       } else {
         this.tweens.add({ targets: target, alpha: 0.35, duration: 70, yoyo: true, repeat: 1 })
         this.tweens.add({ targets: target, angle: 8 * dir, duration: 80, yoyo: true, ease: 'Sine.easeOut' })
-        this.floatText(target.x, target.y - 58, `-${s.damage}`, s.actor === 'player' ? '#ff8a5b' : '#e0607e')
+        this.floatText(target.x, `-${s.damage}`, s.actor === 'player' ? '#ff8a5b' : '#e0607e')
       }
       this.drawBars(s.playerHp, s.enemyHp)
     })
@@ -350,10 +355,17 @@ export class HomeScene extends Phaser.Scene {
     b.onEnd(b.win)
   }
 
-  private floatText(x: number, y: number, text: string, color: string) {
+  /** 맞은 쪽 HP 막대 바로 위에서 숫자·글자가 떠오르며 사라진다(막대를 가리지 않게) */
+  private floatText(x: number, text: string, color: string) {
     const t = this.add
-      .text(x, y, text, { fontFamily: FONT, fontSize: '20px', color, fontStyle: 'bold', stroke: '#ffffff', strokeThickness: 5 })
+      .text(x, 0, text, { fontFamily: FONT, fontSize: '20px', color, fontStyle: 'bold', stroke: '#ffffff', strokeThickness: 5 })
       .setOrigin(0.5)
+    const y = barY(this.scale.height) - 5 - t.height / 2
+    t.setY(y)
+    // e2e가 숫자가 HP 막대를 가리는지 볼 수 있게 숫자 아래끝과 막대 위끝을 남긴다
+    const box = this.game.canvas.parentElement
+    box?.setAttribute('data-hit-bottom', String(Math.round(y + t.height / 2)))
+    box?.setAttribute('data-bar-top', String(Math.round(barY(this.scale.height) - 3)))
     this.tweens.add({ targets: t, y: y - 34, alpha: 0, duration: 800, ease: 'Cubic.easeOut', onComplete: () => t.destroy() })
   }
 
@@ -368,8 +380,8 @@ export class HomeScene extends Phaser.Scene {
       if (ratio > 0) g.fillStyle(color).fillRoundedRect(cx - BAR_W / 2, cy, Math.max(10, BAR_W * ratio), 10, 5)
     }
     const { width: w, height: h } = this.scale
-    bar(w * 0.3, groundY(h) - 72, playerHp, HP_PLAYER)
-    bar(w * 0.72, groundY(h) - 72, enemyHp, HP_ENEMY)
+    bar(w * 0.3, barY(h), playerHp, HP_PLAYER)
+    bar(w * 0.72, barY(h), enemyHp, HP_ENEMY)
     b.hp = [playerHp, enemyHp]
   }
 
