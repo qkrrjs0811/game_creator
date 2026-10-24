@@ -21,11 +21,31 @@ test('레벨업으로 받은 포인트로 스킬을 고르고, 새로고침해�
 
   await page.getByTestId('tab-me').click()
   await expect(page.getByTestId('skill-points')).toHaveText('남은 포인트 2')
+  // 잘못 눌러도 포인트가 사라지지 않게, 한 번 누르면 묻고 한 번 더 눌러야 배운다
+  await page.getByTestId('learn-tough').click()
+  await expect(page.getByTestId('learn-tough')).toHaveText('정말?')
+  await expect(page.getByTestId('skill-hint')).toHaveText('한 번 더 누르면 단단한 몸을 배워요')
+  await expect(page.getByTestId('skill-points')).toHaveText('남은 포인트 2')
+  await page.screenshot({ path: 'test-results/screens/skills-confirm.png' })
+  // 다른 스킬을 누르면 그쪽으로 옮겨 간다
+  await page.getByTestId('learn-punch').click()
+  await expect(page.getByTestId('learn-tough')).toHaveText('배우기')
+  await expect(page.getByTestId('learn-punch')).toHaveText('정말?')
+  await expect(page.getByTestId('skill-points')).toHaveText('남은 포인트 2')
   await page.getByTestId('learn-punch').click()
   await expect(page.getByTestId('skill-points')).toHaveText('남은 포인트 1')
   await expect(page.getByTestId('skill-rank-punch')).toHaveText('Lv.1')
+  await expect(page.getByTestId('learn-punch')).toHaveText('배우기')
   await page.screenshot({ path: 'test-results/screens/skills.png' })
 
+  // 묻는 중에 창을 닫으면 취소된다
+  await page.getByTestId('learn-punch').click()
+  await page.getByTestId('skills-close').click()
+  await page.getByTestId('tab-me').click()
+  await expect(page.getByTestId('learn-punch')).toHaveText('배우기')
+  await expect(page.getByTestId('skill-points')).toHaveText('남은 포인트 1')
+
+  await page.getByTestId('learn-punch').click()
   await page.getByTestId('learn-punch').click()
   await expect(page.getByTestId('skill-rank-punch')).toHaveText('Lv.2')
   await expect(page.getByTestId('skill-points')).toHaveText('남은 포인트 0')

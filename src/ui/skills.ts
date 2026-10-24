@@ -7,6 +7,12 @@ export interface SkillsView {
   stats: StatRow[]
 }
 
+/** 받침이 있으면 '을', 없으면 '를' */
+export function objectParticle(word: string): string {
+  const code = word.charCodeAt(word.length - 1) - 0xac00
+  return code >= 0 && code < 11172 && code % 28 > 0 ? '을' : '를'
+}
+
 /** 나 창: 운동으로 오른 능력치, 남은 포인트와 스킬 3종, 골라서 배우기 */
 export function createSkills(root: HTMLElement, h: { view(): SkillsView; onLearn(id: SkillId): void }) {
   const wrap = document.createElement('div')
@@ -39,8 +45,12 @@ export function createSkills(root: HTMLElement, h: { view(): SkillsView; onLearn
 
   const q = (id: string) => wrap.querySelector<HTMLElement>(`[data-testid=${id}]`)!
 
+  /** 한 번 누른 스킬. 잘못 눌러 포인트를 쓰지 않게 한 번 더 눌러야 배운다 */
+  let asking: SkillId | null = null
+
   const draw = () => {
     const v = h.view()
+    if (v.points < 1) asking = null
     q('stats').innerHTML = v.stats
       .map(
         (s) => `
@@ -52,23 +62,39 @@ export function createSkills(root: HTMLElement, h: { view(): SkillsView; onLearn
       )
       .join('')
     q('skill-points').innerHTML = `남은 포인트 <b>${v.points}</b>`
-    q('skill-hint').textContent =
-      v.points > 0 ? '하나를 골라 배워요. 같은 스킬을 또 배우면 더 강해져요.' : '운동해서 레벨을 올리면 포인트를 받아요.'
+    const asked = SKILLS.find((s) => s.id === asking)
+    q('skill-hint').textContent = asked
+      ? `한 번 더 누르면 ${asked.name}${objectParticle(asked.name)} 배워요`
+      : v.points > 0
+        ? '하나를 골라 배워요. 같은 스킬을 또 배우면 더 강해져요.'
+        : '운동해서 레벨을 올리면 포인트를 받아요.'
+    q('skill-hint').classList.toggle('asking', !!asked)
     for (const s of SKILLS) {
       const rank = v.ranks[s.id]
       q(`skill-rank-${s.id}`).textContent = rank > 0 ? `Lv.${rank}` : ''
       q(`skill-${s.id}`).classList.toggle('known', rank > 0)
-      ;(q(`learn-${s.id}`) as HTMLButtonElement).disabled = v.points < 1
+      q(`skill-${s.id}`).classList.toggle('asking', s.id === asking)
+      const btn = q(`learn-${s.id}`) as HTMLButtonElement
+      btn.disabled = v.points < 1
+      btn.textContent = s.id === asking ? '정말?' : '배우기'
     }
   }
 
   for (const s of SKILLS) {
     q(`learn-${s.id}`).addEventListener('click', () => {
-      h.onLearn(s.id)
+      if (asking === s.id) {
+        asking = null
+        h.onLearn(s.id)
+      } else {
+        asking = s.id
+      }
       draw()
     })
   }
-  const close = () => (wrap.hidden = true)
+  const close = () => {
+    asking = null
+    wrap.hidden = true
+  }
   q('skills-close').addEventListener('click', close)
   wrap.addEventListener('click', (e) => e.target === wrap && close())
 

@@ -366,6 +366,9 @@ body {
   box-shadow: 0 3px 0 #e9764a;
   cursor: pointer;
 }
+.skill.asking { box-shadow: 0 0 0 2px var(--accent), 0 4px 0 var(--track); }
+.skill.asking .skill-learn { background: var(--ink); box-shadow: 0 3px 0 #3d2f24; }
+.skill-list + .sheet-desc.asking { color: var(--accent); font-weight: 700; }
 .skill-learn:disabled { background: var(--chip); color: var(--ink-soft); box-shadow: none; cursor: default; }
 .skill-list + .sheet-desc { margin: 14px 0 0; }
 
