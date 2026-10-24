@@ -18,8 +18,13 @@ const BODY_COLORS: Record<string, [number, number]> = {
   'color-cotton': [0xffc6de, 0xf5a3c6],
 }
 const CONFETTI =[0xff8a5b, 0xffd36b, 0x9be3c4, 0xa8d4ff, 0xffa8c8, 0xc9a7ff]
-const BUBBLE_IDLE = '💪 오늘도 같이 크는 중!'
-const BUBBLE_EXERCISE = '🔥 말랑이도 같이 운동 중!'
+/** 말랑이 기분: 쉬는 중, 같이 운동 중, 오늘 상한을 채워 쉬어도 되는 중 */
+export type Mood = 'rest' | 'exercise' | 'full'
+const BUBBLES: Record<Mood, string> = {
+  rest: '💪 오늘도 같이 크는 중!',
+  exercise: '🔥 말랑이도 같이 운동 중!',
+  full: '😊 오늘은 충분해요! 쉬어도 돼요',
+}
 
 /** 홈 장면: 둥근 마스코트와 몬스터가 마주 보고, 마스코트가 숨 쉬듯 움직인다 */
 export class HomeScene extends Phaser.Scene {
@@ -31,8 +36,8 @@ export class HomeScene extends Phaser.Scene {
   private jump?: Phaser.Tweens.Tween
   /** 숨쉬기(쉬는 중) 또는 꾹꾹 누르기(운동 중) 움직임 */
   private breathe?: Phaser.Tweens.Tween
-  /** 타이머가 켜져 있는지. 켜져 있으면 말랑이도 같이 운동한다 */
-  private exercising = false
+  /** 타이머가 켜져 있으면 말랑이도 같이 운동한다. 오늘 상한을 채웠으면 쉬자고 한다 */
+  private mood: Mood = 'rest'
   /** 홈에서 보여 줄 몬스터(다음에 도전할 스테이지)와 지금 그려진 몬스터 */
   private homeLook?: Monster
   private shownMonster = ''
@@ -76,10 +81,10 @@ export class HomeScene extends Phaser.Scene {
     this.idle()
   }
 
-  /** 타이머를 켜면 말랑이가 꾹꾹 같이 운동하고 말풍선도 바뀐다. 모습만 바뀐다 */
-  setExercising(on: boolean) {
-    if (this.exercising === on) return
-    this.exercising = on
+  /** 타이머를 켜면 말랑이가 꾹꾹 같이 운동하고, 상한을 채우면 쉬자고 한다. 모습만 바뀐다 */
+  setMood(mood: Mood) {
+    if (this.mood === mood) return
+    this.mood = mood
     if (!this.mascot) return
     this.drawBubble()
     // 전투 중에는 끝난 뒤 idle()에서 맞춰진다
@@ -87,11 +92,11 @@ export class HomeScene extends Phaser.Scene {
   }
 
   private drawBubble() {
-    this.bubbleText.setText(this.exercising ? BUBBLE_EXERCISE : BUBBLE_IDLE)
+    this.bubbleText.setText(BUBBLES[this.mood])
     const w = this.bubbleText.width
     this.bubbleBg.clear().fillStyle(0xffffff).fillRoundedRect(-w / 2 - 12, -15, w + 24, 30, 15)
-    // e2e가 말랑이가 운동 중인지 볼 수 있게 남긴다
-    this.game.canvas.parentElement?.setAttribute('data-mood', this.exercising ? 'exercise' : 'rest')
+    // e2e가 말랑이 기분을 볼 수 있게 남긴다
+    this.game.canvas.parentElement?.setAttribute('data-mood', this.mood)
   }
 
   /** 레벨업: 마스코트가 폴짝 뛰고 파스텔 색종이가 터진다. 말풍선은 축하 배지에 자리를 비켜 준다 */
@@ -282,11 +287,11 @@ export class HomeScene extends Phaser.Scene {
     this.tweens.add({ targets: this.monster, y: '-=6', duration: 1200, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' })
   }
 
-  /** 쉬는 중에는 느리게 숨 쉬고, 운동 중에는 빠르게 꾹꾹 눌렀다 편다 */
+  /** 쉬는 중(상한을 채운 뒤도)에는 느리게 숨 쉬고, 운동 중에는 빠르게 꾹꾹 눌렀다 편다 */
   private moveMascot() {
     this.breathe?.stop()
     this.mascot.setScale(1)
-    this.breathe = this.exercising
+    this.breathe = this.mood === 'exercise'
       ? this.tweens.add({ targets: this.mascot, scaleY: 0.86, scaleX: 1.1, duration: 280, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' })
       : this.tweens.add({ targets: this.mascot, scaleY: 0.94, scaleX: 1.04, duration: 900, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' })
   }

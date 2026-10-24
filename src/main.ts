@@ -272,7 +272,8 @@ function render() {
   skills.refresh()
   homeScene()?.showHomeMonster(homeMonster(save.stageProgress))
   homeScene()?.dress(wornCosmetics(save))
-  homeScene()?.setExercising(save.active !== null)
+  // 상한을 채운 뒤에도 타이머가 켜져 있으면 말랑이가 그만 쉬자고 한다(모습만 바뀜)
+  homeScene()?.setMood(!save.active ? 'rest' : today.reached ? 'full' : 'exercise')
 }
 
 const game = new Phaser.Game({
