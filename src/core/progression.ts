@@ -63,15 +63,21 @@ export function todayStatus(records: ActivityRecord[], activity: ActivityId, now
   return { minutes, cap, reached: minutes >= cap }
 }
 
-export function computeProgress(records: ActivityRecord[]): Progress {
+/** 활동별 인정 분으로 정해지는 능력치 */
+export function statsFromMinutes(minutes: Record<ActivityId, number>): Record<StatId, number> {
   const ids = Object.keys(ACTIVITIES) as ActivityId[]
-  const minutes = Object.fromEntries(ids.map((id) => [id, creditedMinutes(records, id)])) as Record<ActivityId, number>
-
   const stats: Record<StatId, number> = { str: BASE_STAT, vit: BASE_STAT, int: BASE_STAT }
   for (const stat of Object.keys(stats) as StatId[]) {
     const linked = ids.filter((id) => ACTIVITIES[id].stats.includes(stat)).reduce((sum, id) => sum + minutes[id], 0)
     stats[stat] += Math.floor(linked / MINUTES_PER_STAT)
   }
+  return stats
+}
+
+export function computeProgress(records: ActivityRecord[]): Progress {
+  const ids = Object.keys(ACTIVITIES) as ActivityId[]
+  const minutes = Object.fromEntries(ids.map((id) => [id, creditedMinutes(records, id)])) as Record<ActivityId, number>
+  const stats = statsFromMinutes(minutes)
 
   const exp = ids.reduce((sum, id) => sum + minutes[id], 0) * EXP_PER_MINUTE
   let level = 1

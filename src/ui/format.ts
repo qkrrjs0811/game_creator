@@ -8,3 +8,11 @@ export function formatElapsed(ms: number): string {
   const s = total % 60
   return h > 0 ? `${h}:${pad(m)}:${pad(s)}` : `${pad(m)}:${pad(s)}`
 }
+
+/** 한 시간 미만은 N분, 이상은 N시간 M분 */
+export function formatMinutes(minutes: number): string {
+  const h = Math.floor(minutes / 60)
+  const m = minutes % 60
+  if (h === 0) return `${m}분`
+  return m === 0 ? `${h}시간` : `${h}시간 ${m}분`
+}

@@ -21,6 +21,8 @@ import { applyBattleResult, type BattleOutcome } from './core/result'
 import { ownedCosmetics, toggleWear, wornCosmetics } from './core/cosmetics'
 import { createCosmetics } from './ui/cosmetics'
 import { statRows } from './core/stats'
+import { minutesToWin } from './core/coach'
+import { formatMinutes } from './ui/format'
 
 declare global {
   interface Window {
@@ -148,8 +150,13 @@ const homeScene = () => {
   return scene?.sys.isActive() ? scene : null
 }
 
-function resultNote(o: BattleOutcome, win: boolean): string {
-  if (!win) return '💪 운동으로 더 키워서 다시 와요'
+/** toWin = 운동 몇 분 더 하면 이길 만한지(minutesToWin). 졌을 때만 쓴다 */
+function resultNote(o: BattleOutcome, win: boolean, toWin: number | null): string {
+  if (!win) {
+    if (toWin === null) return '💪 운동으로 더 키워서 다시 와요'
+    if (toWin === 0) return '🍀 지금도 이길 만해요 · 다시 도전해 봐요'
+    return `💪 운동 ${formatMinutes(toWin)} 더 하면 이길 만해요`
+  }
   if (o.allCleared) return '👑 모든 스테이지를 깼어요!'
   if (o.unlocked !== null) {
     const next = STAGES[o.unlocked - 1]
@@ -188,7 +195,8 @@ const stages = createStages(app, {
     const view = {
       win: result.win,
       rounds: result.rounds,
-      note: resultNote(outcome, result.win),
+      // 지면 얼마나 더 키우면 되는지 알려 다시 운동하러 가게 한다(화면에 보여 줄 값일 뿐)
+      note: resultNote(outcome, result.win, result.win ? null : minutesToWin(p.creditedMinutes, save.skills, enemy)),
       reward,
       foe: foe.name,
       damage: enemyDamagePercent(enemy, result),

@@ -56,7 +56,8 @@ test('지면 결과 카드가 다시 오라고 하고, 스테이지는 그대로
   await page.getByTestId('battle-action').click()
 
   await expect(page.getByTestId('battle-result-title')).toContainText('아쉬워요')
-  await expect(page.getByTestId('battle-result-note')).toContainText('운동으로')
+  // 운동 몇 분 더 하면 이길 만한지 알려 준다(능력치가 오르는 10분 단위)
+  await expect(page.getByTestId('battle-result-note')).toHaveText(/^💪 운동 (\d+시간 )?[1-5]?0분 더 하면 이길 만해요$|^💪 운동 \d+시간 더 하면 이길 만해요$/)
   await expect(page.getByTestId('battle-result-reward')).toBeHidden()
   // 지더라도 몬스터를 얼마나 깎았는지 보여 준다
   const damage = page.getByTestId('battle-result-damage')
