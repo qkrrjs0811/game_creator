@@ -55,8 +55,15 @@ test('상한을 채운 뒤 그만하면 경험치는 내일 쌓인다고 알려 
   await page.clock.fastForward('20:00')
   await page.getByTestId('toggle').click()
   await expect(page.getByTestId('session-summary-title')).toHaveText('🎉 운동 20분 했어요!')
-  await expect(page.getByTestId('session-summary-detail')).toHaveText('오늘 상한을 채워서 경험치는 내일 다시 쌓여요')
+  await expect(page.getByTestId('session-summary-detail')).toHaveText('상한을 채워서 경험치는 내일 쌓여요')
   await expect(page.getByTestId('cap-toast')).toBeHidden()
+  // 안내가 한 줄에 들어가 카드가 길어지지 않고, 말랑이를 가리지 않는다
+  const detail = (await page.getByTestId('session-summary-detail').boundingBox())!
+  expect(detail.height).toBeLessThan(13 * 1.4 * 1.5)
+  const box = (await page.getByTestId('session-summary').boundingBox())!
+  const scene = (await page.getByTestId('scene').boundingBox())!
+  const feet = Number(await page.locator('[data-feet]').getAttribute('data-feet'))
+  expect(scene.y + feet).toBeLessThanOrEqual(box.y)
   await page.waitForTimeout(700)
   await page.screenshot({ path: 'test-results/screens/session-summary-cap.png' })
 })

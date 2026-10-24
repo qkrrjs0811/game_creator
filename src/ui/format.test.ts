@@ -31,7 +31,7 @@ test('경험치를 못 얻었으면 까닭을 알려 줌', () => {
   const none = { str: 0, vit: 0, int: 0 }
   expect(sessionSummary({ minutes: 20, exp: 0, stats: none }, true)).toEqual({
     title: '🎉 운동 20분 했어요!',
-    detail: '오늘 상한을 채워서 경험치는 내일 다시 쌓여요',
+    detail: '상한을 채워서 경험치는 내일 쌓여요',
   })
   expect(sessionSummary({ minutes: 0, exp: 0, stats: none }, false)).toEqual({
     title: '🎉 운동을 마쳤어요!',
