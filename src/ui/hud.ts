@@ -9,17 +9,18 @@ export interface HudView {
   todayMinutes: number
   todayCap: number
   capReached: boolean
+  skillPoints: number
 }
 
 const TABS = [
   { label: '운동', ready: true },
   { label: '공부', ready: false },
   { label: '독서', ready: false },
-  { label: '나', ready: false },
+  { label: '나', ready: true },
 ]
 
 /** 레벨 바·타이머 카드·탭을 그리고, 가운데 Phaser 장면이 들어갈 자리를 돌려준다 */
-export function createHud(root: HTMLElement, onToggle: () => void, onSettings: () => void) {
+export function createHud(root: HTMLElement, onToggle: () => void, onSettings: () => void, onMe: () => void) {
   root.innerHTML = `
     <header class="top">
       <div class="top-row">
@@ -49,8 +50,10 @@ export function createHud(root: HTMLElement, onToggle: () => void, onSettings: (
     <nav class="tabs">
       ${TABS.map(
         (t, i) =>
-          `<button type="button" class="tab${i === 0 ? ' on' : ''}" ${t.ready ? '' : 'disabled'}>${t.label}${
-            t.ready ? '' : '<small>준비 중</small>'
+          `<button type="button" class="tab${i === 0 ? ' on' : ''}" ${t.ready ? '' : 'disabled'}${
+            t.label === '나' ? ' data-testid="tab-me"' : ''
+          }>${t.label}${t.ready ? '' : '<small>준비 중</small>'}${
+            t.label === '나' ? '<em class="tab-badge" data-testid="skill-badge" hidden></em>' : ''
           }</button>`,
       ).join('')}
     </nav>`
@@ -75,6 +78,8 @@ export function createHud(root: HTMLElement, onToggle: () => void, onSettings: (
   toggle.addEventListener('click', onToggle)
   q('cap-toast-close').addEventListener('click', hideToast)
   q('open-settings').addEventListener('click', onSettings)
+  q('tab-me').addEventListener('click', onMe)
+  const skillBadge = q('skill-badge')
 
   return {
     sceneHost: q('scene'),
@@ -92,6 +97,8 @@ export function createHud(root: HTMLElement, onToggle: () => void, onSettings: (
       timer.textContent = formatElapsed(v.running ? v.elapsedMs : 0)
       toggle.textContent = v.running ? '그만하기' : '운동 시작'
       toggle.classList.toggle('running', v.running)
+      skillBadge.hidden = v.skillPoints < 1
+      skillBadge.textContent = String(v.skillPoints)
     },
     /** 하루 상한에 닿았다는 안내를 잠깐 띄운다 */
     showCapToast() {

@@ -9,6 +9,8 @@ import { loadSave, writeSave, SAVE_KEY, type KV } from './core/storage'
 import type { SaveData } from './core/types'
 import { createHud } from './ui/hud'
 import { createSettings } from './ui/settings'
+import { createSkills } from './ui/skills'
+import { learnSkill, remainingSkillPoints, skillRanks } from './core/skills'
 
 declare global {
   interface Window {
@@ -42,6 +44,7 @@ const hud = createHud(
     render()
   },
   () => settings.open(),
+  () => skills.open(),
 )
 
 // 설정 창은 HUD 뒤에 붙인다(HUD가 #app 내용을 새로 채우기 때문)
@@ -70,6 +73,19 @@ const settings = createSettings(app, {
     save = s
     writeSave(kv, save)
     shownLevel = undefined
+    render()
+  },
+})
+
+const currentLevel = () => computeProgress(liveRecords(save, Date.now())).level
+
+const skills = createSkills(app, {
+  view: () => ({ points: remainingSkillPoints(currentLevel(), save.skills), ranks: skillRanks(save.skills) }),
+  onLearn(id) {
+    const next = learnSkill(save, currentLevel(), id)
+    if (!next) return
+    save = next
+    writeSave(kv, save)
     render()
   },
 })
@@ -105,7 +121,9 @@ function render() {
     todayMinutes: today.minutes,
     todayCap: today.cap,
     capReached: today.reached,
+    skillPoints: remainingSkillPoints(p.level, save.skills),
   })
+  skills.refresh()
 }
 
 const game = new Phaser.Game({
