@@ -10,6 +10,8 @@ export interface HudView {
   todayCap: number
   capReached: boolean
   skillPoints: number
+  /** 브라우저 저장소에 저장하지 못했으면 true */
+  saveFailed: boolean
 }
 
 const TABS = [
@@ -37,6 +39,13 @@ export function createHud(
       </div>
       <div class="bar"><i data-testid="exp-bar"></i></div>
     </header>
+    <div class="save-warn" data-testid="save-warning" role="alert" hidden>
+      <div class="save-warn-text">
+        <b>⚠️ 기록이 저장되지 않고 있어요</b>
+        <span>창을 닫으면 사라질 수 있어요. 백업 파일로 받아 두세요</span>
+      </div>
+      <button type="button" class="save-warn-action" data-testid="save-warning-backup">백업 받기</button>
+    </div>
     <section class="scene" data-testid="scene">
       <div class="levelup" data-testid="levelup" role="status" hidden>
         <b>레벨 업!</b>
@@ -87,6 +96,8 @@ export function createHud(
   toggle.addEventListener('click', onToggle)
   q('cap-toast-close').addEventListener('click', hideToast)
   q('open-settings').addEventListener('click', onSettings)
+  q('save-warning-backup').addEventListener('click', onSettings)
+  const saveWarning = q('save-warning')
   q('tab-me').addEventListener('click', onMe)
   q('open-stages').addEventListener('click', onAdventure)
   q('open-cosmetics').addEventListener('click', onDress)
@@ -110,6 +121,7 @@ export function createHud(
       toggle.classList.toggle('running', v.running)
       skillBadge.hidden = v.skillPoints < 1
       skillBadge.textContent = String(v.skillPoints)
+      saveWarning.hidden = !v.saveFailed
     },
     /** 하루 상한에 닿았다는 안내를 잠깐 띄운다 */
     showCapToast() {

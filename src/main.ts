@@ -5,7 +5,7 @@ import { computeProgress, todayStatus } from './core/progression'
 import { levelUpTo } from './core/levelup'
 import { liveRecords, startSession, stopSession } from './core/session'
 import { backupFileName, exportBackup } from './core/backup'
-import { loadSave, syncSave, writeSave, SAVE_KEY, type KV } from './core/storage'
+import { canPersist, loadSave, syncSave, writeSave, SAVE_KEY, type KV } from './core/storage'
 import type { SaveData } from './core/types'
 import { createHud } from './ui/hud'
 import { createSettings } from './ui/settings'
@@ -28,19 +28,25 @@ declare global {
 }
 
 /** 브라우저 저장소를 못 쓰는 환경(사생활 보호 모드 등)에서는 메모리에만 둔다 */
-function openStorage(): KV {
+function openStorage(): { kv: KV; persistent: boolean } {
   try {
     const s = window.localStorage
     s.getItem('probe')
-    return s
+    return { kv: s, persistent: canPersist(s) }
   } catch {
     const m = new Map<string, string>()
-    return { getItem: (k) => m.get(k) ?? null, setItem: (k, v) => void m.set(k, v) }
+    return { kv: { getItem: (k) => m.get(k) ?? null, setItem: (k, v) => void m.set(k, v) }, persistent: false }
   }
 }
 
-const kv = openStorage()
+const storage = openStorage()
+const kv = storage.kv
 let save = loadSave(kv, Date.now())
+// 저장이 안 되면(가득 참 등) 창을 닫는 순간 기록이 사라지므로 화면에 알리고 백업을 권한다
+let saveOk = storage.persistent
+function persist() {
+  saveOk = writeSave(kv, save) && storage.persistent
+}
 
 /** 다른 창이 저장했으면 그 내용으로 바꾼다. 바뀌었으면 true */
 function pullSave(): boolean {
@@ -60,7 +66,7 @@ const hud = createHud(
     pullSave()
     const now = Date.now()
     save = save.active ? stopSession(save, now) : startSession(save, 'exercise', now)
-    writeSave(kv, save)
+    persist()
     render()
   },
   () => settings.open(),
@@ -93,7 +99,7 @@ const settings = createSettings(app, {
       // 남기지 못해도 가져오기는 진행한다
     }
     save = s
-    writeSave(kv, save)
+    persist()
     shownLevel = undefined
     render()
   },
@@ -108,7 +114,7 @@ const skills = createSkills(app, {
     const next = learnSkill(save, currentLevel(), id)
     if (!next) return
     save = next
-    writeSave(kv, save)
+    persist()
     render()
   },
 })
@@ -121,7 +127,7 @@ const cosmetics = createCosmetics(app, {
     const next = toggleWear(save, id)
     if (next === save) return
     save = next
-    writeSave(kv, save)
+    persist()
     render()
   },
 })
@@ -165,7 +171,7 @@ const stages = createStages(app, {
     const outcome = applyBattleResult(save, no, result.win)
     if (outcome.save !== save) {
       save = outcome.save
-      writeSave(kv, save)
+      persist()
     }
     const reward = outcome.reward ? `🎁 새 꾸미기 · ${outcome.reward.icon} ${outcome.reward.name}` : null
     const view = { win: result.win, rounds: result.rounds, note: resultNote(outcome, result.win), reward }
@@ -208,6 +214,7 @@ function render() {
     todayCap: today.cap,
     capReached: today.reached,
     skillPoints: remainingSkillPoints(p.level, save.skills),
+    saveFailed: !saveOk,
   })
   skills.refresh()
   homeScene()?.showHomeMonster(homeMonster(save.stageProgress))

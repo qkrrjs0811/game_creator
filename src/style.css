@@ -119,6 +119,34 @@ body {
   from { transform: translateY(8px) scale(0.96); }
   to { transform: none; }
 }
+.save-warn {
+  margin: 0 14px 10px;
+  padding: 10px 10px 10px 16px;
+  border-radius: 20px;
+  background: #ffe2d4;
+  box-shadow: 0 3px 0 #f6c7b2;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  word-break: keep-all;
+}
+.save-warn[hidden] { display: none; }
+.save-warn-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.save-warn-text b { font-size: 14px; color: var(--accent); }
+.save-warn-text span { font-size: 12px; line-height: 1.4; color: var(--ink); }
+.save-warn-action {
+  flex: none;
+  min-height: 44px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--accent);
+  color: #fff;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
 .today {
   display: inline-block;
   margin-bottom: 6px;

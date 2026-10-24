@@ -1,5 +1,5 @@
 import { test, expect } from 'vitest'
-import { loadSave, syncSave, writeSave, SAVE_KEY } from './storage'
+import { canPersist, loadSave, syncSave, writeSave, SAVE_KEY } from './storage'
 import { newSave } from './session'
 
 const mem = () => {
@@ -72,4 +72,20 @@ test('저장이 없거나 깨졌으면 지금 것을 지키고 보존 키도 만
   expect([...kv.m.keys()]).toEqual([SAVE_KEY])
   const bad = { getItem: () => { throw new Error('x') }, setItem: () => {} }
   expect(syncSave(bad, s)).toBe(s)
+})
+
+test('저장소에 써지고 다시 읽히면 저장할 수 있음', () => {
+  const kv = mem()
+  expect(canPersist(kv)).toBe(true)
+  // 시험 값은 저장 키를 건드리지 않는다
+  expect(kv.m.has(SAVE_KEY)).toBe(false)
+})
+
+test('쓰기가 막혔거나(가득 참 등) 써도 읽히지 않으면 저장할 수 없음', () => {
+  const full = { getItem: () => null, setItem: () => { throw new Error('QuotaExceededError') } }
+  expect(canPersist(full)).toBe(false)
+  const lost = { getItem: () => null, setItem: () => {} }
+  expect(canPersist(lost)).toBe(false)
+  const broken = { getItem: () => { throw new Error('x') }, setItem: () => {} }
+  expect(canPersist(broken)).toBe(false)
 })

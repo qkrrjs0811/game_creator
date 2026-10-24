@@ -43,6 +43,19 @@ export function syncSave(kv: KV, current: SaveData): SaveData {
   }
 }
 
+const PROBE_KEY = `${SAVE_KEY}:probe`
+
+/** 저장소에 써지고 다시 읽히는지 본다(가득 참, 사생활 보호 모드 등이면 false) */
+export function canPersist(kv: KV): boolean {
+  try {
+    const value = String(Math.random())
+    kv.setItem(PROBE_KEY, value)
+    return kv.getItem(PROBE_KEY) === value
+  } catch {
+    return false
+  }
+}
+
 export function writeSave(kv: KV, save: SaveData): boolean {
   try {
     kv.setItem(SAVE_KEY, JSON.stringify(save))
