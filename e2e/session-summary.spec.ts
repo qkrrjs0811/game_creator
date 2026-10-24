@@ -19,6 +19,13 @@ test('운동을 그만하면 이번에 얻은 경험치와 능력치를 보여 �
     const b = (await page.getByTestId(id).boundingBox())!
     expect(b.y).toBeGreaterThanOrEqual(box.y + box.height)
   }
+  // 요약이 말랑이와 몬스터를 가리지 않는다(장면이 남기는 발끝 높이로 잰다)
+  const scene = (await page.getByTestId('scene').boundingBox())!
+  const feet = Number(await page.locator('[data-feet]').getAttribute('data-feet'))
+  // 캔버스가 장면 칸에 꼭 맞아야 아래쪽이 잘리지 않는다
+  const canvas = (await page.locator('canvas').boundingBox())!
+  expect(Math.abs(canvas.height - scene.height)).toBeLessThanOrEqual(1)
+  expect(scene.y + feet).toBeLessThanOrEqual(box.y)
   await page.waitForTimeout(700)
   await page.screenshot({ path: 'test-results/screens/session-summary.png' })
 

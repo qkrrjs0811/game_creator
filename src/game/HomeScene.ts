@@ -9,6 +9,18 @@ const INK = 0x5a4636
 const MONSTER_INK = 0x3d2a63
 const CROWN = 0xffd36b
 const HP_PLAYER = 0x7fd8b0
+/** 땅 높이에서 말랑이(반지름 38)·몬스터 아래 끝까지 */
+const FEET = 38
+/** 장면 아래 끝에서 운동 마침 요약 카드 위(버튼 줄 72 + 카드 약 76)까지와 조금의 틈 */
+const BELOW_FEET = 156
+
+/**
+ * 말랑이·몬스터가 서는 땅 높이. 아래쪽 운동 마침 요약(버튼 위 카드)에 가리지 않게 발끝을 그 위에 둔다.
+ * 낮은 화면에서는 위쪽 결과 카드·말풍선 자리를 위해 너무 올리지 않는다
+ */
+function groundY(h: number): number {
+  return Phaser.Math.Clamp(h - BELOW_FEET - FEET, h * 0.56, h * 0.68)
+}
 const HP_ENEMY = 0xff9fbf
 const BAR_W = 78
 const FONT = 'Segoe UI, Malgun Gothic, sans-serif'
@@ -356,16 +368,18 @@ export class HomeScene extends Phaser.Scene {
       if (ratio > 0) g.fillStyle(color).fillRoundedRect(cx - BAR_W / 2, cy, Math.max(10, BAR_W * ratio), 10, 5)
     }
     const { width: w, height: h } = this.scale
-    bar(w * 0.3, h * 0.68 - 72, playerHp, HP_PLAYER)
-    bar(w * 0.72, h * 0.68 - 72, enemyHp, HP_ENEMY)
+    bar(w * 0.3, groundY(h) - 72, playerHp, HP_PLAYER)
+    bar(w * 0.72, groundY(h) - 72, enemyHp, HP_ENEMY)
     b.hp = [playerHp, enemyHp]
   }
 
   private layout(w: number, h: number) {
-    const ground = h * 0.68
+    const ground = groundY(h)
     this.mascot.setPosition(w * 0.3, ground)
     this.monster.setPosition(w * 0.72, ground + 6)
     this.bubble.setPosition(w / 2, Math.max(28, h * 0.16))
+    // e2e가 말랑이·몬스터 발끝(장면 위에서부터 px)을 볼 수 있게 남긴다
+    this.game.canvas.parentElement?.setAttribute('data-feet', String(Math.round(ground + FEET)))
     if (this.battle) this.drawBars(...this.battle.hp)
   }
 }

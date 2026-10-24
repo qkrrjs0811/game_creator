@@ -284,6 +284,11 @@ const game = new Phaser.Game({
   scale: { mode: Phaser.Scale.RESIZE },
   scene: HomeScene,
 })
+// 장면 칸 크기가 창 크기와 상관없이 바뀌어도(아래 카드 글자가 들어설 때 등) 캔버스를 칸에 맞춘다.
+// 맞추지 않으면 캔버스가 칸보다 커서 아래쪽이 잘리고 말랑이가 실제보다 아래에 놓인다
+new ResizeObserver(() => {
+  if (game.scale.getParentBounds()) game.scale.refresh()
+}).observe(hud.sceneHost)
 
 render()
 setInterval(render, 1000)
