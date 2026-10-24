@@ -5,6 +5,10 @@ export interface SettingsHandlers {
   onExport(): void
   /** 가져오기 확인 화면에 보여 줄 한 줄 요약 */
   describe(save: SaveData): string
+  /** 지금 기록의 한 줄 요약 */
+  describeCurrent(): string
+  /** 가져오면 지금보다 덜 자란 상태가 되는지 */
+  losesProgress(save: SaveData): boolean
   onImport(save: SaveData): void
 }
 
@@ -26,7 +30,11 @@ export function createSettings(root: HTMLElement, h: SettingsHandlers) {
       </section>
       <section class="sheet-body" data-testid="import-confirm" hidden>
         <p class="confirm-title">이 백업으로 되돌릴까요?</p>
+        <p class="confirm-label">가져올 백업</p>
         <p class="confirm-summary" data-testid="import-summary"></p>
+        <p class="confirm-label">지금 기록</p>
+        <p class="confirm-summary now" data-testid="import-current"></p>
+        <p class="confirm-warn" data-testid="import-warning" role="alert" hidden>⚠️ 백업이 지금보다 덜 자랐어요. 되돌리면 그 뒤에 쌓은 기록이 사라져요.</p>
         <p class="sheet-desc">지금 기록은 이 백업 내용으로 바뀌어요.</p>
         <button type="button" class="sheet-btn main" data-testid="import-yes">되돌리기</button>
         <button type="button" class="sheet-btn" data-testid="import-no">취소</button>
@@ -72,6 +80,8 @@ export function createSettings(root: HTMLElement, h: SettingsHandlers) {
     }
     pending = r.save
     q('import-summary').textContent = h.describe(r.save)
+    q('import-current').textContent = h.describeCurrent()
+    q('import-warning').hidden = !h.losesProgress(r.save)
     menu.hidden = true
     confirmBox.hidden = false
   })

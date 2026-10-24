@@ -27,6 +27,8 @@ test('백업 내려받기 후 새로 시작한 상태에서 가져오면 레벨�
   await page.getByTestId('open-settings').click()
   await page.getByTestId('backup-file').setInputFiles({ name: 'b.json', mimeType: 'application/json', buffer: Buffer.from(text) })
   await expect(page.getByTestId('import-summary')).toHaveText('Lv.3 · 운동 기록 1개')
+  await expect(page.getByTestId('import-current')).toHaveText('Lv.1 · 운동 기록 0개')
+  await expect(page.getByTestId('import-warning')).toBeHidden()
   await page.screenshot({ path: 'test-results/screens/import-confirm.png' })
 
   // 취소하면 그대로
@@ -42,6 +44,38 @@ test('백업 내려받기 후 새로 시작한 상태에서 가져오면 레벨�
   // 새로고침해도 유지
   await page.reload()
   await expect(page.getByTestId('level')).toHaveText('Lv.3')
+})
+
+test('지금보다 덜 자란 오래된 백업을 고르면 경고하고, 취소하면 그대로', async ({ page }) => {
+  await page.clock.install()
+  await page.goto('./')
+  await page.getByTestId('toggle').click()
+  await page.clock.fastForward('10:00')
+  await page.getByTestId('toggle').click()
+  await expect(page.getByTestId('level')).toHaveText('Lv.2')
+
+  await page.getByTestId('open-settings').click()
+  const [download] = await Promise.all([page.waitForEvent('download'), page.getByTestId('backup-export').click()])
+  const old = await readFile((await download.path())!, 'utf8')
+  await page.getByTestId('settings-close').click()
+
+  // 백업 뒤에 더 운동했다(타이머는 켜 둔 채)
+  await page.getByTestId('toggle').click()
+  await page.clock.fastForward('40:00')
+  await expect(page.getByTestId('level')).toHaveText('Lv.4')
+
+  await page.getByTestId('open-settings').click()
+  await page.getByTestId('backup-file').setInputFiles({ name: 'old.json', mimeType: 'application/json', buffer: Buffer.from(old) })
+  await expect(page.getByTestId('import-summary')).toHaveText('Lv.2 · 운동 기록 1개')
+  await expect(page.getByTestId('import-current')).toHaveText('Lv.4 · 운동 기록 1개')
+  await expect(page.getByTestId('import-warning')).toBeVisible()
+  await expect(page.getByTestId('import-warning')).toContainText('덜 자랐어요')
+  await page.screenshot({ path: 'test-results/screens/import-older.png' })
+
+  await page.getByTestId('import-no').click()
+  await page.getByTestId('settings-close').click()
+  await expect(page.getByTestId('level')).toHaveText('Lv.4')
+  await expect(page.getByTestId('toggle')).toHaveText('그만하기')
 })
 
 test('형식이 틀린 파일은 거절하고 기록은 그대로', async ({ page }) => {

@@ -1,4 +1,6 @@
 import { ACTIVITIES } from './activities'
+import { computeProgress } from './progression'
+import { liveRecords } from './session'
 import type { ActiveSession, ActivityId, ActivityRecord, SaveData } from './types'
 
 export const BACKUP_APP = 'growth-game'
@@ -30,6 +32,12 @@ export function parseBackup(text: string): BackupResult {
   }
   const save = toSave(data)
   return save ? { ok: true, save } : { ok: false }
+}
+
+/** 가져오면 지금보다 덜 자란 상태가 되는지(경험치나 깬 스테이지가 줄어드는지). 진행 중 타이머는 now 까지 센다 */
+export function importLosesProgress(current: SaveData, incoming: SaveData, now: number): boolean {
+  const exp = (s: SaveData) => computeProgress(liveRecords(s, now)).exp
+  return exp(incoming) < exp(current) || incoming.stageProgress < current.stageProgress
 }
 
 function isObject(v: unknown): v is Record<string, unknown> {

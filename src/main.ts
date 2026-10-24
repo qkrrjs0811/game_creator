@@ -4,7 +4,7 @@ import { HomeScene } from './game/HomeScene'
 import { computeProgress, todayStatus } from './core/progression'
 import { levelUpTo, restoreShownLevel } from './core/levelup'
 import { liveRecords, startSession, stopSession } from './core/session'
-import { backupFileName, exportBackup } from './core/backup'
+import { backupFileName, exportBackup, importLosesProgress } from './core/backup'
 import { canPersist, loadSave, syncSave, writeSave, SAVE_KEY, type KV } from './core/storage'
 import type { SaveData } from './core/types'
 import { createHud } from './ui/hud'
@@ -91,6 +91,12 @@ const settings = createSettings(app, {
     const p = computeProgress(liveRecords(s, Date.now()))
     return `Lv.${p.level} · 운동 기록 ${s.records.length}개`
   },
+  describeCurrent() {
+    pullSave()
+    return this.describe(save)
+  },
+  // 실수로 오래된 백업을 고르면 그 뒤에 쌓은 기록이 사라지므로 미리 알린다
+  losesProgress: (s) => importLosesProgress(save, s, Date.now()),
   onImport(s) {
     // 덮어쓰기 전 지금 저장을 따로 남겨 둔다(잘못 가져와도 기록이 사라지지 않게)
     const now = Date.now()

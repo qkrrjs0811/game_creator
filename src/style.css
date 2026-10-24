@@ -247,6 +247,20 @@ body {
   font-weight: 700;
   color: var(--accent);
 }
+.confirm-summary.now { color: var(--ink); }
+.confirm-label { margin: 2px 0 -6px 4px; font-size: 12px; font-weight: 700; color: var(--ink-soft); }
+.confirm-warn {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 18px;
+  background: #ffe1d3;
+  font-size: 13px;
+  line-height: 1.5;
+  font-weight: 700;
+  color: #c25a34;
+  word-break: keep-all;
+}
+.confirm-warn[hidden] { display: none; }
 .sheet-close {
   margin-top: 12px;
   min-height: 44px;

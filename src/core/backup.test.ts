@@ -1,5 +1,5 @@
 import { test, expect } from 'vitest'
-import { backupFileName, exportBackup, parseBackup } from './backup'
+import { backupFileName, exportBackup, importLosesProgress, parseBackup } from './backup'
 import { newSave } from './session'
 import type { SaveData } from './types'
 
@@ -84,4 +84,31 @@ test('끝이 시작보다 이른 기록이 섞여 있어도 백업 전체를 거
   const save = { ...newSave(), records: [{ id: 'r', activity: 'exercise' as const, startedAt: 5000, endedAt: 1000 }] }
   const r = parseBackup(JSON.stringify(save))
   expect(r).toEqual({ ok: true, save: { ...save, records: [{ id: 'r', activity: 'exercise', startedAt: 5000, endedAt: 5000 }] } })
+})
+
+test('백업이 지금보다 덜 자랐으면(경험치나 깬 스테이지가 적으면) 잃는 것으로 봄', () => {
+  const now = 2_000_000
+  const s = sample()
+  expect(importLosesProgress(s, newSave(), now)).toBe(true)
+  expect(importLosesProgress(s, { ...s, stageProgress: 1 }, now)).toBe(true)
+  expect(importLosesProgress(s, { ...s, records: s.records.slice(1) }, now)).toBe(true)
+})
+
+test('같거나 더 자란 백업은 잃지 않음', () => {
+  const now = 2_000_000
+  const s = sample()
+  expect(importLosesProgress(s, s, now)).toBe(false)
+  expect(importLosesProgress(newSave(), s, now)).toBe(false)
+  expect(importLosesProgress(s, { ...s, stageProgress: 3 }, now)).toBe(false)
+})
+
+test('진행 중 타이머의 시간도 지금 것으로 셈', () => {
+  const now = 1_000 + 31 * 60_000
+  const running: SaveData = { ...newSave(), active: { activity: 'exercise', startedAt: 1_000 } }
+  const done: SaveData = {
+    ...newSave(),
+    records: [{ id: 'exercise-1000', activity: 'exercise', startedAt: 1_000, endedAt: 1_000 + 10 * 60_000 }],
+  }
+  expect(importLosesProgress(running, done, now)).toBe(true)
+  expect(importLosesProgress(done, running, now)).toBe(false)
 })
