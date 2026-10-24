@@ -19,7 +19,13 @@
       "Bash(git add *)",
       "Bash(git commit *)",
       "Bash(git restore *)",
-      "Bash(ls *)"
+      "Bash(ls *)",
+      "Bash(git ls-files*)",
+      "Bash(cat *)",
+      "Bash(head *)",
+      "Bash(tail *)",
+      "Bash(grep *)",
+      "Bash(wc *)"
     ],
     "deny": [
       "Bash(git push*)",

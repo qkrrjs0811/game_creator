@@ -19,7 +19,7 @@ mkdirSync(LOGS, { recursive: true })
 
 const stamp = () => new Date().toISOString().replace(/[:.]/g, '-')
 const log = (msg) => console.log(`[${new Date().toLocaleString('ko-KR')}] ${msg}`)
-const git = (...a) => execFileSync('git', a, { cwd: ROOT, encoding: 'utf8' }).trim()
+const git = (...a) => execFileSync('git', a, { cwd: ROOT, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }).trim()
 
 /** prompt 를 stdin 으로 넣고 stream-json 출력을 모은다. 시간 초과면 프로세스를 끝낸다 */
 function runClaude({ model, prompt, timeoutMs, logPath, permissionMode }) {
@@ -27,6 +27,9 @@ function runClaude({ model, prompt, timeoutMs, logPath, permissionMode }) {
     const cli = ['-p', '--model', model, '--output-format', 'stream-json', '--verbose']
     // 사용자 전역 설정(플러그인·스킬·훅·MCP)을 빼고 이 저장소 설정만 쓴다. 질문을 요구하는 스킬이 혼자 도는 세션을 멈추지 않게
     cli.push('--setting-sources', 'project,local', '--disable-slash-commands', '--strict-mcp-config')
+    // 신뢰 승인 전 작업 공간에서는 settings.json 의 허용 목록이 무시되므로 같은 목록을 옵션으로 직접 넘긴다
+    const { allow, deny } = JSON.parse(readFileSync(join(ROOT, '.claude', 'settings.json'), 'utf8')).permissions
+    cli.push('--allowedTools', ...allow, '--disallowedTools', ...deny)
     if (permissionMode) cli.push('--permission-mode', permissionMode)
     const child = spawn('claude', cli, { cwd: ROOT, stdio: ['pipe', 'pipe', 'pipe'] })
     const file = logPath ? createWriteStream(logPath) : null
