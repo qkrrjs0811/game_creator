@@ -402,7 +402,13 @@ export class HomeScene extends Phaser.Scene {
     const box = this.game.canvas.parentElement
     box?.setAttribute('data-hit-bottom', String(Math.round(y + t.height / 2)))
     box?.setAttribute('data-bar-top', String(Math.round(barY(this.scale.height) - 3)))
-    this.tweens.add({ targets: t, y: y - 34, alpha: 0, duration: 800, ease: 'Cubic.easeOut', onComplete: () => t.destroy() })
+    // 톡 커지며 나타나 또렷하게 떠오르다가 끝에서만 흐려진다(뜨자마자 흐려져 읽기 어렵지 않게)
+    t.setScale(0.6)
+    this.tweens.add({ targets: t, scale: 1, duration: 140, ease: 'Back.easeOut' })
+    this.tweens.add({ targets: t, y: y - 26, duration: 760, ease: 'Quad.easeOut' })
+    this.tweens.add({ targets: t, alpha: 0, delay: 460, duration: 300, ease: 'Quad.easeIn', onComplete: () => t.destroy() })
+    // e2e가 숫자가 읽을 만큼 오래 또렷한지 볼 수 있게 0.3초 뒤 투명도를 남긴다
+    this.time.delayedCall(300, () => box?.setAttribute('data-hit-alpha-300', t.alpha.toFixed(2)))
   }
 
   /** 두 캐릭터 머리 위의 둥근 HP 바 */

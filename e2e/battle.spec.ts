@@ -65,6 +65,9 @@ test('데미지 숫자는 HP 막대 위에서 떠올라 막대를 가리지 않�
   const hitBottom = Number(await scene.getAttribute('data-hit-bottom'))
   const barTop = Number(await scene.getAttribute('data-bar-top'))
   expect(hitBottom).toBeLessThanOrEqual(barTop)
-  await page.waitForTimeout(150)
+
+  // 숫자는 뜨자마자 흐려지지 않고 0.3초 뒤에도 또렷해서 읽을 수 있다
+  await expect(scene).toHaveAttribute('data-hit-alpha-300', /.+/, { timeout: 2_000 })
+  expect(Number(await scene.getAttribute('data-hit-alpha-300'))).toBeGreaterThanOrEqual(0.95)
   await page.screenshot({ path: 'test-results/screens/battle-hit.png' })
 })
