@@ -1,12 +1,80 @@
 :root {
   --bg: #fff6ec;
   --ink: #5a4636;
+  --ink-soft: #a08b78;
   --accent: #ff8a5b;
   --exp: #ffb36b;
+  --track: #f1dfcf;
+  --chip: #f6e7d8;
 }
+* { box-sizing: border-box; }
+html, body { height: 100%; }
 body {
   margin: 0;
   background: var(--bg);
   color: var(--ink);
   font-family: "Segoe UI", "Malgun Gothic", sans-serif;
+  -webkit-tap-highlight-color: transparent;
 }
+#app {
+  height: 100dvh;
+  max-width: 480px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  padding: env(safe-area-inset-top) 0 env(safe-area-inset-bottom);
+}
+.top { padding: 14px 16px 10px; font-size: 14px; }
+.top-row { display: flex; justify-content: space-between; align-items: baseline; }
+.top-row b { font-size: 18px; }
+.exp-text { font-size: 12px; color: var(--ink-soft); }
+.bar { margin-top: 8px; height: 12px; border-radius: 6px; background: var(--track); overflow: hidden; }
+.bar i { display: block; height: 100%; width: 0; background: var(--exp); border-radius: 6px; transition: width 0.4s; }
+.scene {
+  flex: 1;
+  min-height: 0;
+  margin: 0 14px;
+  border-radius: 28px;
+  background: linear-gradient(#bfe6ff, #e4f7d6);
+  overflow: hidden;
+}
+.timer-card {
+  margin: 14px;
+  padding: 16px;
+  background: #fff;
+  border-radius: 24px;
+  text-align: center;
+  box-shadow: 0 4px 0 var(--track);
+}
+.timer-label { font-size: 13px; color: var(--ink-soft); }
+.timer { font-size: 40px; font-weight: 800; color: var(--accent); font-variant-numeric: tabular-nums; margin: 4px 0 10px; }
+.toggle {
+  border: 0;
+  padding: 12px 36px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: #fff;
+  font: inherit;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.toggle.running { background: var(--ink); }
+.tabs { display: flex; gap: 8px; padding: 0 14px 14px; }
+.tab {
+  flex: 1;
+  border: 0;
+  padding: 10px 0 8px;
+  border-radius: 14px;
+  background: var(--chip);
+  color: var(--ink);
+  font: inherit;
+  font-size: 13px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+.tab.on { background: var(--ink); color: #fff; font-weight: 700; }
+.tab:disabled { opacity: 0.55; }
+.tab small { font-size: 10px; }

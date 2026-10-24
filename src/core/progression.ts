@@ -35,10 +35,11 @@ export function creditedMinutes(records: ActivityRecord[], activity: ActivityId)
       t = cut
     }
   }
-  const cap = ACTIVITIES[activity].dailyCapMinutes
-  let total = 0
-  for (const ms of msByDay.values()) total += Math.min(Math.floor(ms / MINUTE), cap)
-  return total
+  // 상한은 날짜별로, 내림은 합계에 한 번만 한다(자정을 걸친 세션이 분을 잃지 않게)
+  const capMs = ACTIVITIES[activity].dailyCapMinutes * MINUTE
+  let totalMs = 0
+  for (const ms of msByDay.values()) totalMs += Math.min(ms, capMs)
+  return Math.floor(totalMs / MINUTE)
 }
 
 export function computeProgress(records: ActivityRecord[]): Progress {

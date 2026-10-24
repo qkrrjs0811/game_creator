@@ -30,6 +30,11 @@ describe('progression', () => {
     expect(creditedMinutes([rec('2026-10-24T23:00:00', '2026-10-25T01:00:00')], 'exercise')).toBe(120)
   })
 
+  test('자정을 걸친 짧은 세션도 분을 잃지 않음', () => {
+    expect(creditedMinutes([rec('2026-10-24T23:59:30', '2026-10-25T00:00:30')], 'exercise')).toBe(1)
+    expect(creditedMinutes([rec('2026-10-24T23:50:30', '2026-10-25T00:20:30')], 'exercise')).toBe(30)
+  })
+
   test('끝이 시작보다 이르면 0분', () => {
     expect(creditedMinutes([rec('2026-10-24T10:00:00', '2026-10-24T09:00:00')], 'exercise')).toBe(0)
   })
