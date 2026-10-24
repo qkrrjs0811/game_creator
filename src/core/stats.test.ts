@@ -34,4 +34,14 @@ describe('statRows', () => {
     const str = statRows(computeProgress(exercise(200))).find((r) => r.id === 'str')!
     expect(str).toMatchObject({ value: 23, toNext: 10 })
   })
+
+  test('오늘 상한을 채운 활동으로 오르는 능력치는 내일 이어서 오른다고 표시한다', () => {
+    const p = computeProgress(exercise(200))
+    const rows = statRows(p, ['exercise'])
+    expect(rows.find((r) => r.id === 'str')).toMatchObject({ toNext: 10, tomorrow: true })
+    expect(rows.find((r) => r.id === 'vit')).toMatchObject({ tomorrow: true })
+    expect(rows.find((r) => r.id === 'int')).toMatchObject({ tomorrow: false })
+    // 상한 전이면 오늘 더 하면 된다
+    expect(statRows(computeProgress(exercise(37))).find((r) => r.id === 'str')).toMatchObject({ tomorrow: false })
+  })
 })

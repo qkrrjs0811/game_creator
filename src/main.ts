@@ -124,8 +124,12 @@ const currentLevel = () => currentProgress().level
 
 const skills = createSkills(app, {
   view: () => {
-    const p = currentProgress()
-    return { points: remainingSkillPoints(p.level, save.skills), ranks: skillRanks(save.skills), stats: statRows(p) }
+    const now = Date.now()
+    const records = liveRecords(save, now)
+    const p = computeProgress(records)
+    // 오늘 상한을 채웠으면 능력치 칸에 "내일" 이어서 오른다고 알려 준다
+    const stats = statRows(p, todayStatus(records, 'exercise', now).reached ? ['exercise'] : [])
+    return { points: remainingSkillPoints(p.level, save.skills), ranks: skillRanks(save.skills), stats }
   },
   onLearn(id) {
     pullSave()

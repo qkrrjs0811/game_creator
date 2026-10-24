@@ -47,7 +47,7 @@ export function createSkills(root: HTMLElement, h: { view(): SkillsView; onLearn
         <li class="stat${s.source ? '' : ' soon'}" data-testid="stat-${s.id}">
           <span class="stat-name"><span aria-hidden="true">${s.icon}</span> ${s.name}</span>
           <b data-testid="stat-value-${s.id}">${s.value}</b>
-          <small data-testid="stat-next-${s.id}">${s.toNext === null ? '준비 중' : `${s.source} ${s.toNext}분 더`}</small>
+          <small data-testid="stat-next-${s.id}">${s.toNext === null ? '준비 중' : `${s.tomorrow ? '내일 ' : ''}${s.source} ${s.toNext}분 더`}</small>
         </li>`,
       )
       .join('')

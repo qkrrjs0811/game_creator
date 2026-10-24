@@ -30,3 +30,32 @@ test('오늘 운동 시간을 보여 주고, 상한에 닿으면 안내', async 
   await page.clock.fastForward('00:05')
   await expect(page.getByTestId('cap-toast')).toBeHidden()
 })
+
+test('상한을 채우면 나 창의 능력치 칸이 내일 이어서 오른다고 알려 준다', async ({ page }) => {
+  await page.clock.install({ time: new Date('2026-10-25T08:00:00+09:00') })
+  await page.goto('./')
+  await page.getByTestId('toggle').click()
+  await page.clock.fastForward('02:57:00')
+  await page.getByTestId('tab-me').click()
+  await expect(page.getByTestId('stat-next-str')).toHaveText('운동 3분 더')
+
+  // 열어 둔 채 상한에 닿으면 바로 "내일"로 바뀐다
+  await page.clock.fastForward('03:00')
+  await expect(page.getByTestId('stat-next-str')).toHaveText('내일 운동 10분 더')
+  await expect(page.getByTestId('stat-next-vit')).toHaveText('내일 운동 10분 더')
+  await expect(page.getByTestId('stat-next-int')).toHaveText('준비 중')
+  const small = page.getByTestId('stat-next-str')
+  const card = page.getByTestId('stat-str')
+  const [s, c] = [await small.boundingBox(), await card.boundingBox()]
+  expect(s!.x).toBeGreaterThanOrEqual(c!.x)
+  expect(s!.x + s!.width).toBeLessThanOrEqual(c!.x + c!.width)
+  expect(s!.height).toBeLessThan(24) // 한 줄
+  await page.screenshot({ path: 'test-results/screens/stats-cap.png' })
+
+  // 다음 날이 되면 다시 오늘 하면 된다
+  await page.getByTestId('skills-close').click()
+  await page.getByTestId('toggle').click()
+  await page.clock.fastForward('16:00:00')
+  await page.getByTestId('tab-me').click()
+  await expect(page.getByTestId('stat-next-str')).toHaveText('운동 10분 더')
+})
