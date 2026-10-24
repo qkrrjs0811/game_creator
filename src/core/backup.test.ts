@@ -49,7 +49,6 @@ test('형식이 틀리면 거절', () => {
     { app: 'other', save: sample() },
     { ...sample(), version: 2 },
     { ...sample(), records: 'x' },
-    { ...sample(), records: [{ id: 'a', activity: 'exercise', startedAt: 10, endedAt: 5 }] },
     { ...sample(), records: [{ id: 'a', activity: 'dance', startedAt: 1, endedAt: 5 }] },
     { ...sample(), records: [{ id: 1, activity: 'exercise', startedAt: 1, endedAt: 5 }] },
     { ...sample(), records: [{ id: 'a', activity: 'exercise', startedAt: '1', endedAt: 5 }] },
@@ -70,4 +69,10 @@ test('모르는 필드는 버리고 아는 필드만 남김', () => {
 
 test('파일 이름은 내보낸 날짜를 씀', () => {
   expect(backupFileName(new Date(2026, 9, 4, 23, 0).getTime())).toBe('growth-backup-2026-10-04.json')
+})
+
+test('끝이 시작보다 이른 기록이 섞여 있어도 백업 전체를 거절하지 않고 바로잡아 받음', () => {
+  const save = { ...newSave(), records: [{ id: 'r', activity: 'exercise' as const, startedAt: 5000, endedAt: 1000 }] }
+  const r = parseBackup(JSON.stringify(save))
+  expect(r).toEqual({ ok: true, save: { ...save, records: [{ id: 'r', activity: 'exercise', startedAt: 5000, endedAt: 5000 }] } })
 })

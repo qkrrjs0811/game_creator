@@ -37,3 +37,11 @@ test('저장소가 예외를 던져도 죽지 않음', () => {
   expect(loadSave(bad, 0)).toEqual(newSave())
   expect(writeSave(bad, newSave())).toBe(false)
 })
+
+test('구조가 깨진 저장(records 안에 null)도 깨진 것으로 보존하고 새로 시작', () => {
+  const kv = mem()
+  const raw = JSON.stringify({ ...newSave(), records: [null] })
+  kv.m.set(SAVE_KEY, raw)
+  expect(loadSave(kv, 9)).toEqual(newSave())
+  expect(kv.m.get(`${SAVE_KEY}:corrupt:9`)).toBe(raw)
+})

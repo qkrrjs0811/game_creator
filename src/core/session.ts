@@ -12,7 +12,7 @@ export function startSession(save: SaveData, activity: ActivityId, now: number):
 
 export function stopSession(save: SaveData, now: number): SaveData {
   if (!save.active) return save
-  return { ...save, active: null, records: [...save.records, toRecord(save.active.activity, save.active.startedAt, now)] }
+  return { ...save, active: null, records: [...save.records, toRecord(save.active.activity, save.active.startedAt, Math.max(save.active.startedAt, now))] }
 }
 
 /** 진행 중인 세션을 now 까지의 기록으로 포함한 목록 */

@@ -44,8 +44,8 @@ function toRecord(v: unknown): ActivityRecord | null {
   if (!isObject(v)) return null
   const { id, activity, startedAt, endedAt } = v
   if (typeof id !== 'string' || !isActivity(activity) || !isTime(startedAt) || !isTime(endedAt)) return null
-  if (endedAt < startedAt) return null
-  return { id, activity, startedAt, endedAt }
+  // 시계가 뒤로 간 기록은 거절하지 않고 길이 0으로 바로잡는다(백업 전체를 못 쓰게 되지 않게)
+  return { id, activity, startedAt, endedAt: Math.max(startedAt, endedAt) }
 }
 
 function toActive(v: unknown): ActiveSession | null | undefined {
@@ -54,7 +54,8 @@ function toActive(v: unknown): ActiveSession | null | undefined {
   return { activity: v.activity, startedAt: v.startedAt }
 }
 
-function toSave(v: unknown): SaveData | null {
+/** 저장 데이터 형식을 엄격하게 확인한다. 틀리면 null */
+export function toSave(v: unknown): SaveData | null {
   if (!isObject(v) || v.version !== 1 || !Array.isArray(v.records)) return null
   const records = v.records.map(toRecord)
   if (records.some((r) => r === null)) return null

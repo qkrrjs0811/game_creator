@@ -21,3 +21,8 @@ test('liveRecords는 진행 중 세션을 now까지 포함', () => {
   const s = startSession(newSave(), 'exercise', 0)
   expect(liveRecords(s, 600_000)).toEqual([{ id: 'exercise-0', activity: 'exercise', startedAt: 0, endedAt: 600_000 }])
 })
+
+test('정지 시각이 시작보다 이르면(시계가 뒤로 감) 길이 0으로 기록', () => {
+  const s = stopSession(startSession(newSave(), 'exercise', 10_000), 4_000)
+  expect(s.records).toEqual([{ id: 'exercise-10000', activity: 'exercise', startedAt: 10_000, endedAt: 10_000 }])
+})

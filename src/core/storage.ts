@@ -1,3 +1,4 @@
+import { toSave } from './backup'
 import { newSave } from './session'
 import type { SaveData } from './types'
 
@@ -14,8 +15,8 @@ export function loadSave(kv: KV, now: number): SaveData {
   }
   if (raw === null) return newSave()
   try {
-    const data = JSON.parse(raw)
-    if (data?.version === 1 && Array.isArray(data.records)) return data as SaveData
+    const data = toSave(JSON.parse(raw))
+    if (data) return data
   } catch {
     // 아래에서 보존 처리
   }
