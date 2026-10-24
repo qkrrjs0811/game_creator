@@ -16,6 +16,16 @@ test('오늘 운동 시간을 보여 주고, 상한에 닿으면 안내', async 
   await expect(page.getByTestId('today')).toHaveText('오늘 180분 / 180분')
   await expect(page.getByTestId('cap-toast')).toBeVisible()
   await expect(page.getByTestId('timer-label')).toContainText('오늘은 충분히 했어요')
+  // 안내가 떠 있어도 모험·꾸미기 버튼은 가려지지 않고, 말랑이도 가리지 않는다
+  await page.waitForTimeout(500)
+  const box = (await page.getByTestId('cap-toast').boundingBox())!
+  for (const id of ['open-stages', 'open-cosmetics']) {
+    const b = (await page.getByTestId(id).boundingBox())!
+    expect(b.y).toBeGreaterThanOrEqual(box.y + box.height)
+  }
+  const scene = (await page.getByTestId('scene').boundingBox())!
+  const feet = Number(await page.locator('[data-feet]').getAttribute('data-feet'))
+  expect(scene.y + feet).toBeLessThanOrEqual(box.y)
   await page.screenshot({ path: 'test-results/screens/daily-cap.png' })
   await page.getByTestId('cap-toast-close').click()
   await expect(page.getByTestId('cap-toast')).toBeHidden()
