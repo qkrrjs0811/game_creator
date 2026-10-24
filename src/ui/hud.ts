@@ -157,6 +157,11 @@ export function createHud(
     },
     /** 운동을 다시 시작하면 지난 요약은 닫는다 */
     hideSessionSummary: hideSummary,
+    /** 전투를 시작하면 장면 아래쪽 안내(마침 요약·상한 안내)를 닫는다. 전투 띠와 말랑이를 가리지 않게 */
+    hideToasts() {
+      hideSummary()
+      hideToast()
+    },
     /** 레벨이 오른 순간 축하 배지를 띄우고 레벨 글자를 통통 튀게 한다. 받은 스킬 포인트는 "나" 탭으로 안내한다 */
     showLevelUp(newLevel: number, points: number) {
       levelUpLevel.textContent = `Lv.${newLevel} 달성!`

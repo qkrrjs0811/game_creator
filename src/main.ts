@@ -213,6 +213,7 @@ const stages = createStages(app, {
       damage: enemyDamagePercent(enemy, result),
     }
     stages.close()
+    hud.hideToasts()
     battleBar.start(`${s.boss ? '보스' : `${no}스테이지`} · ${s.name}`, foe.name)
     const scene = homeScene()
     if (scene) scene.playBattle(timeline, stepDelay(timeline.steps.length), foe, () => battleBar.end(view))

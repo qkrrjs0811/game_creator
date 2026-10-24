@@ -485,6 +485,8 @@ body {
 }
 .battle-bar[data-state='done'] .battle-action { background: var(--accent); color: #fff; box-shadow: 0 3px 0 #e9764a; }
 .scene.in-battle .adventure { display: none; }
+/* 전투 중에 상한에 닿아도 안내가 전투 띠 버튼을 덮지 않게 한다(타이머 카드가 이미 알려 준다) */
+.scene.in-battle .toast { display: none; }
 .battle-result {
   position: absolute;
   top: 16px;
