@@ -26,6 +26,7 @@ export function createHud(
   onSettings: () => void,
   onMe: () => void,
   onAdventure: () => void,
+  onDress: () => void,
 ) {
   root.innerHTML = `
     <header class="top">
@@ -46,6 +47,7 @@ export function createHud(
         <span>오늘 경험치는 다 모았어요. 내일 또 만나요</span>
         <button type="button" class="toast-close" data-testid="cap-toast-close" aria-label="닫기">✕</button>
       </div>
+      <button type="button" class="adventure dress" data-testid="open-cosmetics">🎀 꾸미기</button>
       <button type="button" class="adventure" data-testid="open-stages">⚔️ 모험</button>
     </section>
     <section class="timer-card">
@@ -87,6 +89,7 @@ export function createHud(
   q('open-settings').addEventListener('click', onSettings)
   q('tab-me').addEventListener('click', onMe)
   q('open-stages').addEventListener('click', onAdventure)
+  q('open-cosmetics').addEventListener('click', onDress)
   const skillBadge = q('skill-badge')
 
   return {

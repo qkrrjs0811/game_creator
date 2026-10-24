@@ -1,5 +1,5 @@
 import { describe, test, expect } from 'vitest'
-import { COSMETICS, ownedCosmetics, stageReward } from './cosmetics'
+import { COSMETICS, ownedCosmetics, stageReward, toggleWear, wornCosmetics } from './cosmetics'
 import { STAGES } from './stages'
 import { newSave } from './session'
 
@@ -39,5 +39,54 @@ describe('ownedCosmetics', () => {
     const id = stageReward(2)!.id
     const owned = ownedCosmetics({ ...newSave(), stageProgress: 0, cosmetics: ['???', id, id] })
     expect(owned.map((c) => c.id)).toEqual([id])
+  })
+})
+
+const byId = (id: string) => COSMETICS.find((c) => c.id === id)
+
+describe('wornCosmetics', () => {
+  const all = { ...newSave(), stageProgress: 6 }
+
+  test('처음에는 아무것도 안 입음', () => {
+    expect(wornCosmetics(newSave())).toEqual({ hat: null, color: null })
+  })
+
+  test('입은 모자와 색을 돌려줌', () => {
+    expect(wornCosmetics({ ...all, worn: ['hat-crown', 'color-sky'] })).toEqual({ hat: byId('hat-crown'), color: byId('color-sky') })
+  })
+
+  test('가지지 않았거나 모르는 꾸미기는 입지 않은 것으로 봄', () => {
+    const save = { ...newSave(), stageProgress: 1, worn: ['hat-crown', '???', 'color-sky'] }
+    expect(wornCosmetics(save)).toEqual({ hat: null, color: null })
+  })
+})
+
+describe('toggleWear', () => {
+  const all = { ...newSave(), stageProgress: 6 }
+
+  test('가진 꾸미기를 입음', () => {
+    expect(toggleWear(all, 'hat-sprout').worn).toEqual(['hat-sprout'])
+  })
+
+  test('같은 종류는 하나만 — 새 모자를 쓰면 이전 모자를 벗음', () => {
+    const save = toggleWear(toggleWear(toggleWear(all, 'hat-sprout'), 'color-sky'), 'hat-crown')
+    expect(wornCosmetics(save)).toEqual({ hat: byId('hat-crown'), color: byId('color-sky') })
+    expect(save.worn).not.toContain('hat-sprout')
+  })
+
+  test('입은 것을 다시 누르면 벗음', () => {
+    expect(toggleWear(toggleWear(all, 'color-cotton'), 'color-cotton').worn).toEqual([])
+  })
+
+  test('가지지 않았거나 모르는 꾸미기는 그대로', () => {
+    const save = { ...newSave(), stageProgress: 1 }
+    expect(toggleWear(save, 'hat-crown')).toBe(save)
+    expect(toggleWear(save, '???')).toBe(save)
+  })
+
+  test('입기는 기록·스킬·스테이지·가진 꾸미기를 바꾸지 않음', () => {
+    const save = { ...all, cosmetics: ['hat-sprout'], skills: ['punch'] }
+    const next = toggleWear(save, 'hat-sprout')
+    expect({ ...next, worn: save.worn }).toEqual(save)
   })
 })

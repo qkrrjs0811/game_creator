@@ -12,6 +12,13 @@ const sample = (): SaveData => ({
   skills: ['a'],
   stageProgress: 2,
   cosmetics: ['hat'],
+  worn: ['hat'],
+})
+
+test('입은 꾸미기가 없던 이전 형식은 아무것도 안 입은 것으로 읽음', () => {
+  const { worn: _, ...old } = sample()
+  const r = parseBackup(JSON.stringify(old))
+  expect(r).toEqual({ ok: true, save: { ...sample(), worn: [] } })
 })
 
 test('내보낸 백업을 다시 읽으면 같은 저장', () => {
@@ -57,6 +64,8 @@ test('형식이 틀리면 거절', () => {
     { ...sample(), stageProgress: -1 },
     { ...sample(), stageProgress: 1.5 },
     { ...sample(), cosmetics: null },
+    { ...sample(), worn: null },
+    { ...sample(), worn: [1] },
   ]
   for (const b of bad) expect(parseBackup(JSON.stringify(b)).ok, JSON.stringify(b)).toBe(false)
 })

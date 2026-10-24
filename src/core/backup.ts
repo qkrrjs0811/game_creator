@@ -64,6 +64,9 @@ export function toSave(v: unknown): SaveData | null {
   const { skills, stageProgress, cosmetics } = v
   if (!isStringList(skills) || !isStringList(cosmetics)) return null
   if (!Number.isInteger(stageProgress) || (stageProgress as number) < 0) return null
+  // 입은 꾸미기는 나중에 생긴 필드라 없으면 아무것도 안 입은 것으로 본다
+  const worn = v.worn === undefined ? [] : v.worn
+  if (!isStringList(worn)) return null
   return {
     version: 1,
     records: records as ActivityRecord[],
@@ -71,5 +74,6 @@ export function toSave(v: unknown): SaveData | null {
     skills: [...skills],
     stageProgress: stageProgress as number,
     cosmetics: [...cosmetics],
+    worn: [...worn],
   }
 }

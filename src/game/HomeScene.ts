@@ -1,6 +1,7 @@
 import Phaser from 'phaser'
 import type { ReplayStep, Timeline } from '../core/replay'
 import { MONSTERS, type Monster } from '../core/monsters'
+import type { Worn } from '../core/cosmetics'
 
 const MASCOT = 0xffd7a8
 const MASCOT_SHADE = 0xf7b97a
@@ -11,7 +12,12 @@ const HP_PLAYER = 0x7fd8b0
 const HP_ENEMY = 0xff9fbf
 const BAR_W = 78
 const FONT = 'Segoe UI, Malgun Gothic, sans-serif'
-const CONFETTI = [0xff8a5b, 0xffd36b, 0x9be3c4, 0xa8d4ff, 0xffa8c8, 0xc9a7ff]
+/** 색 꾸미기의 [몸, 아래 그늘] 색 */
+const BODY_COLORS: Record<string, [number, number]> = {
+  'color-sky': [0xb5dcff, 0x8fc2f0],
+  'color-cotton': [0xffc6de, 0xf5a3c6],
+}
+const CONFETTI =[0xff8a5b, 0xffd36b, 0x9be3c4, 0xa8d4ff, 0xffa8c8, 0xc9a7ff]
 
 /** 홈 장면: 둥근 마스코트와 몬스터가 마주 보고, 마스코트가 숨 쉬듯 움직인다 */
 export class HomeScene extends Phaser.Scene {
@@ -22,6 +28,9 @@ export class HomeScene extends Phaser.Scene {
   /** 홈에서 보여 줄 몬스터(다음에 도전할 스테이지)와 지금 그려진 몬스터 */
   private homeLook?: Monster
   private shownMonster = ''
+  /** 입은 꾸미기와 지금 그려진 모습 */
+  private look: Worn = { hat: null, color: null }
+  private shownLook?: string
   private battle?: {
     steps: ReplayStep[]
     win: boolean
@@ -39,14 +48,9 @@ export class HomeScene extends Phaser.Scene {
   }
 
   create() {
-    this.mascot = this.add.container(0, 0, [
-      this.add.circle(0, 0, 38, MASCOT),
-      this.add.ellipse(0, 22, 60, 20, MASCOT_SHADE).setAlpha(0.6),
-      this.add.ellipse(-12, -6, 8, 11, INK),
-      this.add.ellipse(12, -6, 8, 11, INK),
-      this.add.ellipse(-22, 8, 10, 6, 0xffa8a8).setAlpha(0.7),
-      this.add.ellipse(22, 8, 10, 6, 0xffa8a8).setAlpha(0.7),
-    ])
+    this.mascot = this.add.container(0, 0)
+    this.shownLook = undefined
+    this.dress(this.look)
 
     this.monster = this.add.container(0, 0)
     this.setMonster(this.homeLook ?? MONSTERS[0])
@@ -136,6 +140,54 @@ export class HomeScene extends Phaser.Scene {
     this.layout(this.scale.width, this.scale.height)
     this.idle()
     this.tweens.add({ targets: this.bubble, alpha: 1, duration: 300 })
+  }
+
+  /** 말랑이에게 입은 꾸미기(모자·색)를 입힌다. 모습만 바뀐다 */
+  dress(worn: Worn) {
+    this.look = worn
+    if (!this.mascot) return
+    const key = [worn.hat?.id, worn.color?.id].filter(Boolean).join(' ')
+    if (this.shownLook === key) return
+    this.shownLook = key
+    this.mascot.removeAll(true)
+    this.mascot.add(this.mascotParts(worn))
+    // e2e가 지금 입은 꾸미기를 볼 수 있게 남긴다
+    this.game.canvas.parentElement?.setAttribute('data-look', key)
+  }
+
+  /** 둥근 말랑이. 색 꾸미기는 몸 색을, 모자 꾸미기는 머리 위(y≈-38)를 꾸민다 */
+  private mascotParts(worn: Worn): Phaser.GameObjects.GameObject[] {
+    const [body, shade] = BODY_COLORS[worn.color?.id ?? ''] ?? [MASCOT, MASCOT_SHADE]
+    const parts: Phaser.GameObjects.GameObject[] = [
+      this.add.circle(0, 0, 38, body),
+      this.add.ellipse(0, 22, 60, 20, shade).setAlpha(0.6),
+      this.add.ellipse(-12, -6, 8, 11, INK),
+      this.add.ellipse(12, -6, 8, 11, INK),
+      this.add.ellipse(-22, 8, 10, 6, 0xffa8a8).setAlpha(0.7),
+      this.add.ellipse(22, 8, 10, 6, 0xffa8a8).setAlpha(0.7),
+    ]
+    const g = this.add.graphics()
+    switch (worn.hat?.id) {
+      case 'hat-sprout':
+        g.fillStyle(0x7cc576).fillRoundedRect(-2, -50, 4, 14, 2)
+        g.fillEllipse(-9, -50, 16, 9).fillEllipse(9, -53, 16, 9)
+        break
+      case 'hat-mushroom':
+        g.fillStyle(0xff9f9f).fillRoundedRect(-30, -58, 60, 30, { tl: 30, tr: 30, bl: 8, br: 8 })
+        g.fillStyle(0xf28888).fillRoundedRect(-30, -34, 60, 6, { tl: 0, tr: 0, bl: 8, br: 8 })
+        g.fillStyle(0xffffff).fillCircle(-14, -46, 5).fillCircle(6, -52, 4).fillCircle(17, -41, 4)
+        break
+      case 'hat-ribbon':
+        g.fillStyle(0xffa8c8).fillTriangle(14, -34, 34, -48, 34, -24).fillTriangle(14, -34, -6, -48, -6, -24)
+        g.fillStyle(0xff8fb4).fillCircle(14, -36, 6)
+        break
+      case 'hat-crown':
+        g.fillStyle(CROWN).fillRoundedRect(-16, -44, 32, 9, 3)
+        g.fillTriangle(-16, -42, -8, -42, -14, -54).fillTriangle(-5, -42, 5, -42, 0, -58).fillTriangle(8, -42, 16, -42, 14, -54)
+        g.fillStyle(0xff8fa8).fillCircle(0, -39, 3)
+        break
+    }
+    return [...parts, g]
   }
 
   /** 홈에서 기다리는 몬스터를 정한다. 전투 중이면 끝난 뒤에 바뀐다 */

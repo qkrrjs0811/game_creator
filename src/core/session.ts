@@ -1,7 +1,7 @@
 import type { ActivityId, ActivityRecord, SaveData } from './types'
 
 export function newSave(): SaveData {
-  return { version: 1, records: [], active: null, skills: [], stageProgress: 0, cosmetics: [] }
+  return { version: 1, records: [], active: null, skills: [], stageProgress: 0, cosmetics: [], worn: [] }
 }
 
 /** 이미 진행 중이면 같은 객체를 그대로 돌려준다 */

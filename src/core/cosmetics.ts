@@ -32,3 +32,22 @@ export function stageReward(no: number): Cosmetic | null {
 export function ownedCosmetics(save: SaveData): Cosmetic[] {
   return COSMETICS.filter((c) => save.cosmetics.includes(c.id) || c.stage <= save.stageProgress)
 }
+
+export type Worn = Record<CosmeticKind, Cosmetic | null>
+
+/** 지금 입은 모자와 색. 가지지 않았거나 모르는 이름은 입지 않은 것으로 본다 */
+export function wornCosmetics(save: SaveData): Worn {
+  const owned = ownedCosmetics(save)
+  const pick = (kind: CosmeticKind) =>
+    save.worn.map((id) => owned.find((c) => c.id === id && c.kind === kind)).find((c) => c !== undefined) ?? null
+  return { hat: pick('hat'), color: pick('color') }
+}
+
+/** 가진 꾸미기를 입는다. 같은 종류는 하나만 입고, 입은 것을 다시 고르면 벗는다. 입는 것 말고는 바꾸지 않는다 */
+export function toggleWear(save: SaveData, id: string): SaveData {
+  const c = ownedCosmetics(save).find((x) => x.id === id)
+  if (!c) return save
+  if (save.worn.includes(id)) return { ...save, worn: save.worn.filter((x) => x !== id) }
+  const sameKind = new Set(COSMETICS.filter((x) => x.kind === c.kind).map((x) => x.id))
+  return { ...save, worn: [...save.worn.filter((x) => !sameKind.has(x)), id] }
+}

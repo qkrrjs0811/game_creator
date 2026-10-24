@@ -21,6 +21,8 @@ export interface SaveData {
   skills: string[]
   stageProgress: number
   cosmetics: string[]
+  /** 입은 꾸미기 id(종류마다 하나). 이전 형식에는 없어서 읽을 때 []로 채운다 */
+  worn: string[]
 }
 
 export interface Progress {

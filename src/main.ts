@@ -18,6 +18,8 @@ import { playerFighter, simulateBattle } from './core/battle'
 import { battleTimeline, stepDelay } from './core/replay'
 import { homeMonster, stageEnemy, stageMonster } from './core/monsters'
 import { applyBattleResult, type BattleOutcome } from './core/result'
+import { ownedCosmetics, toggleWear, wornCosmetics } from './core/cosmetics'
+import { createCosmetics } from './ui/cosmetics'
 
 declare global {
   interface Window {
@@ -53,6 +55,7 @@ const hud = createHud(
   () => settings.open(),
   () => skills.open(),
   () => stages.open(),
+  () => cosmetics.open(),
 )
 
 // 설정 창은 HUD 뒤에 붙인다(HUD가 #app 내용을 새로 채우기 때문)
@@ -92,6 +95,18 @@ const skills = createSkills(app, {
   onLearn(id) {
     const next = learnSkill(save, currentLevel(), id)
     if (!next) return
+    save = next
+    writeSave(kv, save)
+    render()
+  },
+})
+
+// 꾸미기는 모습만 바꾼다(입은 꾸미기 저장만 바뀜)
+const cosmetics = createCosmetics(app, {
+  view: () => ({ owned: ownedCosmetics(save), worn: wornCosmetics(save) }),
+  onWear(id) {
+    const next = toggleWear(save, id)
+    if (next === save) return
     save = next
     writeSave(kv, save)
     render()
@@ -182,6 +197,7 @@ function render() {
   })
   skills.refresh()
   homeScene()?.showHomeMonster(homeMonster(save.stageProgress))
+  homeScene()?.dress(wornCosmetics(save))
 }
 
 const game = new Phaser.Game({
