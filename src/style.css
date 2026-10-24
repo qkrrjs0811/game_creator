@@ -29,8 +29,9 @@ body {
 .top-row b { font-size: 18px; }
 .exp-text { margin-left: auto; font-size: 12px; color: var(--ink-soft); }
 .gear {
-  width: 40px;
-  height: 40px;
+  flex: none;
+  width: 44px;
+  height: 44px;
   border: 0;
   border-radius: 50%;
   background: var(--chip);
@@ -56,7 +57,7 @@ body {
   left: 12px;
   right: 12px;
   z-index: 5;
-  padding: 14px 52px 14px 18px;
+  padding: 14px 58px 14px 18px;
   border-radius: 22px;
   background: #fff;
   box-shadow: 0 4px 0 var(--track);
@@ -73,9 +74,9 @@ body {
   position: absolute;
   top: 50%;
   right: 8px;
-  width: 40px;
-  height: 40px;
-  margin-top: -20px;
+  width: 44px;
+  height: 44px;
+  margin-top: -22px;
   border: 0;
   border-radius: 50%;
   background: var(--chip);
