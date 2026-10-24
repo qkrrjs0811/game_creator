@@ -1,5 +1,5 @@
 import { describe, test, expect } from 'vitest'
-import { levelUpTo, restoreShownLevel } from './levelup'
+import { levelUpPoints, levelUpTo, restoreShownLevel } from './levelup'
 
 describe('levelUpTo', () => {
   test('레벨이 오르면 새 레벨', () => {
@@ -36,5 +36,18 @@ describe('restoreShownLevel', () => {
     expect(restoreShownLevel('0', 3)).toBeUndefined()
     expect(restoreShownLevel('2.5', 3)).toBeUndefined()
     expect(restoreShownLevel('5', 3)).toBeUndefined()
+  })
+})
+
+describe('levelUpPoints', () => {
+  test('오른 레벨 수만큼 스킬 포인트를 받음', () => {
+    expect(levelUpPoints(2, 3)).toBe(1)
+    expect(levelUpPoints(1, 4)).toBe(3)
+  })
+
+  test('축하하지 않는 경우(처음 봄·그대로·내려감)는 0', () => {
+    expect(levelUpPoints(undefined, 7)).toBe(0)
+    expect(levelUpPoints(3, 3)).toBe(0)
+    expect(levelUpPoints(5, 2)).toBe(0)
   })
 })

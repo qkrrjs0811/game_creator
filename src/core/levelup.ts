@@ -1,3 +1,8 @@
+/** 레벨업 축하에서 받았다고 알릴 스킬 포인트(레벨마다 1). 축하하지 않으면 0 */
+export function levelUpPoints(prev: number | undefined, next: number): number {
+  return levelUpTo(prev, next) === null ? 0 : next - prev!
+}
+
 /** 이전 레벨보다 올랐으면 새 레벨, 아니면 null. 처음 본 레벨(prev 없음)은 축하하지 않는다 */
 export function levelUpTo(prev: number | undefined, next: number): number | null {
   if (prev === undefined) return null

@@ -2,7 +2,7 @@ import Phaser from 'phaser'
 import './style.css'
 import { HomeScene } from './game/HomeScene'
 import { computeProgress, todayStatus } from './core/progression'
-import { levelUpTo, restoreShownLevel } from './core/levelup'
+import { levelUpPoints, levelUpTo, restoreShownLevel } from './core/levelup'
 import { liveRecords, startSession, stopSession } from './core/session'
 import { backupFileName, exportBackup, importLosesProgress } from './core/backup'
 import { canPersist, loadSave, syncSave, writeSave, SAVE_KEY, type KV } from './core/storage'
@@ -228,10 +228,11 @@ function render() {
     hud.showCapToast()
   }
   const up = levelUpTo(shownLevel, p.level)
+  const points = levelUpPoints(shownLevel, p.level)
   if (shownLevel !== p.level) rememberShownLevel(p.level)
   shownLevel = p.level
   if (up !== null) {
-    hud.showLevelUp(up)
+    hud.showLevelUp(up, points)
     homeScene()?.celebrate()
   }
   hud.render({

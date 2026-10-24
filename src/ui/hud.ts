@@ -50,6 +50,7 @@ export function createHud(
       <div class="levelup" data-testid="levelup" role="status" hidden>
         <b>레벨 업!</b>
         <span data-testid="levelup-level"></span>
+        <small class="levelup-points" data-testid="levelup-points"></small>
       </div>
       <div class="toast" data-testid="cap-toast" role="status" hidden>
         <b>오늘은 충분히 했어요!</b>
@@ -87,6 +88,7 @@ export function createHud(
   const toast = q('cap-toast')
   const levelUp = q('levelup')
   const levelUpLevel = q('levelup-level')
+  const levelUpPoints = q('levelup-points')
   let toastTimer: ReturnType<typeof setTimeout> | undefined
   let levelUpTimer: ReturnType<typeof setTimeout> | undefined
   const hideToast = () => {
@@ -129,9 +131,10 @@ export function createHud(
       clearTimeout(toastTimer)
       toastTimer = setTimeout(hideToast, 6000)
     },
-    /** 레벨이 오른 순간 축하 배지를 띄우고 레벨 글자를 통통 튀게 한다 */
-    showLevelUp(newLevel: number) {
+    /** 레벨이 오른 순간 축하 배지를 띄우고 레벨 글자를 통통 튀게 한다. 받은 스킬 포인트는 "나" 탭으로 안내한다 */
+    showLevelUp(newLevel: number, points: number) {
       levelUpLevel.textContent = `Lv.${newLevel} 달성!`
+      levelUpPoints.textContent = `✨ 스킬 포인트 +${points} · 나 탭에서 골라요`
       // 연달아 오르면 애니메이션을 처음부터 다시 돌린다
       levelUp.hidden = true
       level.classList.remove('pop')
