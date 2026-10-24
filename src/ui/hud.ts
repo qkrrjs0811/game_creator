@@ -20,7 +20,13 @@ const TABS = [
 ]
 
 /** 레벨 바·타이머 카드·탭을 그리고, 가운데 Phaser 장면이 들어갈 자리를 돌려준다 */
-export function createHud(root: HTMLElement, onToggle: () => void, onSettings: () => void, onMe: () => void) {
+export function createHud(
+  root: HTMLElement,
+  onToggle: () => void,
+  onSettings: () => void,
+  onMe: () => void,
+  onAdventure: () => void,
+) {
   root.innerHTML = `
     <header class="top">
       <div class="top-row">
@@ -40,6 +46,7 @@ export function createHud(root: HTMLElement, onToggle: () => void, onSettings: (
         <span>오늘 경험치는 다 모았어요. 내일 또 만나요</span>
         <button type="button" class="toast-close" data-testid="cap-toast-close" aria-label="닫기">✕</button>
       </div>
+      <button type="button" class="adventure" data-testid="open-stages">⚔️ 모험</button>
     </section>
     <section class="timer-card">
       <div class="today" data-testid="today"></div>
@@ -79,6 +86,7 @@ export function createHud(root: HTMLElement, onToggle: () => void, onSettings: (
   q('cap-toast-close').addEventListener('click', hideToast)
   q('open-settings').addEventListener('click', onSettings)
   q('tab-me').addEventListener('click', onMe)
+  q('open-stages').addEventListener('click', onAdventure)
   const skillBadge = q('skill-badge')
 
   return {

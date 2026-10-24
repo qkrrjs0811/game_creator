@@ -11,6 +11,8 @@ import { createHud } from './ui/hud'
 import { createSettings } from './ui/settings'
 import { createSkills } from './ui/skills'
 import { learnSkill, remainingSkillPoints, skillRanks } from './core/skills'
+import { STAGES } from './core/stages'
+import { createStages } from './ui/stages'
 
 declare global {
   interface Window {
@@ -45,6 +47,7 @@ const hud = createHud(
   },
   () => settings.open(),
   () => skills.open(),
+  () => stages.open(),
 )
 
 // 설정 창은 HUD 뒤에 붙인다(HUD가 #app 내용을 새로 채우기 때문)
@@ -87,6 +90,15 @@ const skills = createSkills(app, {
     save = next
     writeSave(kv, save)
     render()
+  },
+})
+
+// 전투는 "자동 전투 계산"·"전투 장면 연출"에서 붙인다. 지금은 고른 스테이지만 알려 준다
+const stages = createStages(app, {
+  progress: () => save.stageProgress,
+  onChallenge(no) {
+    const s = STAGES[no - 1]
+    stages.say(`${s.boss ? '보스' : `${no}스테이지`} 전투는 곧 열려요. 조금만 기다려 주세요!`)
   },
 })
 

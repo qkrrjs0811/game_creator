@@ -293,3 +293,69 @@ body {
 }
 .skill-learn:disabled { background: var(--chip); color: var(--ink-soft); box-shadow: none; cursor: default; }
 .skill-list + .sheet-desc { margin: 14px 0 0; }
+
+.adventure {
+  position: absolute;
+  right: 12px;
+  bottom: 12px;
+  z-index: 3;
+  min-height: 48px;
+  padding: 0 20px;
+  border: 0;
+  border-radius: 999px;
+  background: #fff;
+  color: var(--ink);
+  font: inherit;
+  font-size: 15px;
+  font-weight: 700;
+  box-shadow: 0 4px 0 var(--track);
+  cursor: pointer;
+}
+.sheet { max-height: 92dvh; overflow-y: auto; }
+.stage-list { list-style: none; margin: 10px 0 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.stage {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 64px;
+  padding: 8px 10px 8px 12px;
+  border-radius: 22px;
+  background: #fff;
+  box-shadow: 0 4px 0 var(--track);
+  text-align: left;
+}
+.stage.locked { background: #f9efe4; box-shadow: none; }
+.stage.locked .stage-icon { filter: grayscale(1); opacity: 0.5; }
+.stage.boss:not(.locked) { background: #fff0f5; box-shadow: 0 4px 0 #f6cfdc; }
+.stage-icon {
+  flex: none;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: var(--chip);
+  font-size: 22px;
+  line-height: 44px;
+  text-align: center;
+}
+.stage.cleared .stage-icon { background: #ffe2d4; }
+.stage-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.stage-text b { font-size: 15px; }
+.stage-text span { font-size: 12px; color: var(--ink-soft); }
+.stage.open .stage-text span { color: var(--accent); font-weight: 700; }
+.stage-go {
+  flex: none;
+  min-width: 72px;
+  min-height: 44px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--accent);
+  color: #fff;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  box-shadow: 0 3px 0 #e9764a;
+  cursor: pointer;
+}
+.stage.cleared .stage-go { background: var(--chip); color: var(--ink); box-shadow: 0 3px 0 var(--track); }
+.stage-lock { flex: none; width: 72px; text-align: center; font-size: 20px; opacity: 0.6; }
+.stage-list + .sheet-msg { margin-top: 10px; }
