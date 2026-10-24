@@ -79,5 +79,8 @@ test('경고가 떠서 장면이 낮아져도 말랑이·몬스터가 새 땅에
   expect(Math.abs(mascot - feet)).toBeLessThanOrEqual(2)
   expect(monster).toBeLessThanOrEqual(feet + 1)
   expect(monster).toBeGreaterThanOrEqual(feet - 13)
+  // 낮아진 장면에서도 운동 마침 요약이 말랑이·몬스터 발끝을 가리지 않는다
+  const summary = (await page.getByTestId('session-summary').boundingBox())!
+  expect(after.y + feet).toBeLessThanOrEqual(summary.y)
   await page.screenshot({ path: 'test-results/screens/save-warning-scene.png' })
 })

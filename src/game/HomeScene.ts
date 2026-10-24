@@ -16,10 +16,11 @@ const BELOW_FEET = 156
 
 /**
  * 말랑이·몬스터가 서는 땅 높이. 아래쪽 운동 마침 요약(버튼 위 카드)에 가리지 않게 발끝을 그 위에 둔다.
- * 낮은 화면에서는 위쪽 결과 카드·말풍선 자리를 위해 너무 올리지 않는다
+ * 낮은 화면에서는 위쪽 결과 카드·말풍선 자리를 위해 너무 올리지 않는다.
+ * 저장 실패 경고로 장면이 낮아져도(약 385px) 요약 카드 위에 서도록 아래 한계를 장면의 0.52로 둔다
  */
 function groundY(h: number): number {
-  return Phaser.Math.Clamp(h - BELOW_FEET - FEET, h * 0.56, h * 0.68)
+  return Phaser.Math.Clamp(h - BELOW_FEET - FEET, h * 0.52, h * 0.68)
 }
 const HP_ENEMY = 0xff9fbf
 const BAR_W = 78
