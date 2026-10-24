@@ -1,5 +1,5 @@
 import { test, expect } from 'vitest'
-import { parseRateLimit, decideNext, shouldPush } from './lib.mjs'
+import { parseRateLimit, decideNext, shouldPush, oldLogs } from './lib.mjs'
 
 const ev = (fu, fs, su, ss) =>
   JSON.stringify({
@@ -11,7 +11,8 @@ const ev = (fu, fs, su, ss) =>
       },
     },
   })
-const base = { stopFile: false, idleFile: false, rate: null, iteration: 0, maxIterations: null, consecutiveFailures: 0, maxConsecutiveFailures: 3, weeklyStopAt: 0.9 }
+const NOW = 5_000_000
+const base = { nowMs: NOW, stopFile: false, idleFile: false, rate: null, iteration: 0, maxIterations: null, consecutiveFailures: 0, maxConsecutiveFailures: 3, weeklyStopAt: 0.9, idleWaitMinutes: 60, failurePauseMinutes: 30 }
 
 test('parseRateLimit: 마지막 이벤트 사용, 다른 줄 무시', () => {
   const text = ['{"type":"system"}', ev(0.1, 'allowed', 0.2, 'allowed'), 'not json', ev(0.3, 'allowed', 0.5, 'allowed')].join('\n')
@@ -22,17 +23,33 @@ test('parseRateLimit: 마지막 이벤트 사용, 다른 줄 무시', () => {
   expect(parseRateLimit('{"type":"result"}')).toBeNull()
 })
 
-test('decideNext 순서', () => {
+test('decideNext 순서: 멈추는 건 STOP 파일과 최대 바퀴뿐, 나머지는 기다렸다가 다시', () => {
   const r = (fu, fs, su, ss) => parseRateLimit(ev(fu, fs, su, ss))
   expect(decideNext({ ...base, stopFile: true, idleFile: true })).toEqual({ action: 'stop', reason: 'STOP 파일' })
-  expect(decideNext({ ...base, idleFile: true })).toEqual({ action: 'stop', reason: '할 일 없음' })
   expect(decideNext({ ...base, iteration: 5, maxIterations: 5 })).toEqual({ action: 'stop', reason: '최대 바퀴' })
-  expect(decideNext({ ...base, consecutiveFailures: 3 })).toEqual({ action: 'stop', reason: '연속 실패' })
-  expect(decideNext({ ...base, rate: r(0.1, 'allowed', 0.9, 'allowed') })).toEqual({ action: 'stop', reason: '주간 사용량' })
-  expect(decideNext({ ...base, rate: r(0.1, 'allowed', 0.5, 'rejected') })).toEqual({ action: 'stop', reason: '주간 사용량' })
+  expect(decideNext({ ...base, idleFile: true, rate: r(0.1, 'allowed', 0.9, 'allowed') })).toEqual({ action: 'wait', untilMs: 2_060_000, reason: '주간 사용량' })
+  expect(decideNext({ ...base, rate: r(0.1, 'allowed', 0.5, 'rejected') })).toEqual({ action: 'wait', untilMs: 2_060_000, reason: '주간 사용량' })
   expect(decideNext({ ...base, rate: r(1, 'rejected', 0.5, 'allowed') })).toEqual({ action: 'wait', untilMs: 1_060_000, reason: '5시간 한도' })
+  expect(decideNext({ ...base, consecutiveFailures: 3, idleFile: true })).toEqual({ action: 'wait', untilMs: NOW + 30 * 60_000, reason: '연속 실패', reset: 'failures' })
+  expect(decideNext({ ...base, idleFile: true })).toEqual({ action: 'wait', untilMs: NOW + 60 * 60_000, reason: '할 일 없음', reset: 'idle' })
   expect(decideNext({ ...base, rate: r(0.5, 'allowed', 0.89, 'allowed') })).toEqual({ action: 'run' })
   expect(decideNext(base)).toEqual({ action: 'run' })
+})
+
+test('decideNext: 주간 한도의 되돌아오는 시각을 모르면 한 시간 뒤 다시 본다', () => {
+  const rate = { fiveHour: { utilization: 0, resetsAt: 1000, status: 'allowed' }, sevenDay: { utilization: 0.95, resetsAt: undefined, status: 'allowed' } }
+  expect(decideNext({ ...base, rate })).toEqual({ action: 'wait', untilMs: NOW + 60 * 60_000, reason: '주간 사용량' })
+})
+
+test('decideNext: 푸시가 계속 실패해도 멈추지 않음', () => {
+  expect(decideNext({ ...base, consecutivePushFailures: 10 })).toEqual({ action: 'run' })
+})
+
+test('oldLogs: 이름순(시각순)으로 최근 keep개만 남기고 나머지를 돌려준다', () => {
+  const names = ['2026-10-24T03.jsonl', '2026-10-24T01.jsonl', 'runs.jsonl', '2026-10-24T02.jsonl', 'user-files']
+  expect(oldLogs(names, 2)).toEqual(['2026-10-24T01.jsonl'])
+  expect(oldLogs(names, 5)).toEqual([])
+  expect(oldLogs(['b', 'a', 'c'], 1, (n) => true)).toEqual(['a', 'b'])
 })
 
 test('shouldPush', () => {
@@ -69,7 +86,3 @@ test('leftoverPaths: 사용자 파일과 무시할 경로를 뺀 변경만', () 
   expect(leftoverPaths(z, ['피드백.md', '기획서.md'])).toEqual(['src/a.ts', 'loop/new.txt', 'b.ts'])
 })
 
-test('decideNext: 푸시가 연속으로 실패하면 멈춤', () => {
-  expect(decideNext({ ...base, consecutivePushFailures: 3, maxConsecutivePushFailures: 3 })).toEqual({ action: 'stop', reason: '푸시 연속 실패' })
-  expect(decideNext({ ...base, consecutivePushFailures: 2, maxConsecutivePushFailures: 3 })).toEqual({ action: 'run' })
-})

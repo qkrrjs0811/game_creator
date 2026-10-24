@@ -18,18 +18,25 @@ export function parseRateLimit(streamJsonText) {
   return found
 }
 
-/** 다음 바퀴를 돌릴지, 기다릴지, 멈출지. 먼저 맞는 조건으로 정한다 */
+/**
+ * 다음 바퀴를 돌릴지, 기다릴지, 멈출지. 먼저 맞는 조건으로 정한다.
+ * 스스로 멈추는 건 STOP 파일(사용자가 멈춤)과 최대 바퀴(--once)뿐이다. 나머지는 기다렸다가 다시 한다.
+ * reset: 기다린 뒤 실행기가 지울 상태('idle' = IDLE 파일, 'failures' = 연속 실패 수)
+ */
 export function decideNext(s) {
+  const later = (minutes) => s.nowMs + minutes * 60_000
   if (s.stopFile) return { action: 'stop', reason: 'STOP 파일' }
-  if (s.idleFile) return { action: 'stop', reason: '할 일 없음' }
   if (s.maxIterations != null && s.iteration >= s.maxIterations) return { action: 'stop', reason: '최대 바퀴' }
-  if (s.consecutiveFailures >= s.maxConsecutiveFailures) return { action: 'stop', reason: '연속 실패' }
-  if (s.consecutivePushFailures >= s.maxConsecutivePushFailures) return { action: 'stop', reason: '푸시 연속 실패' }
   if (s.rate) {
     const { fiveHour, sevenDay } = s.rate
-    if (sevenDay.utilization >= s.weeklyStopAt || sevenDay.status === 'rejected') return { action: 'stop', reason: '주간 사용량' }
+    if (sevenDay.utilization >= s.weeklyStopAt || sevenDay.status === 'rejected') {
+      // 사용자 몫(주간 10%)은 남기고, 주간 한도가 돌아오면 이어서 한다
+      return { action: 'wait', untilMs: sevenDay.resetsAt ? sevenDay.resetsAt * 1000 + 60_000 : later(60), reason: '주간 사용량' }
+    }
     if (fiveHour.status === 'rejected') return { action: 'wait', untilMs: fiveHour.resetsAt * 1000 + 60_000, reason: '5시간 한도' }
   }
+  if (s.consecutiveFailures >= s.maxConsecutiveFailures) return { action: 'wait', untilMs: later(s.failurePauseMinutes), reason: '연속 실패', reset: 'failures' }
+  if (s.idleFile) return { action: 'wait', untilMs: later(s.idleWaitMinutes), reason: '할 일 없음', reset: 'idle' }
   return { action: 'run' }
 }
 
@@ -76,4 +83,12 @@ export function leftoverPaths(porcelainZ, protectedPaths) {
     if (!protectedPaths.includes(path)) out.push(path)
   }
   return out
+}
+
+const SESSION_LOG = /^\d{4}-.*\.jsonl$/
+
+/** 오래된 것부터 지울 이름들. 이름이 시각으로 시작하므로 이름순 = 시각순이다. 최근 keep개는 남긴다 */
+export function oldLogs(names, keep, isTarget = (n) => SESSION_LOG.test(n)) {
+  const targets = names.filter(isTarget).sort()
+  return targets.slice(0, Math.max(0, targets.length - keep))
 }

@@ -1,11 +1,12 @@
 // 루프 실행기: claude -p 를 한 바퀴씩 반복 실행한다.
 // 사용법: npm run loop | npm run loop:once | node loop/run.mjs --cleanup-only
+// 한 번 실행하면 멈추지 않는다. 할 일 없음·연속 실패·사용량 한도는 기다렸다가 다시 한다.
 // 멈춤: 저장소 루트에 STOP 파일을 만든다. 실행기가 스스로 위험하다고 판단해 멈출 때도 STOP 파일에 이유를 적는다.
 import { spawn, execFileSync } from 'node:child_process'
-import { appendFileSync, copyFileSync, createWriteStream, existsSync, mkdirSync, readFileSync, unlinkSync, writeFileSync } from 'node:fs'
+import { appendFileSync, copyFileSync, createWriteStream, existsSync, mkdirSync, readdirSync, readFileSync, rmSync, unlinkSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { decideNext, leftoverPaths, moveFeedback, parseRateLimit, shouldPush } from './lib.mjs'
+import { decideNext, leftoverPaths, moveFeedback, oldLogs, parseRateLimit, shouldPush } from './lib.mjs'
 import { isAncestor, killTree, revertInProgress, safeRevert } from './git.mjs'
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
@@ -133,6 +134,17 @@ function push() {
   }
 }
 
+/** 멈추지 않고 오래 돌아도 디스크가 차지 않게, 최근 keepLogs개 바퀴의 로그·사용자 파일 사본만 남긴다 */
+function pruneLogs() {
+  try {
+    for (const n of oldLogs(readdirSync(LOGS), config.keepLogs)) rmSync(join(LOGS, n), { force: true })
+    const copies = join(LOGS, 'user-files')
+    if (existsSync(copies)) for (const n of oldLogs(readdirSync(copies), config.keepLogs, () => true)) rmSync(join(copies, n), { recursive: true, force: true })
+  } catch (e) {
+    log(`오래된 로그 정리 실패(계속함): ${e.message}`)
+  }
+}
+
 async function sleepUntil(untilMs) {
   while (Date.now() < untilMs && !existsSync(STOP)) await new Promise((r) => setTimeout(r, 60_000))
 }
@@ -164,8 +176,18 @@ async function main() {
   let consecutivePushFailures = 0
   let lastPushMs = null
 
+  const pushNow = () => {
+    const p = push()
+    if (p.pushed) {
+      lastPushMs = Date.now()
+      consecutivePushFailures = 0
+    } else consecutivePushFailures++
+    return p
+  }
+
   for (;;) {
     const decision = decideNext({
+      nowMs: Date.now(),
       stopFile: existsSync(STOP),
       idleFile: existsSync(IDLE),
       rate,
@@ -173,9 +195,9 @@ async function main() {
       maxIterations: args.has('--once') ? 1 : config.maxIterations,
       consecutiveFailures,
       maxConsecutiveFailures: config.maxConsecutiveFailures,
-      consecutivePushFailures,
-      maxConsecutivePushFailures: config.maxConsecutivePushFailures,
       weeklyStopAt: config.weeklyStopAt,
+      idleWaitMinutes: config.idleWaitMinutes,
+      failurePauseMinutes: config.failurePauseMinutes,
     })
 
     if (decision.action === 'stop') {
@@ -185,13 +207,30 @@ async function main() {
       return
     }
     if (decision.action === 'wait') {
-      log(`대기: ${decision.reason}, ${new Date(decision.untilMs).toLocaleString('ko-KR')}까지`)
+      // 기다리는 동안에도 폰에서 새 버전을 받을 수 있게 먼저 올린다
+      const p = unpushedCount() > 0 ? pushNow() : { pushed: 'skipped' }
+      record({ event: 'wait', at: new Date().toISOString(), reason: decision.reason, until: new Date(decision.untilMs).toISOString(), iteration, ...p })
+      log(`대기: ${decision.reason}, ${new Date(decision.untilMs).toLocaleString('ko-KR')}까지 (멈추려면 STOP 파일)`)
       await sleepUntil(decision.untilMs)
+      if (decision.reset === 'idle' && existsSync(IDLE)) unlinkSync(IDLE)
+      if (decision.reset === 'failures') consecutiveFailures = 0
       rate = null // 다음 바퀴 출력에서 다시 읽는다
       continue
     }
 
     iteration++
+    try {
+      await runIteration()
+    } catch (e) {
+      // 예상 못 한 오류(일시적인 git 잠금 등)는 실패 한 번으로 세고 계속 간다. 위험한 상태는 halt()가 따로 멈춘다
+      consecutiveFailures++
+      record({ event: 'error', at: new Date().toISOString(), iteration, error: String(e?.message ?? e).split('\n')[0], stack: String(e?.stack ?? e) })
+      log(`${iteration}바퀴 오류(계속함): ${String(e?.message ?? e).split('\n')[0]}`)
+    }
+  }
+
+  async function runIteration() {
+    pruneLogs()
     const startedAt = new Date().toISOString()
     const logPath = join(LOGS, `${stamp()}.jsonl`)
     backupUserFiles()
@@ -231,13 +270,7 @@ async function main() {
     }
 
     let p = { pushed: 'skipped' }
-    if (unpushedCount() > 0 && shouldPush(lastPushMs, Date.now(), config.pushIntervalMinutes)) {
-      p = push()
-      if (p.pushed) {
-        lastPushMs = Date.now()
-        consecutivePushFailures = 0
-      } else consecutivePushFailures++
-    }
+    if (unpushedCount() > 0 && shouldPush(lastPushMs, Date.now(), config.pushIntervalMinutes)) p = pushNow()
 
     record({
       iteration,
@@ -253,6 +286,7 @@ async function main() {
       fiveHour: rate?.fiveHour ?? null,
       sevenDay: rate?.sevenDay ?? null,
       log: logPath,
+      ...(consecutivePushFailures > 0 ? { consecutivePushFailures } : {}),
     })
     log(`${iteration}바퀴 끝: ${result}`)
   }
