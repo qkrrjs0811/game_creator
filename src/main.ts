@@ -17,6 +17,7 @@ import { createBattleBar } from './ui/battle'
 import { playerFighter, simulateBattle } from './core/battle'
 import { battleTimeline, stepDelay } from './core/replay'
 import { homeMonster, stageEnemy, stageMonster } from './core/monsters'
+import { applyBattleResult, type BattleOutcome } from './core/result'
 
 declare global {
   interface Window {
@@ -102,7 +103,17 @@ const homeScene = () => {
   return scene?.sys.isActive() ? scene : null
 }
 
-// 전투는 저장을 건드리지 않는다. 승패에 따른 스테이지 열기는 "승패 결과와 다음 스테이지 열기"에서 붙인다
+function resultNote(o: BattleOutcome, win: boolean): string {
+  if (!win) return '💪 운동으로 더 키워서 다시 와요'
+  if (o.allCleared) return '👑 모든 스테이지를 깼어요!'
+  if (o.unlocked !== null) {
+    const next = STAGES[o.unlocked - 1]
+    return next.boss ? `🔓 보스 스테이지가 열렸어요 · ${next.name}` : `🔓 ${next.no}스테이지가 열렸어요 · ${next.name}`
+  }
+  return '⭐ 이미 깬 스테이지예요'
+}
+
+// 전투가 바꾸는 저장은 깬 스테이지 수뿐이다(applyBattleResult)
 const battleBar = createBattleBar(hud.sceneHost, {
   onSkip: () => homeScene()?.skipBattle(),
   onLeave() {
@@ -118,13 +129,21 @@ const stages = createStages(app, {
     const p = computeProgress(liveRecords(save, Date.now()))
     const me = playerFighter(p.stats, save.skills)
     const enemy = stageEnemy(no)
-    const timeline = battleTimeline(me, enemy, simulateBattle(me, enemy, Date.now()))
+    const result = simulateBattle(me, enemy, Date.now())
+    const timeline = battleTimeline(me, enemy, result)
     const foe = stageMonster(no)
+    // 결과는 재생 전에 저장한다(재생 중 앱을 닫아도 깬 스테이지가 남게). 바뀌는 건 깬 스테이지 수뿐이다
+    const outcome = applyBattleResult(save, no, result.win)
+    if (outcome.save !== save) {
+      save = outcome.save
+      writeSave(kv, save)
+    }
+    const view = { win: result.win, rounds: result.rounds, note: resultNote(outcome, result.win) }
     stages.close()
     battleBar.start(`${s.boss ? '보스' : `${no}스테이지`} · ${s.name}`, foe.name)
     const scene = homeScene()
-    if (scene) scene.playBattle(timeline, stepDelay(timeline.steps.length), foe, (win) => battleBar.end(win))
-    else battleBar.end(timeline.win)
+    if (scene) scene.playBattle(timeline, stepDelay(timeline.steps.length), foe, () => battleBar.end(view))
+    else battleBar.end(view)
   },
 })
 

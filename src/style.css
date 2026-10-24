@@ -397,3 +397,40 @@ body {
 }
 .battle-bar[data-state='done'] .battle-action { background: var(--accent); color: #fff; box-shadow: 0 3px 0 #e9764a; }
 .scene.in-battle .adventure { display: none; }
+.battle-result {
+  position: absolute;
+  top: 16px;
+  left: 50%;
+  z-index: 3;
+  width: min(280px, calc(100% - 32px));
+  padding: 14px 18px;
+  border-radius: 24px;
+  background: #fff;
+  box-shadow: 0 4px 0 rgba(90, 70, 54, 0.12);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  text-align: center;
+  word-break: keep-all;
+  transform: translateX(-50%);
+  animation: result-pop 0.35s ease-out;
+}
+.battle-result[hidden] { display: none; }
+.battle-result b { font-size: 24px; color: var(--ink); }
+.battle-result[data-win='true'] b { color: var(--accent); }
+.battle-result span { font-size: 14px; color: var(--ink-soft); }
+.battle-result .battle-result-note {
+  margin-top: 4px;
+  padding: 6px 14px;
+  border-radius: 999px;
+  background: var(--chip);
+  color: var(--ink);
+  font-weight: 700;
+  font-size: 13px;
+  line-height: 1.4;
+}
+@keyframes result-pop {
+  from { transform: translateX(-50%) scale(0.6); opacity: 0; }
+  to { transform: translateX(-50%) scale(1); opacity: 1; }
+}

@@ -1,5 +1,22 @@
-/** 전투 중 장면 위쪽 알림 띠: 어느 스테이지인지, 건너뛰기·돌아가기 버튼 */
+/** 전투가 끝나면 장면 위쪽에 띄우는 결과 카드 내용 */
+export interface BattleResultView {
+  win: boolean
+  rounds: number
+  /** 결과 아래에 덧붙이는 한 줄(새로 열린 스테이지, 다시 오라는 말 등) */
+  note: string
+}
+
+/** 전투 중 장면 아래쪽 알림 띠(어느 스테이지인지, 건너뛰기·돌아가기 버튼)와 끝난 뒤 결과 카드 */
 export function createBattleBar(scene: HTMLElement, h: { onSkip(): void; onLeave(): void }) {
+  const card = document.createElement('div')
+  card.className = 'battle-result'
+  card.dataset.testid = 'battle-result'
+  card.hidden = true
+  card.innerHTML = `
+    <b data-testid="battle-result-title"></b>
+    <span data-testid="battle-result-detail"></span>
+    <span class="battle-result-note" data-testid="battle-result-note"></span>`
+
   const bar = document.createElement('div')
   bar.className = 'battle-bar'
   bar.dataset.testid = 'battle'
@@ -11,12 +28,12 @@ export function createBattleBar(scene: HTMLElement, h: { onSkip(): void; onLeave
       <span data-testid="battle-status"></span>
     </span>
     <button type="button" class="battle-action" data-testid="battle-action"></button>`
-  scene.append(bar)
+  scene.append(card, bar)
 
-  const q = (id: string) => bar.querySelector<HTMLElement>(`[data-testid=${id}]`)!
-  const title = q('battle-title')
-  const status = q('battle-status')
-  const action = q('battle-action')
+  const q = (el: HTMLElement, id: string) => el.querySelector<HTMLElement>(`[data-testid=${id}]`)!
+  const title = q(bar, 'battle-title')
+  const status = q(bar, 'battle-status')
+  const action = q(bar, 'battle-action')
   action.addEventListener('click', () => (bar.dataset.state === 'playing' ? h.onSkip() : h.onLeave()))
 
   return {
@@ -26,11 +43,19 @@ export function createBattleBar(scene: HTMLElement, h: { onSkip(): void; onLeave
       action.textContent = '건너뛰기'
       bar.dataset.state = 'playing'
       delete bar.dataset.win
+      bar.classList.remove('won')
       bar.hidden = false
+      card.hidden = true
       scene.classList.add('in-battle')
     },
-    end(win: boolean) {
-      status.textContent = win ? '이겼어요! 🎉' : '아쉽게 졌어요. 더 키워서 다시 와요'
+    end(r: BattleResultView) {
+      const { win } = r
+      q(card, 'battle-result-title').textContent = win ? '🎉 승리!' : '💧 아쉬워요'
+      q(card, 'battle-result-detail').textContent = win ? `${r.rounds}번 주고받아 이겼어요` : '말랑이가 지쳐 버렸어요'
+      q(card, 'battle-result-note').textContent = r.note
+      card.dataset.win = String(win)
+      card.hidden = false
+      status.textContent = win ? '이겼어요! 🎉' : '아쉽게 졌어요'
       action.textContent = '돌아가기'
       bar.dataset.state = 'done'
       bar.dataset.win = String(win)
@@ -38,6 +63,7 @@ export function createBattleBar(scene: HTMLElement, h: { onSkip(): void; onLeave
     },
     hide() {
       bar.hidden = true
+      card.hidden = true
       bar.dataset.state = ''
       scene.classList.remove('in-battle')
     },
