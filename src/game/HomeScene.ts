@@ -18,13 +18,21 @@ const BODY_COLORS: Record<string, [number, number]> = {
   'color-cotton': [0xffc6de, 0xf5a3c6],
 }
 const CONFETTI =[0xff8a5b, 0xffd36b, 0x9be3c4, 0xa8d4ff, 0xffa8c8, 0xc9a7ff]
+const BUBBLE_IDLE = '💪 오늘도 같이 크는 중!'
+const BUBBLE_EXERCISE = '🔥 말랑이도 같이 운동 중!'
 
 /** 홈 장면: 둥근 마스코트와 몬스터가 마주 보고, 마스코트가 숨 쉬듯 움직인다 */
 export class HomeScene extends Phaser.Scene {
   private mascot!: Phaser.GameObjects.Container
   private monster!: Phaser.GameObjects.Container
   private bubble!: Phaser.GameObjects.Container
+  private bubbleText!: Phaser.GameObjects.Text
+  private bubbleBg!: Phaser.GameObjects.Graphics
   private jump?: Phaser.Tweens.Tween
+  /** 숨쉬기(쉬는 중) 또는 꾹꾹 누르기(운동 중) 움직임 */
+  private breathe?: Phaser.Tweens.Tween
+  /** 타이머가 켜져 있는지. 켜져 있으면 말랑이도 같이 운동한다 */
+  private exercising = false
   /** 홈에서 보여 줄 몬스터(다음에 도전할 스테이지)와 지금 그려진 몬스터 */
   private homeLook?: Monster
   private shownMonster = ''
@@ -55,17 +63,35 @@ export class HomeScene extends Phaser.Scene {
     this.monster = this.add.container(0, 0)
     this.setMonster(this.homeLook ?? MONSTERS[0])
 
-    const text = this.add
-      .text(0, 0, '💪 오늘도 같이 크는 중!', { fontFamily: 'Segoe UI, Malgun Gothic, sans-serif', fontSize: '14px', color: '#5a4636', fontStyle: 'bold' })
+    this.bubbleText = this.add
+      .text(0, 0, '', { fontFamily: FONT, fontSize: '14px', color: '#5a4636', fontStyle: 'bold' })
       .setOrigin(0.5)
-    const bg = this.add.graphics()
-    bg.fillStyle(0xffffff).fillRoundedRect(-text.width / 2 - 12, -15, text.width + 24, 30, 15)
-    this.bubble = this.add.container(0, 0, [bg, text])
+    this.bubbleBg = this.add.graphics()
+    this.bubble = this.add.container(0, 0, [this.bubbleBg, this.bubbleText])
+    this.drawBubble()
 
     this.layout(this.scale.width, this.scale.height)
     this.scale.on('resize', (size: Phaser.Structs.Size) => this.layout(size.width, size.height))
 
     this.idle()
+  }
+
+  /** 타이머를 켜면 말랑이가 꾹꾹 같이 운동하고 말풍선도 바뀐다. 모습만 바뀐다 */
+  setExercising(on: boolean) {
+    if (this.exercising === on) return
+    this.exercising = on
+    if (!this.mascot) return
+    this.drawBubble()
+    // 전투 중에는 끝난 뒤 idle()에서 맞춰진다
+    if (!this.battle) this.moveMascot()
+  }
+
+  private drawBubble() {
+    this.bubbleText.setText(this.exercising ? BUBBLE_EXERCISE : BUBBLE_IDLE)
+    const w = this.bubbleText.width
+    this.bubbleBg.clear().fillStyle(0xffffff).fillRoundedRect(-w / 2 - 12, -15, w + 24, 30, 15)
+    // e2e가 말랑이가 운동 중인지 볼 수 있게 남긴다
+    this.game.canvas.parentElement?.setAttribute('data-mood', this.exercising ? 'exercise' : 'rest')
   }
 
   /** 레벨업: 마스코트가 폴짝 뛰고 파스텔 색종이가 터진다. 말풍선은 축하 배지에 자리를 비켜 준다 */
@@ -252,8 +278,17 @@ export class HomeScene extends Phaser.Scene {
   }
 
   private idle() {
-    this.tweens.add({ targets: this.mascot, scaleY: 0.94, scaleX: 1.04, duration: 900, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' })
+    this.moveMascot()
     this.tweens.add({ targets: this.monster, y: '-=6', duration: 1200, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' })
+  }
+
+  /** 쉬는 중에는 느리게 숨 쉬고, 운동 중에는 빠르게 꾹꾹 눌렀다 편다 */
+  private moveMascot() {
+    this.breathe?.stop()
+    this.mascot.setScale(1)
+    this.breathe = this.exercising
+      ? this.tweens.add({ targets: this.mascot, scaleY: 0.86, scaleX: 1.1, duration: 280, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' })
+      : this.tweens.add({ targets: this.mascot, scaleY: 0.94, scaleX: 1.04, duration: 900, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' })
   }
 
   private playStep() {

@@ -272,6 +272,7 @@ function render() {
   skills.refresh()
   homeScene()?.showHomeMonster(homeMonster(save.stageProgress))
   homeScene()?.dress(wornCosmetics(save))
+  homeScene()?.setExercising(save.active !== null)
 }
 
 const game = new Phaser.Game({
