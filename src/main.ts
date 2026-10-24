@@ -2,7 +2,7 @@ import Phaser from 'phaser'
 import './style.css'
 import { HomeScene } from './game/HomeScene'
 import { computeProgress, todayStatus } from './core/progression'
-import { levelUpTo } from './core/levelup'
+import { levelUpTo, restoreShownLevel } from './core/levelup'
 import { liveRecords, startSession, stopSession } from './core/session'
 import { backupFileName, exportBackup } from './core/backup'
 import { canPersist, loadSave, syncSave, writeSave, SAVE_KEY, type KV } from './core/storage'
@@ -190,8 +190,26 @@ const stages = createStages(app, {
 
 // 상한 안내는 운동 중에 닿았을 때 하루 한 번만 띄운다
 let capToastDay = ''
-// 마지막으로 그린 레벨. 처음 열 때와 백업을 가져온 직후에는 비워 두어 축하하지 않는다
-let shownLevel: number | undefined
+// 마지막으로 그린 레벨. 백업을 가져온 직후에는 비워 두어 축하하지 않는다.
+// 처음 열 때는 지난번 창에서 본 레벨을 되살려, 앱을 닫아 둔 사이 오른 레벨도 축하한다
+const SEEN_LEVEL_KEY = `${SAVE_KEY}:seen-level`
+let shownLevel = restoreShownLevel(readKey(SEEN_LEVEL_KEY), currentLevel())
+
+function readKey(key: string): string | null {
+  try {
+    return kv.getItem(key)
+  } catch {
+    return null
+  }
+}
+
+function rememberShownLevel(level: number) {
+  try {
+    kv.setItem(SEEN_LEVEL_KEY, String(level))
+  } catch {
+    // 못 남기면 다음에 열 때 축하를 건너뛸 뿐이다
+  }
+}
 
 function render() {
   const now = Date.now()
@@ -204,6 +222,7 @@ function render() {
     hud.showCapToast()
   }
   const up = levelUpTo(shownLevel, p.level)
+  if (shownLevel !== p.level) rememberShownLevel(p.level)
   shownLevel = p.level
   if (up !== null) {
     hud.showLevelUp(up)

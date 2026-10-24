@@ -1,5 +1,5 @@
 import { describe, test, expect } from 'vitest'
-import { levelUpTo } from './levelup'
+import { levelUpTo, restoreShownLevel } from './levelup'
 
 describe('levelUpTo', () => {
   test('레벨이 오르면 새 레벨', () => {
@@ -17,5 +17,24 @@ describe('levelUpTo', () => {
 
   test('처음 본 레벨(이전 값 없음)은 축하하지 않음', () => {
     expect(levelUpTo(undefined, 7)).toBeNull()
+  })
+})
+
+describe('restoreShownLevel', () => {
+  test('앱을 닫아 둔 사이 오른 레벨은 다시 열 때 축하할 수 있게 지난번 본 레벨을 돌려줌', () => {
+    expect(restoreShownLevel('2', 4)).toBe(2)
+    expect(levelUpTo(restoreShownLevel('2', 4), 4)).toBe(4)
+  })
+
+  test('그대로면 축하하지 않음', () => {
+    expect(levelUpTo(restoreShownLevel('3', 3), 3)).toBeNull()
+  })
+
+  test('남긴 값이 없거나 깨졌거나 지금보다 높으면 처음 본 것으로 둠', () => {
+    expect(restoreShownLevel(null, 3)).toBeUndefined()
+    expect(restoreShownLevel('abc', 3)).toBeUndefined()
+    expect(restoreShownLevel('0', 3)).toBeUndefined()
+    expect(restoreShownLevel('2.5', 3)).toBeUndefined()
+    expect(restoreShownLevel('5', 3)).toBeUndefined()
   })
 })
