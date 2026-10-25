@@ -19,6 +19,8 @@ export interface SkillsView {
   historyPage(page: number): HistoryPage
   /** 업적마다 현재 값·달성 여부(목록 순서) */
   achievements: AchievementProgress[]
+  /** 이름 옆에 단 칭호 id. 없으면 null */
+  title: string | null
 }
 
 const WEEK = ['일', '월', '화', '수', '목', '금', '토']
@@ -97,8 +99,8 @@ const ACHIEVEMENT_ICONS: Record<ActivityId | Exclude<AchievementKind, 'minutes'>
   variety: '🌈',
 }
 
-/** 업적 칸: 이름, 진행 막대와 글자, 달성 표시. 같은 줄에서 다음 것보다 먼 업적은 흐리게 */
-export function achievementsHtml(list: AchievementProgress[]): string {
+/** 업적 칸: 이름, 진행 막대와 글자, 달성 표시. 같은 줄에서 다음 것보다 먼 업적은 흐리게. 달성 칸엔 칭호 달기 버튼(title = 단 칭호 id) */
+export function achievementsHtml(list: AchievementProgress[], title: string | null = null): string {
   const far = farAchievementIds(list)
   return list
     .map((a) => {
@@ -108,7 +110,11 @@ export function achievementsHtml(list: AchievementProgress[]): string {
       const pct = Math.min(100, (a.value / a.goal) * 100).toFixed(1)
       const mark = a.done ? '<span class="ach-mark">달성</span>' : ''
       const sub = a.done ? `🏅 칭호 “${a.titleName}”` : achievementValueText(a)
-      return `<li class="${cls}" data-testid="ach-${a.id}"><span class="ach-icon" aria-hidden="true">${icon}</span><span class="ach-text"><span class="ach-head"><b>${a.label}</b>${mark}</span><span class="ach-bar"><i class="ach-fill${fill}" style="width:${pct}%"></i></span><small data-testid="ach-value-${a.id}">${sub}</small></span></li>`
+      const on = a.done && a.titleId === title
+      const wear = a.done
+        ? `<button type="button" class="ach-wear${on ? ' on' : ''}" data-testid="wear-title-${a.id}" data-title="${a.titleId}" aria-pressed="${on}">${on ? '✓ 달았어요' : '달기'}</button>`
+        : ''
+      return `<li class="${cls}${on ? ' worn' : ''}" data-testid="ach-${a.id}"><span class="ach-icon" aria-hidden="true">${icon}</span><span class="ach-text"><span class="ach-head"><b>${a.label}</b>${mark}</span><span class="ach-bar"><i class="ach-fill${fill}" style="width:${pct}%"></i></span><small data-testid="ach-value-${a.id}">${sub}</small></span>${wear}</li>`
     })
     .join('')
 }
@@ -120,7 +126,7 @@ export function objectParticle(word: string): string {
 }
 
 /** 나 창: 운동으로 오른 능력치, 남은 포인트와 스킬 3종, 골라서 배우기 */
-export function createSkills(root: HTMLElement, h: { view(): SkillsView; onLearn(id: SkillId): void }) {
+export function createSkills(root: HTMLElement, h: { view(): SkillsView; onLearn(id: SkillId): void; onTitle(titleId: string): void }) {
   const wrap = document.createElement('div')
   wrap.className = 'sheet-backdrop'
   wrap.hidden = true
@@ -177,6 +183,7 @@ export function createSkills(root: HTMLElement, h: { view(): SkillsView; onLearn
         </div>
       </div>
       <h3 class="sheet-sub ach-title" data-testid="ach-title"></h3>
+      <p class="ach-hint" data-testid="ach-hint" hidden>🏅 칭호를 하나 골라 이름 옆에 달아요. 다시 누르면 떼요</p>
       <ul class="ach-list" data-testid="achievements"></ul>
       <div class="sheet-foot">
         <button type="button" class="sheet-close" data-testid="skills-close">닫기</button>
@@ -275,7 +282,8 @@ export function createSkills(root: HTMLElement, h: { view(): SkillsView; onLearn
     }
     const done = v.achievements.filter((a) => a.done).length
     q('ach-title').textContent = `🏆 업적 ${done} / ${v.achievements.length}`
-    const ach = achievementsHtml(v.achievements)
+    q('ach-hint').hidden = done === 0
+    const ach = achievementsHtml(v.achievements, v.title)
     if (ach !== lastAch) {
       lastAch = ach
       q('achievements').innerHTML = ach
@@ -310,6 +318,10 @@ export function createSkills(root: HTMLElement, h: { view(): SkillsView; onLearn
       draw()
     })
   }
+  q('achievements').addEventListener('click', (e) => {
+    const id = (e.target as HTMLElement).closest<HTMLElement>('[data-title]')?.dataset.title
+    if (id) h.onTitle(id)
+  })
   q('hist-bars').addEventListener('click', (e) => {
     const key = (e.target as HTMLElement).closest<HTMLElement>('[data-key]')?.dataset.key
     if (!key) return

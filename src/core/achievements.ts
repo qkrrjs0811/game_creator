@@ -2,7 +2,7 @@ import { ACTIVITIES } from './activities'
 import { goalDays } from './goal'
 import { dayMinutes } from './history'
 import { dayKey } from './progression'
-import type { ActivityId, ActivityRecord } from './types'
+import type { ActivityId, ActivityRecord, SaveData } from './types'
 
 /**
  * 업적: 현실 활동으로만 닿는 이정표. 기록에서 인정 분(상한 안)만 세어 계산하고 저장하지 않는다.
@@ -135,6 +135,22 @@ export function parseSeenAchievements(raw: string | null): string[] | null {
 export function unseenAchievements(achieved: string[], seen: string[] | null): string[] {
   const known = new Set(seen ?? [])
   return achieved.filter((id) => !known.has(id))
+}
+
+const byTitle = (titleId: string) => ACHIEVEMENTS.find((a) => a.titleId === titleId)
+
+/** 이름 옆에 단 칭호의 업적. 달지 않았거나 아직 얻지 못한 칭호면 null */
+export function wornTitle(save: Pick<SaveData, 'records' | 'worn'>): Achievement | null {
+  const achieved = new Set(achievedIds(save.records))
+  return save.worn.map(byTitle).find((a) => a !== undefined && achieved.has(a.id)) ?? null
+}
+
+/** 얻은 칭호를 단다(하나만). 단 칭호를 다시 누르면 뗀다. 모자·색은 그대로, 얻지 못한 칭호면 그대로 돌려준다 */
+export function toggleTitle<T extends Pick<SaveData, 'records' | 'worn'>>(save: T, titleId: string): T {
+  const a = byTitle(titleId)
+  if (!a || !achievedIds(save.records).includes(a.id)) return save
+  const others = save.worn.filter((id) => !byTitle(id))
+  return { ...save, worn: save.worn.includes(titleId) ? others : [...others, titleId] }
 }
 
 /** 달성한 업적 id(목록 순서) */

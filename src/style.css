@@ -27,7 +27,21 @@ body {
 .top { padding: 14px 16px 10px; font-size: 14px; }
 .top-row { display: flex; align-items: center; gap: 8px; }
 .top-row b { font-size: 18px; }
-.exp-text { margin-left: auto; font-size: 12px; color: var(--ink-soft); }
+.exp-text { margin-left: auto; flex: none; font-size: 12px; color: var(--ink-soft); }
+.who { display: flex; align-items: baseline; gap: 4px; min-width: 0; white-space: nowrap; }
+/* 이름 옆에 단 칭호: 작은 노란 알약. 길면 말줄임 */
+.char-title {
+  margin-left: 2px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: #fff3cf;
+  color: #c9861a;
+  font-size: 11px;
+  font-weight: 700;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
 .gear {
   flex: none;
   width: 44px;
@@ -1306,6 +1320,23 @@ body {
 :where(.ach-fill) { background: #ffc94d; }
 .ach-text small { font-size: 12px; color: var(--ink-soft); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .ach.done .ach-text small { color: #c9861a; font-weight: 700; }
+.ach-hint { margin: 2px 0 0; font-size: 12px; color: var(--ink-soft); }
+/* 칭호 달기: 손가락으로 누르기 좋게 44px, 단 칭호는 강조색으로 */
+.ach-wear {
+  flex: none;
+  min-width: 64px;
+  height: 44px;
+  padding: 0 12px;
+  border: 2px solid #f5c76a;
+  border-radius: 999px;
+  background: #fff;
+  color: #c9861a;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+}
+.ach-wear.on { border-color: var(--accent); background: var(--accent); color: #fff; }
+.ach.worn { box-shadow: 0 0 0 2px var(--accent), 0 3px 0 #f5d98c; }
 /* 도장판으로 나 창이 길어져도 닫기는 언제나 화면 안 아래에 */
 .sheet-foot {
   position: sticky;

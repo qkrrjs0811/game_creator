@@ -28,6 +28,8 @@ export interface HudView {
   week: WeekGoal
   /** 날마다 바뀌는 오늘의 미션 */
   mission: TodayMission
+  /** 이름 옆에 단 칭호 이름. 없으면 null */
+  title: string | null
 }
 
 /** 활동마다 타이머 카드에 쓰는 안내 */
@@ -62,7 +64,7 @@ export function createHud(
   root.innerHTML = `
     <header class="top">
       <div class="top-row">
-        <span><b data-testid="level">Lv.1</b> <span data-testid="char-name">말랑이</span></span>
+        <span class="who"><b data-testid="level">Lv.1</b> <span data-testid="char-name">말랑이</span><span class="char-title" data-testid="char-title" hidden></span></span>
         <span class="exp-text" data-testid="exp-text"></span>
         <button type="button" class="gear" data-testid="open-settings" aria-label="설정">⚙</button>
       </div>
@@ -142,6 +144,7 @@ export function createHud(
   const q = (id: string) => root.querySelector<HTMLElement>(`[data-testid=${id}]`)!
   const level = q('level')
   const expText = q('exp-text')
+  const charTitle = q('char-title')
   const expBar = q('exp-bar')
   const label = q('timer-label')
   const timer = q('timer')
@@ -256,6 +259,8 @@ export function createHud(
     render(v: HudView) {
       level.textContent = `Lv.${v.level}`
       expText.textContent = `EXP ${v.expIntoLevel} / ${v.expForNextLevel}`
+      charTitle.hidden = !v.title
+      charTitle.textContent = v.title ? `🏅 ${v.title}` : ''
       expBar.style.width = `${Math.min(100, (v.expIntoLevel / v.expForNextLevel) * 100)}%`
       today.textContent = `오늘 ${v.todayMinutes}분 / ${v.todayCap}분`
       today.classList.toggle('full', v.capReached)

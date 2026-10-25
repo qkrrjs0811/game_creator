@@ -1,5 +1,7 @@
 import { describe, test, expect } from 'vitest'
-import { ACHIEVEMENTS, achievementProgress, achievedIds, bestStreak, parseSeenAchievements, titleName, unseenAchievements } from './achievements'
+import { ACHIEVEMENTS, achievementProgress, achievedIds, bestStreak, parseSeenAchievements, titleName, toggleTitle, unseenAchievements, wornTitle } from './achievements'
+import { toggleWear, wornCosmetics } from './cosmetics'
+import { newSave } from './session'
 import { computeProgress } from './progression'
 import type { ActivityId, ActivityRecord } from './types'
 
@@ -170,5 +172,55 @@ describe('본 업적 기억', () => {
 
   test('처음 여는 창(null)은 이미 닿은 업적을 모두 한 번에 알린다', () => {
     expect(unseenAchievements(['exercise-1', 'study-1'], null)).toEqual(['exercise-1', 'study-1'])
+  })
+})
+
+describe('칭호 달기', () => {
+  // 운동 150분 = 운동 1시간(땀방울 새싹), 독서 60분 = 독서 1시간(책장 새싹)
+  const records = () => [on('exercise', '2026-10-20', 150), on('reading', '2026-10-20', 60)]
+
+  test('아무것도 달지 않았으면 없음', () => {
+    expect(wornTitle({ ...newSave(), records: records() })).toBeNull()
+  })
+
+  test('얻은 칭호를 달면 worn 에 칭호 id 가 들어가고 그 업적을 돌려준다', () => {
+    const save = toggleTitle({ ...newSave(), records: records() }, 'title:exercise-1')
+    expect(save.worn).toEqual(['title:exercise-1'])
+    expect(wornTitle(save)?.titleName).toBe('땀방울 새싹')
+  })
+
+  test('칭호는 하나만: 다른 칭호를 달면 바뀌고, 단 칭호를 다시 누르면 뗀다', () => {
+    const one = toggleTitle({ ...newSave(), records: records() }, 'title:exercise-1')
+    const two = toggleTitle(one, 'title:reading-1')
+    expect(two.worn).toEqual(['title:reading-1'])
+    expect(toggleTitle(two, 'title:reading-1').worn).toEqual([])
+  })
+
+  test('아직 얻지 못했거나 없는 칭호는 달 수 없다(그대로 돌려준다)', () => {
+    const save = { ...newSave(), records: records() }
+    expect(toggleTitle(save, 'title:exercise-10')).toBe(save)
+    expect(toggleTitle(save, 'title:???')).toBe(save)
+    expect(toggleTitle(save, 'hat-crown')).toBe(save)
+  })
+
+  test('worn 에 얻지 못한 칭호 id 가 있으면 달지 않은 것으로 본다', () => {
+    expect(wornTitle({ ...newSave(), records: records(), worn: ['title:exercise-100'] })).toBeNull()
+  })
+
+  test('모자와 함께 단다: 모자를 바꿔도 칭호는 남고, 칭호를 바꿔도 모자는 남는다', () => {
+    const base = { ...newSave(), records: records(), stageProgress: 6 }
+    const titled = toggleTitle(toggleWear(base, 'hat-sprout'), 'title:exercise-1')
+    expect(titled.worn).toEqual(['hat-sprout', 'title:exercise-1'])
+    expect(wornCosmetics(titled).hat?.id).toBe('hat-sprout')
+    const crowned = toggleWear(titled, 'hat-crown')
+    expect(wornTitle(crowned)?.titleId).toBe('title:exercise-1')
+    expect(toggleTitle(crowned, 'title:reading-1').worn).toEqual(['hat-crown', 'title:reading-1'])
+  })
+
+  test('칭호를 달아도 기록·레벨·능력치는 그대로다', () => {
+    const save = { ...newSave(), records: records() }
+    const titled = toggleTitle(save, 'title:exercise-1')
+    expect(titled.records).toBe(save.records)
+    expect(computeProgress(titled.records)).toEqual(computeProgress(save.records))
   })
 })

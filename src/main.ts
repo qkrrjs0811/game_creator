@@ -6,7 +6,7 @@ import { goalStreak, stampCalendar, stampCount, todayGoal } from './core/goal'
 import { weekGoal } from './core/week'
 import { missionStars, todayMission } from './core/mission'
 import { historyPage, recordSummary } from './core/history'
-import { achievedIds, achievementProgress, parseSeenAchievements, unseenAchievements } from './core/achievements'
+import { achievedIds, achievementProgress, parseSeenAchievements, toggleTitle, unseenAchievements, wornTitle } from './core/achievements'
 import { levelUpPoints, levelUpTo, restoreShownLevel } from './core/levelup'
 import { liveRecords, startSession, stopSession } from './core/session'
 import { backupFileName, exportBackup, importLosesProgress } from './core/backup'
@@ -172,6 +172,7 @@ const skills = createSkills(app, {
       history: recordSummary(records, now),
       historyPage: (page: number) => historyPage(records, now, page),
       achievements: achievementProgress(records),
+      title: wornTitle({ records, worn: save.worn })?.titleId ?? null,
     }
   },
   onLearn(id) {
@@ -179,6 +180,16 @@ const skills = createSkills(app, {
     const next = learnSkill(save, currentLevel(), id)
     if (!next) return
     save = next
+    persist()
+    render()
+  },
+  // 칭호는 이름 옆 글자만 바꾼다(입은 꾸미기 저장만 바뀜). 켜 둔 타이머로 막 얻은 칭호도 단다
+  onTitle(id) {
+    pullSave()
+    const s = lookSave()
+    const next = toggleTitle(s, id)
+    if (next === s) return
+    save = { ...save, worn: next.worn }
     persist()
     render()
   },
@@ -532,6 +543,7 @@ function render() {
     goal,
     week,
     mission,
+    title: wornTitle({ records, worn: save.worn })?.titleName ?? null,
   })
   skills.refresh()
   homeScene()?.showHomeMonster(homeMonster(save.stageProgress))
