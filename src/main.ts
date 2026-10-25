@@ -35,6 +35,7 @@ import { autoRun } from './core/autorun'
 import { awaySummary, shouldShowAway } from './core/away'
 import { sessionGain } from './core/gain'
 import { GROWTH_STAGES, grownStage, lookLine, malangLook, restoreSeenStage } from './core/look'
+import { chatLines } from './core/chatter'
 import { focusCelebrateNow, focusProgress, focusTargetFor, parseFocusDefault, parseFocusGoal, serializeFocusGoal } from './core/focus'
 
 declare global {
@@ -495,6 +496,8 @@ const storedSeen = Number(readKey(LAST_SEEN_KEY))
 let lastSeen: number | null = Number.isFinite(storedSeen) && storedSeen > 0 ? storedSeen : null
 // 자리 비운 동안 카드에 레벨업을 함께 띄웠으면 그 레벨은 따로 배지를 띄우지 않는다(같은 자리)
 let awayLevel: number | null = null
+// 이번에 열거나 돌아오기 전에 마지막으로 본 시각. 보는 동안 계속 덮어쓰는 lastSeen과 달리 말랑이의 "보고 싶었어"에 쓴다
+let visitSeen: number | null = lastSeen
 
 function rememberLastSeen(now: number) {
   lastSeen = now
@@ -507,6 +510,7 @@ function rememberLastSeen(now: number) {
 
 /** 다시 열거나 다시 돌아왔을 때 자리 비운 동안 늘어난 게 있으면 카드를 띄운다(화면에 보여 줄 값일 뿐) */
 function checkAway(now: number) {
+  visitSeen = lastSeen
   if (lastSeen === null) return
   const a = awaySummary(save, lastSeen, now)
   if (!shouldShowAway(a)) return
@@ -622,6 +626,10 @@ function render() {
   checkGrown(look.index)
   homeScene()?.grow({ scale: look.stage.scale, traits: look.traits })
   // 상한을 채운 뒤에도 타이머가 켜져 있으면 말랑이가 그만 쉬자고 한다(모습만 바뀜)
+  // 쉬는 중 말풍선은 기록을 읽고 지금 가장 중요한 한마디를 고른다(계산만)
+  homeScene()?.setRestLine(
+    chatLines({ records, stageProgress: save.stageProgress, skills: save.skills, now, lastSeen: visitSeen })[0].text,
+  )
   homeScene()?.setMood(live === null ? 'rest' : liveFull ? 'full' : live)
   homeScene()?.setBubbleAway(achievementShown)
 }

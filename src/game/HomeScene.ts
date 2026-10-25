@@ -316,6 +316,8 @@ export class HomeScene extends Phaser.Scene {
   private breathe?: Phaser.Tweens.Tween
   /** 타이머가 켜져 있으면 말랑이도 같이 운동한다. 오늘 상한을 채웠으면 쉬자고 한다 */
   private mood: Mood = 'rest'
+  /** 쉬는 중 말풍선에 띄울 말랑이 한마디(기록을 읽고 화면이 골라 준다) */
+  private restLine = BUBBLES.rest
   /** 홈에서 보여 줄 몬스터(다음에 도전할 스테이지)와 지금 그려진 몬스터 */
   private homeLook?: Monster
   private shownMonster = ''
@@ -381,12 +383,20 @@ export class HomeScene extends Phaser.Scene {
     if (!this.battle) this.moveMascot()
   }
 
+  /** 타이머가 꺼져 있을 때 말풍선에 띄울 한마디. 켜 둔 동안·상한 말풍선은 그대로다 */
+  setRestLine(text: string) {
+    if (this.restLine === text) return
+    this.restLine = text
+    if (this.bubbleText && this.mood === 'rest') this.drawBubble()
+  }
+
   private drawBubble() {
-    this.bubbleText.setText(BUBBLES[this.mood])
+    this.bubbleText.setText(this.mood === 'rest' ? this.restLine : BUBBLES[this.mood])
     const w = this.bubbleText.width
     this.bubbleBg.clear().fillStyle(0xffffff).fillRoundedRect(-w / 2 - 12, -15, w + 24, 30, 15)
     // e2e가 말랑이 기분을 볼 수 있게 남긴다
     this.game.canvas.parentElement?.setAttribute('data-mood', this.mood)
+    this.game.canvas.parentElement?.setAttribute('data-bubble', this.bubbleText.text)
   }
 
   /** 업적 알림이 장면 위쪽에 떠 있는 동안 말풍선이 자리를 비켜 준다. 모습만 바뀐다 */
