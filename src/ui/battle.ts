@@ -12,6 +12,10 @@ export interface BattleResultView {
   damage: number
   /** 장 보스를 처음 깨서 새로 열린 장 번호. 있으면 카드 위에 배지를 단다 */
   chapter: number | null
+  /** 자동 진행처럼 여러 판을 묶어 보여 줄 때 쓰는 제목·설명·띠 글자. 없으면 한 판 결과 글자를 쓴다 */
+  title?: string
+  detail?: string
+  status?: string
 }
 
 /** 전투 중 장면 아래쪽 알림 띠(어느 스테이지인지, 건너뛰기·돌아가기 버튼)와 끝난 뒤 결과 카드 */
@@ -64,8 +68,8 @@ export function createBattleBar(scene: HTMLElement, h: { onSkip(): void; onLeave
     },
     end(r: BattleResultView) {
       const { win } = r
-      q(card, 'battle-result-title').textContent = win ? '🎉 승리!' : '💧 아쉬워요'
-      q(card, 'battle-result-detail').textContent = win ? `${r.rounds}번 주고받아 이겼어요` : '말랑이가 지쳐 버렸어요'
+      q(card, 'battle-result-title').textContent = r.title ?? (win ? '🎉 승리!' : '💧 아쉬워요')
+      q(card, 'battle-result-detail').textContent = r.detail ?? (win ? `${r.rounds}번 주고받아 이겼어요` : '말랑이가 지쳐 버렸어요')
       // 졌을 때만 몬스터를 얼마나 깎았는지 보여 준다(다음엔 더 깎을 수 있게)
       const damage = q(card, 'battle-result-damage')
       damage.hidden = win
@@ -84,7 +88,7 @@ export function createBattleBar(scene: HTMLElement, h: { onSkip(): void; onLeave
       else card.dataset.chapter = String(r.chapter)
       card.dataset.win = String(win)
       card.hidden = false
-      status.textContent = win ? '이겼어요! 🎉' : '아쉽게 졌어요'
+      status.textContent = r.status ?? (win ? '이겼어요! 🎉' : '아쉽게 졌어요')
       action.textContent = '돌아가기'
       bar.dataset.state = 'done'
       bar.dataset.win = String(win)

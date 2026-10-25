@@ -5,6 +5,7 @@ import type { ActivityId } from '../core/types'
 import type { TodayGoal } from '../core/goal'
 import type { AwaySummary } from '../core/away'
 import { WINNABLE_MAX } from '../core/coach'
+import { AUTO_RUN_MAX, type AutoRun } from '../core/autorun'
 
 const pad =(n: number) => String(n).padStart(2, '0')
 
@@ -72,6 +73,36 @@ export function awayAdventure(winnable: number, toWin: number | null): string {
   if (winnable > 0) return `🍀 이길 만한 스테이지 ${winnable}개`
   if (toWin === null) return '💪 운동으로 더 키워서 와요'
   return `💪 다음 스테이지까지 운동 ${formatMinutes(toWin)} 더`
+}
+
+/**
+ * 자동 진행이 끝나면 띄우는 결과 카드 글자. toWin = 멈춘 스테이지를 운동 몇 분 더 하면 이길 만한지
+ * (stageMinutesToWin, 0이면 지금도 이길 만함, null이면 찾는 범위 밖). 다 이겼으면 쓰지 않는다
+ */
+export function autoRunCard(
+  run: Pick<AutoRun, 'from' | 'to' | 'stoppedAt' | 'rewards'>,
+  toWin: number | null,
+): { win: boolean; title: string; detail: string; note: string; reward: string | null } {
+  const win = run.to > run.from
+  const detail = !win
+    ? `${run.stoppedAt}스테이지에서 아쉽게 졌어요`
+    : run.from === 0
+      ? `${run.to}스테이지까지 깼어요`
+      : `${run.from} → ${run.to}스테이지까지 깼어요`
+  let note: string
+  if (run.stoppedAt === null) note = `⏩ ${AUTO_RUN_MAX}판 다 이겼어요!`
+  else if (toWin === null) note = '💪 운동으로 더 키워서 다시 와요'
+  else if (toWin === 0) note = '🍀 지금도 이길 만해요 · 다시 도전해 봐요'
+  else note = `💪 다음은 운동 ${formatMinutes(toWin)} 더 하면 이길 만해요`
+  // 여러 개면 이름 대신 아이콘만 늘어놓아 카드가 길어져 말랑이를 가리지 않게 한다
+  const [one] = run.rewards
+  const reward =
+    run.rewards.length === 0
+      ? null
+      : run.rewards.length === 1
+        ? `🎁 새 꾸미기 · ${one.icon} ${one.name}`
+        : `🎁 새 꾸미기 ${run.rewards.length}개 · ${run.rewards.map((c) => c.icon).join(' ')}`
+  return { win, title: win ? '🏁 자동 진행 끝!' : '💧 아쉬워요', detail, note, reward }
 }
 
 /** 다시 열 때 띄우는 "자리 비운 동안" 카드 글자 */

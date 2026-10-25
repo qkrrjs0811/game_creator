@@ -609,6 +609,26 @@ body {
 .stage.cleared .stage-go { background: var(--chip); color: var(--ink); box-shadow: 0 3px 0 var(--track); }
 .stage-lock { flex: none; width: 72px; text-align: center; font-size: 20px; opacity: 0.6; }
 .stage-list + .sheet-msg { margin-top: 10px; }
+/* 이길 만한 스테이지가 있을 때만 보이는 자동 진행 버튼 */
+.auto-run {
+  display: block;
+  width: 100%;
+  min-height: 48px;
+  margin: 10px 0 0;
+  padding: 0 16px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--accent);
+  color: #fff;
+  font: inherit;
+  font-size: 15px;
+  font-weight: 700;
+  box-shadow: 0 3px 0 #e9764a;
+  cursor: pointer;
+}
+.auto-run[hidden] { display: none; }
+/* 버튼이 들어선 만큼 목록을 줄여 닫기 버튼이 화면 안에 남게 한다 */
+.auto-run:not([hidden]) + .stage-list { max-height: calc(92dvh - 318px); }
 
 .battle-bar {
   position: absolute;

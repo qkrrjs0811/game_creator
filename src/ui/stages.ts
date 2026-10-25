@@ -1,4 +1,5 @@
 import { chapterBrowse, chapterStages } from '../core/endless'
+import { WINNABLE_MAX } from '../core/coach'
 import { formatMinutes } from './format'
 
 /** 다음에 깰 스테이지를 운동 몇 분 더 하면 이길 만한지(nextStageAdvice). 0이면 지금도 이길 만하다 */
@@ -16,7 +17,14 @@ export const stageLabel = (s: { no: number; boss: boolean }) => (s.boss ? '보�
 /** 스테이지 창: 지금 장의 스테이지 10칸과 깸·도전 가능·잠김 상태. 앞 장들과 바로 다음 장도 넘겨 볼 수 있다 */
 export function createStages(
   root: HTMLElement,
-  h: { progress(): number; advice(): StageAdvice; onChallenge(no: number): void },
+  h: {
+    progress(): number
+    advice(): StageAdvice
+    /** 다음 스테이지부터 줄줄이 이길 만한 수(winnableStages). 1 이상이면 자동 진행 버튼을 보여 준다 */
+    winnable(): number
+    onChallenge(no: number): void
+    onAutoRun(): void
+  },
 ) {
   const wrap = document.createElement('div')
   wrap.className = 'sheet-backdrop'
@@ -31,6 +39,7 @@ export function createStages(
         <button type="button" class="chapter-step" data-testid="chapter-next" aria-label="다음 장">▶</button>
       </div>
       <p class="sheet-desc">이기면 다음 스테이지가 열려요.<br />깬 곳도 언제든 다시 도전할 수 있어요.</p>
+      <button type="button" class="auto-run" data-testid="auto-run" hidden></button>
       <ul class="stage-list" data-testid="stage-list"></ul>
       <p class="sheet-msg" data-testid="stage-msg" role="status"></p>
       <button type="button" class="sheet-close" data-testid="stages-close">닫기</button>
@@ -46,8 +55,13 @@ export function createStages(
   /** 보고 있는 장. 열 때마다 지금 장으로 돌아온다 */
   let viewing: number | undefined
 
+  const autoBtn = q('auto-run') as HTMLButtonElement
+
   const draw = () => {
     const advice = h.advice()
+    const winnable = h.winnable()
+    autoBtn.hidden = winnable === 0
+    autoBtn.textContent = `⏩ 자동 진행 · 이길 만한 ${winnable >= WINNABLE_MAX ? `${WINNABLE_MAX}개 이상` : `${winnable}개`}`
     const view = chapterBrowse(h.progress(), viewing)
     viewing = view.chapter
     prev.disabled = !view.prev
@@ -98,6 +112,7 @@ export function createStages(
     draw()
     showOpen()
   }
+  autoBtn.addEventListener('click', () => h.onAutoRun())
   prev.addEventListener('click', () => turn(-1))
   next.addEventListener('click', () => turn(1))
 

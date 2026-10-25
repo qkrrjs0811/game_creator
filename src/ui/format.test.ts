@@ -1,6 +1,8 @@
 import { test, expect } from 'vitest'
 import { WINNABLE_MAX } from '../core/coach'
-import { awayAdventure, awayCard, formatElapsed, formatMinutes, goalText, objectJosa, sessionSummary, topicJosa } from './format'
+import { autoRunCard, awayAdventure, awayCard, formatElapsed, formatMinutes, goalText, objectJosa, sessionSummary, topicJosa } from './format'
+import { AUTO_RUN_MAX } from '../core/autorun'
+import type { Cosmetic } from '../core/cosmetics'
 import type { AwaySummary } from '../core/away'
 
 test('한 시간 미만은 MM:SS', () => {
@@ -106,4 +108,32 @@ test('자리 비운 동안 카드의 모험 안내: 이길 만한 스테이지 �
   expect(awayAdventure(WINNABLE_MAX, 0)).toBe(`🍀 이길 만한 스테이지 ${WINNABLE_MAX}개 이상`)
   expect(awayAdventure(0, 70)).toBe('💪 다음 스테이지까지 운동 1시간 10분 더')
   expect(awayAdventure(0, null)).toBe('💪 운동으로 더 키워서 와요')
+})
+
+test('자동 진행 결과 카드: 깬 만큼·얻은 모자·멈춘 곳의 운동 N분 더', () => {
+  const hat: Cosmetic = { id: 'chapter-hat-1', icon: '🎩', name: '말랑 나라 모자', kind: 'hat' }
+  expect(autoRunCard({ from: 3, to: 8, stoppedAt: 9, rewards: [] }, 90)).toEqual({
+    win: true,
+    title: '🏁 자동 진행 끝!',
+    detail: '3 → 8스테이지까지 깼어요',
+    note: '💪 다음은 운동 1시간 30분 더 하면 이길 만해요',
+    reward: null,
+  })
+  // 처음부터 깨면 "N스테이지까지", 모자를 얻으면 보상 줄을 붙인다
+  expect(autoRunCard({ from: 0, to: 10, stoppedAt: null, rewards: [hat] }, null)).toMatchObject({
+    detail: '10스테이지까지 깼어요',
+    note: `⏩ ${AUTO_RUN_MAX}판 다 이겼어요!`,
+    reward: '🎁 새 꾸미기 · 🎩 말랑 나라 모자',
+  })
+  // 여러 개면 아이콘만 늘어놓는다
+  const bow: Cosmetic = { id: 'hat-bow', icon: '🎀', name: '노을 리본', kind: 'hat' }
+  expect(autoRunCard({ from: 3, to: 10, stoppedAt: null, rewards: [bow, hat] }, null).reward).toBe('🎁 새 꾸미기 2개 · 🎀 🎩')
+  // 한 판도 못 깨면 아쉬워요
+  expect(autoRunCard({ from: 4, to: 4, stoppedAt: 5, rewards: [] }, 0)).toMatchObject({
+    win: false,
+    title: '💧 아쉬워요',
+    detail: '5스테이지에서 아쉽게 졌어요',
+    note: '🍀 지금도 이길 만해요 · 다시 도전해 봐요',
+  })
+  expect(autoRunCard({ from: 4, to: 6, stoppedAt: 7, rewards: [] }, null).note).toBe('💪 운동으로 더 키워서 다시 와요')
 })

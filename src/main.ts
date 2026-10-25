@@ -13,7 +13,7 @@ import { createHud } from './ui/hud'
 import { createSettings } from './ui/settings'
 import { createSkills } from './ui/skills'
 import { learnSkill, remainingSkillPoints, skillRanks } from './core/skills'
-import { endlessStage, homeMonster } from './core/endless'
+import { endlessStage, homeMonster, STAGES_PER_CHAPTER } from './core/endless'
 import { createStages, stageLabel } from './ui/stages'
 import { createBattleBar } from './ui/battle'
 import { enemyDamagePercent, playerFighter, simulateBattle } from './core/battle'
@@ -23,7 +23,8 @@ import { cosmeticCatalog, ownedCosmetics, toggleWear, wornCosmetics } from './co
 import { createCosmetics } from './ui/cosmetics'
 import { statRows } from './core/stats'
 import { nextStageAdvice, stageMinutesToWin, winnableStages } from './core/coach'
-import { awayAdventure, awayCard, formatMinutes, sessionSummary } from './ui/format'
+import { autoRunCard, awayAdventure, awayCard, formatMinutes, sessionSummary } from './ui/format'
+import { autoRun } from './core/autorun'
 import { awaySummary, shouldShowAway } from './core/away'
 import { sessionGain } from './core/gain'
 
@@ -209,6 +210,39 @@ const stages = createStages(app, {
   progress: () => save.stageProgress,
   // 다음 스테이지를 운동 몇 분 더 하면 이길 만한지(화면에 보여 줄 값일 뿐)
   advice: () => nextStageAdvice(currentProgress().creditedMinutes, save.skills, save.stageProgress),
+  winnable: () => winnableStages(currentProgress().creditedMinutes, save.skills, save.stageProgress),
+  // 다음 스테이지부터 처음 질 때까지(최대 10판) 이어 싸운다. 바뀌는 건 깬 스테이지 수와 꾸미기뿐이다(autoRun)
+  onAutoRun() {
+    pullSave()
+    const p = currentProgress()
+    const run = autoRun(save, p.stats, save.skills)
+    if (run.save !== save) {
+      save = run.save
+      persist()
+    }
+    const lost = run.stoppedAt === null ? null : run.battles[run.battles.length - 1]
+    const toWin = run.stoppedAt === null ? null : stageMinutesToWin(p.creditedMinutes, save.skills, run.stoppedAt)
+    const card = autoRunCard(run, toWin)
+    // 장 보스를 넘었으면 마지막으로 열린 장을 배지로 알린다
+    const chapter = Math.floor(run.to / STAGES_PER_CHAPTER) > Math.floor(run.from / STAGES_PER_CHAPTER)
+      ? Math.floor(run.to / STAGES_PER_CHAPTER) + 1
+      : null
+    const foe = lost ? endlessStage(lost.no) : null
+    stages.close()
+    hud.hideToasts()
+    battleBar.start('자동 진행', '몬스터들')
+    battleBar.end({
+      ...card,
+      rounds: 0,
+      status: `${run.battles.filter((b) => b.win).length}판 이겼어요`,
+      // 한 판도 못 깼으면 진 상대를 얼마나 깎았는지 보여 준다
+      foe: foe?.monster.name ?? '',
+      damage: foe && lost ? enemyDamagePercent(foe.enemy, lost.result) : 0,
+      chapter,
+    })
+    if (chapter !== null) homeScene()?.celebrateChapter()
+    render()
+  },
   onChallenge(no) {
     pullSave()
     const s = endlessStage(no)
