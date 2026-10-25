@@ -3,7 +3,6 @@ import type { ReplayStep, Timeline } from '../core/replay'
 import { MONSTERS, type Monster } from '../core/monsters'
 import type { Cosmetic, HatLook, HatShape, Worn } from '../core/cosmetics'
 import { chapterBackdrop, type Backdrop } from '../core/backdrop'
-import type { ActivityId } from '../core/types'
 
 const MASCOT = 0xffd7a8
 const MASCOT_SHADE = 0xf7b97a
@@ -47,50 +46,6 @@ const CHAPTER_HAT_TOP: Record<HatShape, number> = { cone: -58, beret: -52, flowe
 function hatTop(hat: Cosmetic | null): number {
   if (hat?.hat) return CHAPTER_HAT_TOP[hat.hat.shape]
   return HAT_TOP[hat?.id ?? ''] ?? -FEET
-}
-
-/** 말랑이 모습(성장 단계 몸 배율과 많이 한 활동 특징). 기록에서 계산한 그림일 뿐이다 */
-export interface Growth {
-  scale: number
-  traits: ActivityId[]
-}
-
-/** 자란 말랑이 머리끝(모자 포함). 몸은 발끝을 땅에 둔 채 커지므로 위로만 자란다 */
-function grownTop(hat: Cosmetic | null, scale: number): number {
-  return FEET * (1 - scale) + hatTop(hat) * scale
-}
-
-/**
- * 많이 한 활동 특징. 모자보다 먼저 그려 모자 아래에 보인다.
- * 운동: 진한 볼 홍조·이마 머리띠·땀방울, 공부: 동그란 안경, 독서: 왼쪽 머리의 책갈피 잎, 휴식: 졸린 눈(눈 대신)과 작은 별
- */
-function drawTraits(g: Phaser.GameObjects.Graphics, traits: ActivityId[]) {
-  if (traits.includes('exercise')) {
-    g.fillStyle(0xff8f8f, 0.75).fillEllipse(-22, 8, 13, 8).fillEllipse(22, 8, 13, 8)
-    g.fillStyle(0xff9a7a).fillRoundedRect(-31, -27, 62, 7, 3.5)
-    g.fillStyle(0xffffff, 0.8).fillCircle(-14, -23.5, 1.6).fillCircle(0, -23.5, 1.6).fillCircle(14, -23.5, 1.6)
-    // 머리띠 매듭 꼬리
-    g.fillStyle(0xff9a7a).fillEllipse(-36, -20, 10, 5).fillEllipse(-35, -14, 9, 4.5)
-    // 땀방울
-    g.fillStyle(0xa8d4ff).fillTriangle(29, -16, 35, -16, 32, -24).fillCircle(32, -14, 3.6)
-  }
-  if (traits.includes('relax')) {
-    g.lineStyle(2.6, INK)
-    for (const x of [-12, 12]) g.beginPath().arc(x, -7, 5, Math.PI * 0.15, Math.PI * 0.85, false).strokePath()
-    g.fillStyle(0xfff0a0).fillPoints(starPoints(42, -18, 7), true)
-    g.fillStyle(0xffe07a).fillPoints(starPoints(48, -31, 4), true)
-  }
-  if (traits.includes('study')) {
-    g.fillStyle(0xffffff, 0.35).fillCircle(-12, -6, 8).fillCircle(12, -6, 8)
-    g.lineStyle(2.4, 0x8a6a52)
-    g.strokeCircle(-12, -6, 9).strokeCircle(12, -6, 9)
-    g.lineBetween(-3, -7, 3, -7)
-  }
-  if (traits.includes('reading')) {
-    g.fillStyle(0xc7a6ff).fillRect(-30, -36, 6, 12).fillTriangle(-30, -24, -24, -24, -30, -20).fillTriangle(-24, -24, -24, -20, -30, -24)
-    g.fillStyle(0x7cc576).fillEllipse(-23, -38, 16, 9)
-    g.fillStyle(0xa6dc8e).fillEllipse(-31, -41, 12, 7)
-  }
 }
 
 /** 장 모자. 모양 하나에 파스텔 색과 무늬(물방울·줄무늬)를 입힌다. 모두 머리 위(y≈-38) 둘레에 붙는다 */
@@ -299,9 +254,6 @@ export class HomeScene extends Phaser.Scene {
   /** 자리(땅 높이)는 바깥 상자가, 폴짝·둥실 움직임은 안쪽 몸이 맡는다. 장면 높이가 바뀌어도 움직임이 자리를 옛 땅으로 되돌리지 않는다 */
   private mascot!: Phaser.GameObjects.Container
   private mascotBody!: Phaser.GameObjects.Container
-  /** 성장 단계만큼 커지는 몸. 발끝이 땅에 닿게 위로 옮겨 키운다 */
-  private mascotGrow!: Phaser.GameObjects.Container
-  private growth: Growth = { scale: 1, traits: [] }
   private monster!: Phaser.GameObjects.Container
   private monsterBody!: Phaser.GameObjects.Container
   private bubble!: Phaser.GameObjects.Container
@@ -346,8 +298,7 @@ export class HomeScene extends Phaser.Scene {
 
   create() {
     this.scenery = this.add.graphics()
-    this.mascotGrow = this.add.container(0, 0)
-    this.mascotBody = this.add.container(0, 0, [this.mascotGrow])
+    this.mascotBody = this.add.container(0, 0)
     this.mascot = this.add.container(0, 0, [this.mascotBody])
     this.shownLook = undefined
     this.dress(this.look)
@@ -545,48 +496,26 @@ export class HomeScene extends Phaser.Scene {
   /** 말랑이에게 입은 꾸미기(모자·색)를 입힌다. 모습만 바뀐다 */
   dress(worn: Worn) {
     this.look = worn
-    this.redraw()
-  }
-
-  /** 말랑이 모습(성장 단계 몸 크기·많이 한 활동 특징)을 바꾼다. 그림만 바뀐다 */
-  grow(growth: Growth) {
-    this.growth = growth
-    this.redraw()
-  }
-
-  private redraw() {
     if (!this.mascot) return
-    const worn = this.look
-    const { scale, traits } = this.growth
     const key = [worn.hat?.id, worn.color?.id].filter(Boolean).join(' ')
-    const shown = `${key}|${scale}|${traits.join(' ')}`
-    if (this.shownLook === shown) return
-    this.shownLook = shown
-    this.mascotGrow.removeAll(true)
-    this.mascotGrow.add(this.mascotParts(worn, traits))
-    this.mascotGrow.setScale(scale).setY(FEET * (1 - scale))
-    if (this.battle) this.drawBars(...this.battle.hp)
-    // e2e가 지금 입은 꾸미기와 모습을 볼 수 있게 남긴다
-    const host = this.game.canvas.parentElement
-    host?.setAttribute('data-look', key)
-    host?.setAttribute('data-grow-scale', String(scale))
-    host?.setAttribute('data-traits', traits.join(' '))
+    if (this.shownLook === key) return
+    this.shownLook = key
+    this.mascotBody.removeAll(true)
+    this.mascotBody.add(this.mascotParts(worn))
+    // e2e가 지금 입은 꾸미기를 볼 수 있게 남긴다
+    this.game.canvas.parentElement?.setAttribute('data-look', key)
   }
 
   /** 둥근 말랑이. 색 꾸미기는 몸 색을, 모자 꾸미기는 머리 위(y≈-38)를 꾸민다 */
-  private mascotParts(worn: Worn, traits: ActivityId[]): Phaser.GameObjects.GameObject[] {
+  private mascotParts(worn: Worn): Phaser.GameObjects.GameObject[] {
     const [body, shade] = BODY_COLORS[worn.color?.id ?? ''] ?? [MASCOT, MASCOT_SHADE]
-    // 휴식을 많이 했으면 눈 대신 졸린 눈(특징 그림)을 그린다
-    const eyes = traits.includes('relax') ? [] : [this.add.ellipse(-12, -6, 8, 11, INK), this.add.ellipse(12, -6, 8, 11, INK)]
-    const marks = this.add.graphics()
-    drawTraits(marks, traits)
     const parts: Phaser.GameObjects.GameObject[] = [
       this.add.circle(0, 0, 38, body),
       this.add.ellipse(0, 22, 60, 20, shade).setAlpha(0.6),
-      ...eyes,
+      this.add.ellipse(-12, -6, 8, 11, INK),
+      this.add.ellipse(12, -6, 8, 11, INK),
       this.add.ellipse(-22, 8, 10, 6, 0xffa8a8).setAlpha(0.7),
       this.add.ellipse(22, 8, 10, 6, 0xffa8a8).setAlpha(0.7),
-      marks,
     ]
     const g = this.add.graphics()
     switch (worn.hat?.id) {
@@ -804,19 +733,17 @@ export class HomeScene extends Phaser.Scene {
     const dir = s.actor === 'player' ? 1 : -1
     this.layout(this.scale.width, this.scale.height)
     this.tweens.add({ targets: attacker, x: attacker.x + 34 * dir, duration: 120, yoyo: true, ease: 'Quad.easeOut' })
-    // 맞은 쪽 HP 막대 위쪽 y
-    const bar = s.actor === 'player' ? barY(this.scale.height) : this.mascotBarY(this.scale.height)
     this.time.delayedCall(120, () => {
       if (this.battle !== b || b.ended) return
       if (s.kind === 'miss') {
         this.tweens.add({ targets: target, x: target.x + 22 * dir, duration: 110, yoyo: true, ease: 'Sine.easeOut' })
-        this.floatText(target.x, '휙! 피했다', '#6f93c4', bar)
+        this.floatText(target.x, '휙! 피했다', '#6f93c4')
       } else {
         this.tweens.add({ targets: target, alpha: 0.35, duration: 70, yoyo: true, repeat: 1 })
         this.tweens.add({ targets: target, angle: 8 * dir, duration: 80, yoyo: true, ease: 'Sine.easeOut' })
         // 치명타(지능)는 노란 글자로 크게 알린다
-        if (s.crit) this.floatText(target.x, `치명타! -${s.damage}`, '#f0a020', bar)
-        else this.floatText(target.x, `-${s.damage}`, s.actor === 'player' ? '#ff8a5b' : '#e0607e', bar)
+        if (s.crit) this.floatText(target.x, `치명타! -${s.damage}`, '#f0a020')
+        else this.floatText(target.x, `-${s.damage}`, s.actor === 'player' ? '#ff8a5b' : '#e0607e')
       }
       this.drawBars(s.playerHp, s.enemyHp)
     })
@@ -846,16 +773,16 @@ export class HomeScene extends Phaser.Scene {
   }
 
   /** 맞은 쪽 HP 막대 바로 위에서 숫자·글자가 떠오르며 사라진다(막대를 가리지 않게) */
-  private floatText(x: number, text: string, color: string, barTop: number) {
+  private floatText(x: number, text: string, color: string) {
     const t = this.add
       .text(x, 0, text, { fontFamily: FONT, fontSize: '20px', color, fontStyle: 'bold', stroke: '#ffffff', strokeThickness: 5 })
       .setOrigin(0.5)
-    const y = barTop - 5 - t.height / 2
+    const y = barY(this.scale.height) - 5 - t.height / 2
     t.setY(y)
     // e2e가 숫자가 HP 막대를 가리는지 볼 수 있게 숫자 아래끝과 막대 위끝을 남긴다
     const box = this.game.canvas.parentElement
     box?.setAttribute('data-hit-bottom', String(Math.round(y + t.height / 2)))
-    box?.setAttribute('data-bar-top', String(Math.round(barTop - 3)))
+    box?.setAttribute('data-bar-top', String(Math.round(barY(this.scale.height) - 3)))
     // 톡 커지며 나타나 또렷하게 떠오르다가 끝에서만 흐려진다(뜨자마자 흐려져 읽기 어렵지 않게)
     t.setScale(0.6)
     this.tweens.add({ targets: t, scale: 1, duration: 140, ease: 'Back.easeOut' })
@@ -876,17 +803,9 @@ export class HomeScene extends Phaser.Scene {
       if (ratio > 0) g.fillStyle(color).fillRoundedRect(cx - BAR_W / 2, cy, Math.max(10, BAR_W * ratio), 10, 5)
     }
     const { width: w, height: h } = this.scale
-    bar(b.bars[0], w * 0.3, this.mascotBarY(h), playerHp, HP_PLAYER)
+    bar(b.bars[0], w * 0.3, barY(h), playerHp, HP_PLAYER)
     bar(b.bars[1], w * 0.72, barY(h), enemyHp, HP_ENEMY)
     b.hp = [playerHp, enemyHp]
-  }
-
-  /**
-   * 말랑이 HP 막대 위쪽 y. 자란 말랑이 머리(모자)끝보다 위로 올린다.
-   * 아기 말랑이는 어떤 모자를 써도 몬스터 막대와 같은 높이다(머리끝 -58, 막대 아래끝 -59)
-   */
-  private mascotBarY(h: number): number {
-    return Math.min(barY(h), groundY(h) + Math.floor(grownTop(this.look.hat, this.growth.scale)) - 14)
   }
 
   private layout(w: number, h: number) {
@@ -906,7 +825,7 @@ export class HomeScene extends Phaser.Scene {
   update() {
     const box = this.game.canvas.parentElement
     if (!box) return
-    const mascot = String(Math.round(this.mascot.y + this.mascotBody.y + this.mascotGrow.y + FEET * this.growth.scale))
+    const mascot = String(Math.round(this.mascot.y + this.mascotBody.y + FEET))
     const monster = String(Math.round(this.monster.y + this.monsterBody.y + 26))
     if (box.getAttribute('data-mascot-bottom') !== mascot) box.setAttribute('data-mascot-bottom', mascot)
     if (box.getAttribute('data-monster-bottom') !== monster) box.setAttribute('data-monster-bottom', monster)
@@ -919,11 +838,11 @@ export class HomeScene extends Phaser.Scene {
     if (!b?.ended) return
     const winner = b.win ? this.mascot : this.monster
     const bar = b.bars[b.win ? 0 : 1]
-    const headTop = b.win ? grownTop(this.look.hat, this.growth.scale) : MONSTER_TOP[this.monsterShape]
+    const headTop = b.win ? hatTop(this.look.hat) : MONSTER_TOP[this.monsterShape]
     const rest = groundY(this.scale.height) + (b.win ? 0 : 6) + headTop
     const top = winner.y + winner.scaleY * headTop
     // 막대 바깥 흰 테두리 위끝과 아래끝
-    const barTop = (b.win ? this.mascotBarY(this.scale.height) : barY(this.scale.height)) - 3 + bar.y
+    const barTop = barY(this.scale.height) - 3 + bar.y
     b.peak = Math.min(b.peak ?? top, top)
     b.gap = Math.min(b.gap ?? Infinity, top - (barTop + 16))
     b.barPeak = Math.min(b.barPeak ?? barTop, barTop)
