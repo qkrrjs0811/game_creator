@@ -9,6 +9,8 @@ import { stepSound } from '../core/sound'
 import { playSound } from '../ui/sound'
 import { contactAt, finishDelay, hitImpact, hpTrail, isFinalBlow, type Impact } from '../core/impact'
 import { skillFxSize, skillFxTiming, stepSkillFx, type SkillFxKind, type SkillStyle } from '../core/skillfx'
+import { MONSTER_TOP, drawMonsterBody, drawMonsterFace } from './monsterArt'
+import { monsterEndFace, monsterStepFace, type MonsterFace } from '../core/monsterLook'
 import { BLINK_MS, HAPPY_MS, blinkGap, endFace, moodFace, pickFace, stepFace, type Face, type Mood } from '../core/face'
 
 export type { Mood } from '../core/face'
@@ -16,7 +18,6 @@ export type { Mood } from '../core/face'
 const MASCOT = 0xffd7a8
 const MASCOT_SHADE = 0xf7b97a
 const INK = 0x5a4636
-const MONSTER_INK = 0x3d2a63
 const CROWN = 0xffd36b
 const HP_PLAYER = 0x7fd8b0
 /** 땅 높이에서 말랑이(반지름 38)·몬스터 아래 끝까지 */
@@ -422,8 +423,6 @@ function drawScenery(g: Phaser.GameObjects.Graphics, b: Backdrop, w: number, h: 
   }
 }
 
-const MONSTER_TOP: Record<Monster['shape'], number> = { slime: -38, mushroom: -36, drop: -42, cloud: -36, rock: -22, king: -50 }
-
 /** 두 캐릭터 머리 위 HP 막대(높이 10, 흰 테두리 3)의 위쪽 y */
 function barY(h: number): number {
   return groundY(h) - 72
@@ -493,6 +492,10 @@ export class HomeScene extends Phaser.Scene {
   /** 홈에서 보여 줄 몬스터(다음에 도전할 스테이지)와 지금 그려진 몬스터 */
   private homeLook?: Monster
   private shownMonster = ''
+  /** 몬스터 얼굴 그림과 표정. 전투 중에는 monsterFace를 따르고, 아니면 기본 표정이다 */
+  private monsterFaceG?: Phaser.GameObjects.Graphics
+  private shownMonsterFace?: MonsterFace
+  private monsterFace: MonsterFace = 'idle'
   private monsterShape: Monster['shape'] = 'slime'
   /** 입은 꾸미기와 지금 그려진 모습 */
   private look: Worn = { hat: null, color: null, prop: null }
@@ -753,6 +756,7 @@ export class HomeScene extends Phaser.Scene {
       ended: false,
     }
     this.battleFace = 'focus'
+    this.monsterFace = 'idle'
     this.game.canvas.parentElement?.setAttribute('data-final', '0')
     this.game.canvas.parentElement?.setAttribute('data-fainted', '')
     this.game.canvas.parentElement?.setAttribute('data-skill-fx', '')
@@ -1021,50 +1025,14 @@ export class HomeScene extends Phaser.Scene {
     this.game.canvas.parentElement?.setAttribute('data-monster', m.id)
   }
 
-  /** 몬스터 모양. 모두 아래쪽(y≈26)이 땅에 닿는 둥근 도형이다 */
+  /** 몬스터 모양. 모두 아래쪽(y≈26)이 땅에 닿는 둥근 도형이다. 얼굴은 표정이 바뀔 때만 다시 그린다 */
   private monsterParts(m: Monster): Phaser.GameObjects.GameObject[] {
     const g = this.add.graphics()
-    const eyes = (y: number, gap = 11) => [this.add.circle(-gap, y, 4, MONSTER_INK), this.add.circle(gap, y, 4, MONSTER_INK)]
-    const cheeks = (y: number, gap = 20) =>
-      [-gap, gap].map((x) => this.add.ellipse(x, y, 9, 5, 0xff8fa8).setAlpha(0.55))
-    switch (m.shape) {
-      case 'slime':
-        g.fillStyle(m.color).fillRoundedRect(-34, -28, 68, 54, { tl: 32, tr: 32, bl: 16, br: 16 })
-        g.fillStyle(m.shade).fillRoundedRect(-34, 16, 68, 10, { tl: 0, tr: 0, bl: 16, br: 16 })
-        // 머리 위 새싹 두 장
-        g.fillStyle(0x7cc576).fillEllipse(-7, -32, 14, 8).fillEllipse(7, -34, 14, 8)
-        return [g, ...eyes(-6), ...cheeks(6)]
-      case 'mushroom':
-        g.fillStyle(0xfff1dc).fillRoundedRect(-20, -6, 40, 32, 14)
-        g.fillStyle(m.color).fillRoundedRect(-38, -36, 76, 36, { tl: 36, tr: 36, bl: 12, br: 12 })
-        g.fillStyle(m.shade).fillRoundedRect(-38, -8, 76, 8, { tl: 0, tr: 0, bl: 12, br: 12 })
-        g.fillStyle(0xffffff).fillCircle(-18, -22, 6).fillCircle(8, -28, 5).fillCircle(22, -16, 4)
-        return [g, ...eyes(10, 8), ...cheeks(18, 14)]
-      case 'drop':
-        g.fillStyle(m.color).fillTriangle(-20, -8, 20, -8, 0, -42).fillCircle(0, 2, 26)
-        g.fillStyle(m.shade).fillEllipse(0, 22, 40, 8)
-        g.fillStyle(0xffffff, 0.8).fillEllipse(-12, -10, 7, 12)
-        return [g, ...eyes(2, 9), ...cheeks(12, 17)]
-      case 'cloud':
-        g.fillStyle(m.color).fillCircle(-20, -2, 17).fillCircle(2, -14, 22).fillCircle(22, -2, 16)
-        g.fillRoundedRect(-38, -4, 76, 30, 15)
-        g.fillStyle(m.shade).fillRoundedRect(-34, 18, 68, 8, 4)
-        return [g, ...eyes(4), ...cheeks(14, 22)]
-      case 'rock':
-        g.fillStyle(m.color).fillRoundedRect(-36, -22, 72, 48, { tl: 24, tr: 16, bl: 14, br: 14 })
-        g.fillStyle(m.shade).fillRoundedRect(-36, 16, 72, 10, { tl: 0, tr: 0, bl: 14, br: 14 })
-        g.fillCircle(18, -10, 5).fillCircle(-20, 4, 3)
-        // 졸린 듯 가는 눈
-        return [g, this.add.ellipse(-11, -2, 10, 4, MONSTER_INK), this.add.ellipse(11, -2, 10, 4, MONSTER_INK), ...cheeks(8)]
-      case 'king':
-        g.fillStyle(m.color).fillRoundedRect(-42, -30, 84, 56, { tl: 38, tr: 38, bl: 18, br: 18 })
-        g.fillStyle(m.shade).fillRoundedRect(-42, 15, 84, 11, { tl: 0, tr: 0, bl: 18, br: 18 })
-        // 왕관
-        g.fillStyle(CROWN).fillRoundedRect(-18, -36, 36, 10, 3)
-        g.fillTriangle(-18, -34, -10, -34, -16, -46).fillTriangle(-6, -34, 6, -34, 0, -50).fillTriangle(10, -34, 18, -34, 16, -46)
-        g.fillStyle(0xff8fa8).fillCircle(0, -31, 3)
-        return [g, ...eyes(-6, 13), ...cheeks(8, 25)]
-    }
+    drawMonsterBody(g, m)
+    this.monsterFaceG = this.add.graphics()
+    this.shownMonsterFace = undefined
+    // 다음 프레임에 새 몬스터의 표정을 그린다
+    return [g, this.monsterFaceG]
   }
 
   private idle() {
@@ -1123,6 +1091,7 @@ export class HomeScene extends Phaser.Scene {
       this.time.delayedCall(t.start, () => live() && this.skillFx(k, t.duration, fx, dir))
     }
     this.battleFace = 'focus'
+    this.monsterFace = 'idle'
     this.markImpact('windup')
     // 예비 동작: 살짝 뒤로 움츠렸다가 앞으로 튀어 나간다
     this.tweens.add({ targets: attacker, x: home.attacker - fx.pull * dir, scaleX: 0.92, scaleY: 1.06, duration: fx.windup, ease: 'Sine.easeOut' })
@@ -1138,6 +1107,7 @@ export class HomeScene extends Phaser.Scene {
       if (!live()) return
       playSound(stepSound(s.kind, !!s.crit))
       this.battleFace = stepFace(s)
+      this.monsterFace = monsterStepFace(s)
       if (s.kind === 'miss') {
         this.markImpact('back')
         recover()
@@ -1374,6 +1344,7 @@ export class HomeScene extends Phaser.Scene {
     b.ended = true
     b.timer?.remove()
     this.battleFace = endFace(b.win)
+    this.monsterFace = monsterEndFace(b.win)
     for (const who of [this.mascot, this.monster]) this.tweens.killTweensOf(who)
     const winner = b.win ? this.mascot : this.monster
     const loser = b.win ? this.monster : this.mascot
@@ -1544,6 +1515,7 @@ export class HomeScene extends Phaser.Scene {
 
   /** 상황에 맞는 표정을 고르고, 몇 초마다 눈을 깜빡인다. 표정이 바뀔 때만 얼굴을 다시 그린다 */
   private updateFace(box: HTMLElement) {
+    this.updateMonsterFace(box)
     if (!this.face) return
     const now = this.time.now
     if (now >= this.nextBlinkAt) {
@@ -1558,6 +1530,17 @@ export class HomeScene extends Phaser.Scene {
     // e2e가 지금 표정과 깜빡인 횟수를 볼 수 있게 남긴다
     box.setAttribute('data-face', face)
     if (face === 'blink') box.setAttribute('data-blinks', String(Number(box.getAttribute('data-blinks') ?? 0) + 1))
+  }
+
+  /** 몬스터 표정을 고른다. 전투가 아니면 기본 표정이다 */
+  private updateMonsterFace(box: HTMLElement) {
+    if (!this.monsterFaceG) return
+    const face = this.battle ? this.monsterFace : 'idle'
+    if (face === this.shownMonsterFace) return
+    this.shownMonsterFace = face
+    drawMonsterFace(this.monsterFaceG.clear(), this.monsterShape, face)
+    // e2e가 지금 몬스터 표정을 볼 수 있게 남긴다
+    box.setAttribute('data-monster-face', face)
   }
 
   /** e2e가 이긴 쪽이 뛰는 동안 머리끝·HP 막대 자리(장면 위에서부터 px)를 볼 수 있게 남긴다 */
