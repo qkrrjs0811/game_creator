@@ -3,7 +3,7 @@ import { playerFighter, simulateBattle, type Fighter } from './battle'
 import { freshFighter } from './difficulty'
 import { stageEnemy, stageMonsterLook } from './endless'
 import { BASE_STAT } from './progression'
-import { TRAITS, shapeTrait, stageTrait, weaknessHint } from './traits'
+import { TRAITS, shapeTrait, stageTrait, traitLabel, weaknessHint } from './traits'
 
 const base = { str: 30, vit: 30, int: BASE_STAT, focus: BASE_STAT }
 const seeds = Array.from({ length: 40 }, (_, i) => i + 1)
@@ -40,6 +40,12 @@ describe('몬스터 성격', () => {
     expect(weaknessHint('sturdy')).toBe('약점: 🧠 지능')
     expect(weaknessHint('swift')).toBe('약점: 🎯 집중')
     expect(weaknessHint('plain')).toBeNull()
+  })
+
+  test('지도·홈에 붙는 이름표: 성격과 약점을 함께, 무난함은 붙이지 않는다', () => {
+    expect(traitLabel('sturdy')).toBe('🪨 단단함 · 약점: 🧠 지능')
+    expect(traitLabel('swift')).toBe('💨 날쌤 · 약점: 🎯 집중')
+    expect(traitLabel('plain')).toBeNull()
   })
 })
 

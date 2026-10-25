@@ -1,5 +1,6 @@
 import { chapterBrowse, chapterStages } from '../core/endless'
 import { WINNABLE_MAX } from '../core/coach'
+import { stageTrait, traitLabel } from '../core/traits'
 import { formatMinutes } from './format'
 
 /** 다음에 깰 스테이지를 운동 몇 분 더 하면 이길 만한지(nextStageAdvice). 0이면 지금도 이길 만하다 */
@@ -86,6 +87,9 @@ export function createStages(
           advice && advice.no === s.no
             ? `<span class="stage-hint" data-testid="stage-hint">${adviceText(advice.toWin)}</span>`
             : ''
+        // 열린 곳에는 몬스터 성격과 약점을 붙여, 어떤 활동이 잘 통할지 미리 보여 준다
+        const label = s.state === 'locked' ? null : traitLabel(stageTrait(s.no))
+        const trait = label ? `<span class="stage-trait" data-testid="stage-trait-${s.no}">${label}</span>` : ''
         const btn =
           s.state === 'locked'
             ? `<span class="stage-lock" aria-label="잠김">🔒</span>`
@@ -97,7 +101,7 @@ export function createStages(
             <span class="stage-icon" aria-hidden="true">${s.icon}</span>
             <span class="stage-text">
               <b>${stageLabel(s)} · ${view.revealed ? s.name : '???'}</b>
-              <span>${tag}</span>${hint}
+              <span>${tag}</span>${trait}${hint}
             </span>
             ${btn}
           </li>`

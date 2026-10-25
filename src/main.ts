@@ -22,6 +22,7 @@ import { createSkills } from './ui/skills'
 import { learnSkill, remainingSkillPoints, skillRanks } from './core/skills'
 import { chapterOf, endlessStage, homeMonster, STAGES_PER_CHAPTER } from './core/endless'
 import { stageBackdrop } from './core/backdrop'
+import { traitLabel } from './core/traits'
 import { createStages, stageLabel } from './ui/stages'
 import { createDex } from './ui/dex'
 import { dexShadows, monsterDex, newDexMonsters } from './core/dex'
@@ -756,7 +757,9 @@ function render() {
   })
   skills.refresh()
   paintBackdrop()
-  homeScene()?.showHomeMonster(homeMonster(save.stageProgress))
+  const foe = homeMonster(save.stageProgress)
+  homeScene()?.showHomeMonster(foe)
+  hud.showMonsterTrait(traitLabel(foe.stats.trait ?? 'plain'))
   homeScene()?.dress(wornCosmetics({ ...save, records }))
   // 레벨로 몸이 자라고 많이 한 활동대로 특징이 붙는다(그림만)
   const look = malangLook(records)

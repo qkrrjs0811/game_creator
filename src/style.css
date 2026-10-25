@@ -835,6 +835,34 @@ body {
   color: var(--ink);
   font-size: 11px;
 }
+/* 몬스터 성격과 약점: 연한 보라 작은 알약. 무엇을 하면 잘 통하는지 알려 준다 */
+.stage-text .stage-trait,
+.stage.open .stage-text .stage-trait {
+  align-self: flex-start;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: #efe7ff;
+  color: #6b5a8a;
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.monster-trait {
+  position: absolute;
+  right: 12px;
+  bottom: 70px;
+  z-index: 2;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.82);
+  color: #6b5a8a;
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+  box-shadow: 0 2px 0 rgba(107, 90, 138, 0.15);
+  pointer-events: none;
+}
+.scene.in-battle .monster-trait { display: none; }
 .stage-go {
   flex: none;
   min-width: 72px;

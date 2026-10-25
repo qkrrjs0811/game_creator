@@ -36,6 +36,12 @@ export function weaknessHint(trait: MonsterTrait): string | null {
   return stat ? `약점: ${stat.icon} ${stat.name}` : null
 }
 
+/** 지도 칸·홈 몬스터 곁에 붙는 이름표("🪨 단단함 · 약점: 🧠 지능"). 무난함은 약점이 없어 붙이지 않는다 */
+export function traitLabel(trait: MonsterTrait): string | null {
+  const hint = weaknessHint(trait)
+  return hint ? `${TRAITS[trait].icon} ${TRAITS[trait].name} · ${hint}` : null
+}
+
 /** 스테이지 번호의 몬스터 성격 */
 export function stageTrait(no: number): MonsterTrait {
   return shapeTrait(stageMonsterLook(no).shape, chapterOf(no))

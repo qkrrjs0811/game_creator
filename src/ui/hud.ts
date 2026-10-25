@@ -128,6 +128,7 @@ export function createHud(
         <span data-testid="session-summary-detail"></span>
         <button type="button" class="toast-close" data-testid="session-summary-close" aria-label="닫기">✕</button>
       </div>
+      <span class="monster-trait" data-testid="monster-trait" hidden></span>
       <button type="button" class="adventure dress" data-testid="open-cosmetics">🎀 꾸미기</button>
       <button type="button" class="adventure" data-testid="open-stages">⚔️ 모험</button>
     </section>
@@ -498,6 +499,12 @@ export function createHud(
       pledgeLine.classList.toggle('set', v.pledge !== null)
       pledgeLine.classList.toggle('done', v.pledge?.done ?? false)
       pledgeLine.disabled = v.pledge?.done ?? false
+    },
+    /** 홈 몬스터 곁(모험 버튼 위)에 성격과 약점을 작게 붙인다. 약점이 없으면 숨긴다 */
+    showMonsterTrait(label: string | null) {
+      const tag = q('monster-trait')
+      tag.hidden = !label
+      tag.textContent = label ?? ''
     },
     /** 새로 닿은 업적을 장면 위쪽에 잠깐 알린다. 말랑이·버튼을 가리지 않게 누를 수 없는 작은 배지로 띄운다 */
     showAchievement(t: { title: string; detail: string }) {
