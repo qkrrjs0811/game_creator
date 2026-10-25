@@ -13,9 +13,11 @@ export function expToNext(level: number): number {
   return 100 + 50 * (level - 1)
 }
 
-function dayKey(ms: number): string {
+/** 로컬 날짜 키 YYYY-MM-DD */
+export function dayKey(ms: number): string {
   const d = new Date(ms)
-  return `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`
+  const pad = (v: number) => String(v).padStart(2, '0')
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
 }
 
 function nextLocalMidnight(ms: number): number {
@@ -24,7 +26,7 @@ function nextLocalMidnight(ms: number): number {
 }
 
 /** 활동 시간을 로컬 날짜별 ms 로 나눈다 */
-function msByDay(records: ActivityRecord[], activity: ActivityId): Map<string, number> {
+export function msByDay(records: ActivityRecord[], activity: ActivityId): Map<string, number> {
   const byDay = new Map<string, number>()
   for (const r of records) {
     if (r.activity !== activity) continue
