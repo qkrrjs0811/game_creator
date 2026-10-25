@@ -6,6 +6,8 @@ export interface StatRow {
   id: StatId
   name: string
   icon: string
+  /** 전투에서 하는 일 */
+  role: string
   value: number
   /** 이 능력치를 올리는 활동 이름. 아직 없으면 null */
   source: string | null
@@ -15,10 +17,10 @@ export interface StatRow {
   tomorrow: boolean
 }
 
-export const STAT_INFO: { id: StatId; name: string; icon: string }[] = [
-  { id: 'str', name: '힘', icon: '💪' },
-  { id: 'vit', name: '체력', icon: '❤️' },
-  { id: 'int', name: '지능', icon: '🧠' },
+export const STAT_INFO: { id: StatId; name: string; icon: string; role: string }[] = [
+  { id: 'str', name: '힘', icon: '💪', role: '공격' },
+  { id: 'vit', name: '체력', icon: '❤️', role: 'HP·방어' },
+  { id: 'int', name: '지능', icon: '🧠', role: '치명타·스킬' },
 ]
 
 /** 화면에 보여 줄 능력치 줄. 값은 computeProgress 결과를 그대로 쓴다. cappedToday = 오늘 상한을 채운 활동 */

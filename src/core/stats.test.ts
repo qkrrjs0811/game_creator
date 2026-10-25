@@ -29,6 +29,14 @@ describe('statRows', () => {
     expect(int).toMatchObject({ value: 5, toNext: null, source: null, name: '지능' })
   })
 
+  test('능력치마다 전투에서 하는 일을 알려 준다', () => {
+    expect(statRows(computeProgress([])).map((r) => [r.id, r.role])).toEqual([
+      ['str', '공격'],
+      ['vit', 'HP·방어'],
+      ['int', '치명타·스킬'],
+    ])
+  })
+
   test('하루 상한을 넘긴 시간은 남은 분에 들어가지 않는다', () => {
     // 200분 운동해도 인정은 180분 → 힘 5+18, 다음까지 10분
     const str = statRows(computeProgress(exercise(200))).find((r) => r.id === 'str')!

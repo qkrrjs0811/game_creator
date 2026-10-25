@@ -94,3 +94,18 @@ test('나 창에서 운동으로 오른 힘·체력과 다음까지 남은 분�
   await expect(page.getByTestId('stat-value-int')).toHaveText('5')
   await page.screenshot({ path: 'test-results/screens/stats.png' })
 })
+
+test('나 창 능력치 칸에 전투에서 하는 일이 보이고 칸 안에 들어감', async ({ page }) => {
+  await page.goto('./')
+  await page.getByTestId('tab-me').click()
+  await expect(page.getByTestId('stat-role-str')).toHaveText('공격')
+  await expect(page.getByTestId('stat-role-vit')).toHaveText('HP·방어')
+  await expect(page.getByTestId('stat-role-int')).toHaveText('치명타·스킬')
+  for (const id of ['str', 'vit', 'int']) {
+    const role = (await page.getByTestId(`stat-role-${id}`).boundingBox())!
+    const card = (await page.getByTestId(`stat-${id}`).boundingBox())!
+    expect(role.x).toBeGreaterThanOrEqual(card.x)
+    expect(role.x + role.width).toBeLessThanOrEqual(card.x + card.width)
+  }
+  await page.screenshot({ path: 'test-results/screens/stats-roles.png' })
+})

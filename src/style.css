@@ -318,6 +318,17 @@ body {
   box-shadow: 0 4px 0 var(--track);
 }
 .stat-name { font-size: 13px; color: var(--ink-soft); white-space: nowrap; }
+/* 능력치가 전투에서 하는 일(공격·HP·방어·치명타·스킬) */
+.stat-role {
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: var(--chip);
+  font-size: 11px;
+  line-height: 18px;
+  color: var(--ink-soft);
+  white-space: nowrap;
+}
+.stat.soon .stat-role { background: #fff; }
 .stat b { font-size: 24px; line-height: 1.2; color: var(--ink); }
 .stat small { font-size: 11px; color: var(--accent); white-space: nowrap; }
 .stat.soon { background: var(--chip); box-shadow: none; }

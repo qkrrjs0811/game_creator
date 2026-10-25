@@ -1,3 +1,4 @@
+import { BASE_STAT } from './progression'
 import { skillRanks } from './skills'
 import type { StatId } from './types'
 
@@ -10,12 +11,16 @@ export interface Fighter {
   spd: number
   /** 공격을 피할 확률(0~1) */
   dodge: number
+  /** 치명타 확률(0~1). 몬스터는 없다 */
+  crit?: number
 }
 
 export interface BattleEvent {
   actor: 'player' | 'enemy'
   kind: 'hit' | 'miss'
   damage: number
+  /** 치명타였는지. 치명타일 때만 붙는다 */
+  crit?: boolean
   /** 맞은 쪽의 남은 HP */
   targetHp: number
 }
@@ -31,17 +36,27 @@ export interface BattleResult {
 /** 이만큼 주고받아도 안 끝나면 진 것으로 본다 */
 export const MAX_ROUNDS = 30
 const MAX_DODGE = 0.5
+const MAX_CRIT = 0.3
+/** 치명타는 이만큼 곱해 아프다 */
+const CRIT_MULTIPLIER = 1.5
 
-/** 능력치와 스킬로 말랑이의 전투 값을 만든다. 힘 → 공격, 체력 → HP·방어 */
+/**
+ * 능력치와 스킬로 말랑이의 전투 값을 만든다. 힘 → 공격, 체력 → HP·방어,
+ * 지능 → 치명타(1마다 1%)와 스킬 위력(10마다 펀치·몸 한 단계에 +1).
+ * 지능은 기본값을 넘은 만큼만 쳐서 운동만 한 말랑이는 예전 값 그대로다
+ */
 export function playerFighter(stats: Record<StatId, number>, skills: string[]): Fighter {
   const r = skillRanks(skills)
+  const smart = Math.max(0, stats.int - BASE_STAT)
+  const perRank = 2 + Math.floor(smart / 10)
   return {
     name: '말랑이',
     hp: 20 + stats.vit * 4,
-    atk: stats.str + r.punch * 2,
-    def: Math.floor(stats.vit / 2) + r.tough * 2,
+    atk: stats.str + r.punch * perRank,
+    def: Math.floor(stats.vit / 2) + r.tough * perRank,
     spd: 5 + r.quick * 2,
     dodge: Math.min(MAX_DODGE, r.quick * 0.05),
+    crit: Math.min(MAX_CRIT, smart * 0.01),
   }
 }
 
@@ -75,9 +90,13 @@ export function simulateBattle(player: Fighter, enemy: Fighter, seed: number): B
         continue
       }
       const baseDamage = Math.max(1, side[actor].atk - side[target].def)
-      const damage = baseDamage + Math.floor(rand() * (Math.ceil(baseDamage * 0.2) + 1))
+      let damage = baseDamage + Math.floor(rand() * (Math.ceil(baseDamage * 0.2) + 1))
+      // 치명타가 없는 쪽은 주사위를 굴리지 않아 같은 씨앗이면 예전과 같은 전투가 된다
+      const critChance = side[actor].crit ?? 0
+      const crit = critChance > 0 && rand() < critChance
+      if (crit) damage = Math.floor(damage * CRIT_MULTIPLIER)
       hp[target] = Math.max(0, hp[target] - damage)
-      log.push({ actor, kind: 'hit', damage, targetHp: hp[target] })
+      log.push({ actor, kind: 'hit', damage, ...(crit ? { crit } : {}), targetHp: hp[target] })
       if (hp[target] === 0) break
     }
   }

@@ -477,7 +477,9 @@ export class HomeScene extends Phaser.Scene {
       } else {
         this.tweens.add({ targets: target, alpha: 0.35, duration: 70, yoyo: true, repeat: 1 })
         this.tweens.add({ targets: target, angle: 8 * dir, duration: 80, yoyo: true, ease: 'Sine.easeOut' })
-        this.floatText(target.x, `-${s.damage}`, s.actor === 'player' ? '#ff8a5b' : '#e0607e')
+        // 치명타(지능)는 노란 글자로 크게 알린다
+        if (s.crit) this.floatText(target.x, `치명타! -${s.damage}`, '#f0a020')
+        else this.floatText(target.x, `-${s.damage}`, s.actor === 'player' ? '#ff8a5b' : '#e0607e')
       }
       this.drawBars(s.playerHp, s.enemyHp)
     })

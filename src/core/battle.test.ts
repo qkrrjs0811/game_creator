@@ -34,6 +34,51 @@ describe('playerFighter', () => {
   })
 })
 
+describe('지능의 전투 역할', () => {
+  test('기본값 지능(5)은 효과가 없어 운동만 한 말랑이는 예전과 같다', () => {
+    const me = playerFighter({ str: 23, vit: 23, int: 5 }, ['punch', 'tough', 'quick', 'punch'])
+    expect(me).toEqual({ name: '말랑이', hp: 112, atk: 27, def: 13, spd: 7, dodge: 0.05, crit: 0 })
+  })
+
+  test('지능이 오르면 치명타 확률이 생기고 30%를 넘지 않는다', () => {
+    expect(playerFighter({ ...base, int: 15 }, []).crit).toBeCloseTo(0.1)
+    expect(playerFighter({ ...base, int: 500 }, []).crit).toBe(0.3)
+  })
+
+  test('지능 10마다 펀치·몸 스킬 단계 하나가 1씩 더 세진다', () => {
+    const plain = playerFighter(base, ['punch', 'tough'])
+    const smart = playerFighter({ ...base, int: 25 }, ['punch', 'tough'])
+    expect(smart.atk).toBe(plain.atk + 2)
+    expect(smart.def).toBe(plain.def + 2)
+    // 스킬이 없으면 위력이 붙을 곳이 없다
+    expect(playerFighter({ ...base, int: 25 }, []).atk).toBe(playerFighter(base, []).atk)
+  })
+
+  test('치명타는 1.5배 아프고 기록에 표시된다', () => {
+    const me: Fighter = { ...playerFighter(base, []), atk: 10, crit: 1 }
+    const target: Fighter = { ...giant, def: 0, atk: 0, spd: 0 }
+    const first = simulateBattle(me, target, 1).log[0]
+    expect(first).toMatchObject({ actor: 'player', kind: 'hit', crit: true })
+    expect(first.damage).toBeGreaterThanOrEqual(15)
+  })
+
+  test('치명타가 없는 쪽은 기록에 치명타가 없고, 같은 씨앗이면 예전과 같은 전투', () => {
+    const me = playerFighter(base, ['punch'])
+    const r = simulateBattle(me, slime, 9)
+    expect(r.log.some((e) => e.crit)).toBe(false)
+    expect(r).toEqual(simulateBattle({ ...me, crit: undefined }, slime, 9))
+  })
+
+  test('지능이 높으면 같은 몬스터를 더 많이 깎는다', () => {
+    const wall: Fighter = { ...giant, hp: 2000, atk: 40, def: 5, spd: 1 }
+    const left = (int: number) => {
+      const me = playerFighter({ str: 30, vit: 30, int }, ['punch', 'tough'])
+      return Array.from({ length: 20 }, (_, i) => simulateBattle(me, wall, i + 1).enemyHp).reduce((a, b) => a + b, 0)
+    }
+    expect(left(45)).toBeLessThan(left(5))
+  })
+})
+
 describe('simulateBattle', () => {
   test('같은 입력과 씨앗이면 같은 결과', () => {
     const me = playerFighter(base, ['quick'])
