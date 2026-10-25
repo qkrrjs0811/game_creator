@@ -1,7 +1,7 @@
 import { describe, test, expect } from 'vitest'
 import { goalStreak, stampCount } from './goal'
 import { computeProgress } from './progression'
-import { REST_EVERY_STAMPS, REST_MAX, restStreak } from './rest'
+import { REST_EVERY_STAMPS, REST_MAX, restStreak, restedInMonth, restText } from './rest'
 import { achievementProgress, bestStreak } from './achievements'
 import { chatLines } from './chatter'
 import { upcomingRewards } from './rewards'
@@ -148,5 +148,26 @@ describe('쉼표를 쓰는 곳', () => {
     const rewards = upcomingRewards({ records, stageProgress: 0, skills: [], now: kst('2026-10-28T20:00:00') })
     const streak = rewards.find((r) => r.kind === 'achievement')!
     expect(streak).toMatchObject({ value: 28, goal: 30, need: '2일 더 이어 하기' })
+  })
+})
+
+describe('도장판 쉼표 표시', () => {
+  test('그 달에 쉼표로 지킨 날의 일(日)만 고른다', () => {
+    expect(restedInMonth(['2026-09-30', '2026-10-09', '2026-10-21', '2026-11-01'], 2026, 10)).toEqual([9, 21])
+    expect(restedInMonth([], 2026, 10)).toEqual([])
+  })
+
+  test('기록에서 지킨 날이 달력에 이어짐', () => {
+    const r = restStreak(run(1, 12, [9]), kst('2026-10-12T20:00:00'))
+    expect(restedInMonth(r.restedDays, 2026, 10)).toEqual([9])
+  })
+
+  test('쉼표 수와 다음 쉼표까지 남은 도장', () => {
+    expect(restText({ rests: 1, toNextRest: 3 })).toBe('🛟 쉼표 1 / 2개 · 다음 쉼표까지 도장 3개')
+    expect(restText({ rests: 0, toNextRest: 7 })).toBe('🛟 쉼표 0 / 2개 · 다음 쉼표까지 도장 7개')
+  })
+
+  test('가득 들고 있으면 더 모으지 않는다고 알려 줌', () => {
+    expect(restText({ rests: 2, toNextRest: 4 })).toBe('🛟 쉼표 2 / 2개 · 가득 찼어요')
   })
 })

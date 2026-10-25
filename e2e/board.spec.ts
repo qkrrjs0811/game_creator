@@ -69,3 +69,33 @@ test('도장이 없을 때 도장판', async ({ page }) => {
   await expect(page.getByTestId('board-day-25')).toHaveClass(/today/)
   await page.screenshot({ path: 'test-results/screens/board-empty.png' })
 })
+
+test('쉼표로 지킨 날은 도장판에 🛟, 들고 있는 쉼표 수를 보여 줌', async ({ page }) => {
+  await page.clock.install({ time: new Date('2026-10-25T12:00:00+09:00') })
+  await page.goto('./')
+  // 10월 1~24일 중 9일·18일만 빠짐: 도장 22개, 두 날 모두 쉼표가 지켜 줌
+  const records = []
+  for (let d = 1; d <= 24; d++) if (d !== 9 && d !== 18) records.push(day(`2026-10-${String(d).padStart(2, '0')}`))
+  await page.evaluate((s) => localStorage.setItem('growth-game:save', JSON.stringify(s)), { ...base, records })
+  await page.reload()
+
+  await page.getByTestId('tab-me').click()
+  await expect(page.getByTestId('board-stamps')).toHaveText('🌟 모은 도장 22개')
+  await expect(page.getByTestId('board-streak')).toHaveText('🔥 24일 이어 왔어요')
+  await expect(page.getByTestId('board-rest')).toHaveText('🛟 쉼표 1 / 2개 · 다음 쉼표까지 도장 6개')
+  await expect(page.getByTestId('board-day-9')).toHaveText('🛟')
+  await expect(page.getByTestId('board-day-9')).toHaveClass(/rested/)
+  await expect(page.getByTestId('board-day-18')).toHaveText('🛟')
+  await expect(page.getByTestId('board-day-8')).toHaveText('🌟')
+  await expect(page.getByTestId('board-day-25')).toHaveText('25')
+
+  // 쉼표 칩은 화면 안에 들어가고 다른 칩과 겹치지 않음
+  await page.getByTestId('board-title').scrollIntoViewIfNeeded()
+  const rest = (await page.getByTestId('board-rest').boundingBox())!
+  expect(rest.x).toBeGreaterThanOrEqual(0)
+  expect(rest.x + rest.width).toBeLessThanOrEqual(390)
+  const missions = (await page.getByTestId('board-missions').boundingBox())!
+  expect(missions.y + missions.height <= rest.y || missions.x + missions.width <= rest.x).toBe(true)
+  await page.getByTestId('board-day-18').evaluate((el) => el.scrollIntoView({ block: 'center' }))
+  await page.screenshot({ path: 'test-results/screens/board-rest.png' })
+})

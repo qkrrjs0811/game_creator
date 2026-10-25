@@ -3,7 +3,7 @@ import './style.css'
 import { HomeScene, HOME_READY } from './game/HomeScene'
 import { computeProgress, dayKey, todayStatus } from './core/progression'
 import { stampCalendar, stampCount, todayGoal } from './core/goal'
-import { restStreak } from './core/rest'
+import { restStreak, restedInMonth, restText } from './core/rest'
 import { weekGoal } from './core/week'
 import { missionStars, todayMission } from './core/mission'
 import { historyPage, recordSummary } from './core/history'
@@ -174,10 +174,14 @@ const skills = createSkills(app, {
     const capped = (Object.keys(ACTIVITIES) as ActivityId[]).filter((id) => todayStatus(records, id, now).reached)
     const stats = statRows(p, capped)
     // 도장판은 홈의 오늘 목표처럼 켜 둔 타이머의 지금까지도 센다
+    const rest = restStreak(records, now)
+    const calendar = stampCalendar(records, now)
     const board = {
-      calendar: stampCalendar(records, now),
+      calendar,
       stamps: stampCount(records),
-      streak: restStreak(records, now).streak,
+      streak: rest.streak,
+      rested: restedInMonth(rest.restedDays, calendar.year, calendar.month),
+      rest: restText(rest),
       week: weekGoal(records, now),
       missions: missionStars(records),
     }

@@ -13,8 +13,8 @@ export interface SkillsView {
   points: number
   ranks: Record<SkillId, number>
   stats: StatRow[]
-  /** missions: 모은 미션 별(오늘의 미션을 채운 날) 수 */
-  board: { calendar: StampCalendar; stamps: number; streak: number; week: WeekGoal; missions: number }
+  /** missions: 모은 미션 별(오늘의 미션을 채운 날) 수, rested: 이번 달 쉼표로 지킨 날, rest: 쉼표 줄(restText) */
+  board: { calendar: StampCalendar; stamps: number; streak: number; week: WeekGoal; missions: number; rested: number[]; rest: string }
   history: RecordSummary
   /** 내 기록 막대를 앞뒤 주로 넘겨 볼 때의 7일 쪽(0 = 최근 7일) */
   historyPage(page: number): HistoryPage
@@ -44,15 +44,16 @@ export function weekRowHtml(w: WeekGoal): string {
     .join('')
 }
 
-/** 도장판: 이번 달 달력에 하루 목표를 채운 날을 도장으로 */
-export function boardHtml(cal: StampCalendar): string {
+/** 도장판: 이번 달 달력에 하루 목표를 채운 날을 도장으로, 쉼표로 지킨 날(rested)을 🛟로 */
+export function boardHtml(cal: StampCalendar, rested: number[] = []): string {
   const head = WEEK.map((w) => `<li class="board-week">${w}</li>`).join('')
   const lead = '<li class="board-blank"></li>'.repeat(cal.lead)
   const days = cal.days
     .map((d) => {
-      const cls = ['board-day', d.stamped && 'stamped', d.today && 'today', d.future && 'future'].filter(Boolean).join(' ')
-      const label = d.stamped ? ` aria-label="${d.day}일 도장"` : ''
-      return `<li class="${cls}" data-testid="board-day-${d.day}"${label}>${d.stamped ? '🌟' : d.day}</li>`
+      const kept = !d.stamped && rested.includes(d.day)
+      const cls = ['board-day', d.stamped && 'stamped', kept && 'rested', d.today && 'today', d.future && 'future'].filter(Boolean).join(' ')
+      const label = d.stamped ? ` aria-label="${d.day}일 도장"` : kept ? ` aria-label="${d.day}일 쉼표로 지킴"` : ''
+      return `<li class="${cls}" data-testid="board-day-${d.day}"${label}>${d.stamped ? '🌟' : kept ? '🛟' : d.day}</li>`
     })
     .join('')
   return head + lead + days
@@ -183,6 +184,7 @@ export function createSkills(root: HTMLElement, h: { view(): SkillsView; onLearn
         <span class="board-chip" data-testid="board-stamps"></span>
         <span class="board-chip" data-testid="board-streak"></span>
         <span class="board-chip board-mission" data-testid="board-missions"></span>
+        <span class="board-chip board-rest" data-testid="board-rest"></span>
       </div>
       <div class="week-goal" data-testid="week-goal">
         <div class="week-goal-head">
@@ -192,7 +194,7 @@ export function createSkills(root: HTMLElement, h: { view(): SkillsView; onLearn
         <ul class="week-row" data-testid="week-row"></ul>
       </div>
       <ul class="board" data-testid="board"></ul>
-      <p class="sheet-desc">하루 활동 합쳐 30분을 채우면 도장을 찍어요. 한 주(월~일)에 5일 찍으면 이번 주 목표 달성!</p>
+      <p class="sheet-desc">하루 활동 합쳐 30분을 채우면 도장을 찍어요. 한 주(월~일)에 5일 찍으면 이번 주 목표 달성! 도장 7개마다 얻는 쉼표가 하루 빈 날을 🛟로 지켜 줘요.</p>
       <h3 class="sheet-sub hist-title">📖 내 기록</h3>
       <div class="hist" data-testid="history">
         <p class="hist-empty" data-testid="hist-empty">아직 기록이 없어요 · 타이머를 켜면 여기에 쌓여요</p>
@@ -266,7 +268,8 @@ export function createSkills(root: HTMLElement, h: { view(): SkillsView; onLearn
     q('board-stamps').textContent = `🌟 모은 도장 ${v.board.stamps}개`
     q('board-streak').textContent = `🔥 ${v.board.streak}일 이어 왔어요`
     q('board-missions').textContent = `📜 모은 미션 별 ${v.board.missions}개`
-    const board = boardHtml(cal)
+    q('board-rest').textContent = v.board.rest
+    const board = boardHtml(cal, v.board.rested)
     if (board !== lastBoard) {
       lastBoard = board
       q('board').innerHTML = board

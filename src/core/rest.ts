@@ -20,7 +20,19 @@ export interface RestStreak {
   best: number
 }
 
-const nextDay = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate() + 1)
+/** 쉼표로 지킨 날 중 그 달(month 1~12)의 일(日) 번호 */
+export function restedInMonth(restedDays: string[], year: number, month: number): number[] {
+  const prefix = `${year}-${String(month).padStart(2, '0')}-`
+  return restedDays.filter((k) => k.startsWith(prefix)).map((k) => Number(k.slice(prefix.length)))
+}
+
+/** 도장판 쉼표 줄: "🛟 쉼표 1 / 2개 · 다음 쉼표까지 도장 3개" */
+export function restText(r: Pick<RestStreak, 'rests' | 'toNextRest'>): string {
+  const held = `🛟 쉼표 ${r.rests} / ${REST_MAX}개`
+  return r.rests >= REST_MAX ? `${held} · 가득 찼어요` : `${held} · 다음 쉼표까지 도장 ${r.toNextRest}개`
+}
+
+const nextDay =(d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate() + 1)
 
 /**
  * 도장 찍은 날을 날짜순으로 따라가며 쉼표를 모으고, 하루만 빈 날을 쉼표로 메워 이어 온 날을 센다.
