@@ -4,7 +4,7 @@ import { HomeScene, HOME_READY } from './game/HomeScene'
 import { computeProgress, dayKey, todayStatus } from './core/progression'
 import { goalStreak, stampCalendar, stampCount, todayGoal } from './core/goal'
 import { weekGoal } from './core/week'
-import { recordSummary } from './core/history'
+import { historyPage, recordSummary } from './core/history'
 import { levelUpPoints, levelUpTo, restoreShownLevel } from './core/levelup'
 import { liveRecords, startSession, stopSession } from './core/session'
 import { backupFileName, exportBackup, importLosesProgress } from './core/backup'
@@ -159,6 +159,7 @@ const skills = createSkills(app, {
       stats,
       board,
       history: recordSummary(records, now),
+      historyPage: (page: number) => historyPage(records, now, page),
     }
   },
   onLearn(id) {

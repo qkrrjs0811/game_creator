@@ -67,6 +67,32 @@ export function recentDays(records: ActivityRecord[], end: number, count = 7, no
   return days
 }
 
+export interface HistoryPage {
+  /** 0 = 오늘까지 최근 7일, 1 = 그 앞 7일, … (기록 범위 안으로 맞춘 값) */
+  page: number
+  days: HistoryDay[]
+  /** 이 쪽보다 앞에 1분 이상 기록한 날이 있다 */
+  hasOlder: boolean
+  /** 이 쪽 뒤에 더 최근 쪽이 있다 */
+  hasNewer: boolean
+}
+
+/** 막대를 앞뒤 주로 넘겨 볼 때의 7일 쪽. 가장 오래된 기록이 든 쪽보다 앞으로, 오늘 뒤로는 가지 않는다 */
+export function historyPage(records: ActivityRecord[], now: number, page: number): HistoryPage {
+  let first: string | null = null
+  for (const [key, day] of dayMinutes(records)) if (day.total >= 1 && (!first || key < first)) first = key
+  const n = new Date(now)
+  const endOf = (p: number) => new Date(n.getFullYear(), n.getMonth(), n.getDate() - 7 * p)
+  let maxPage = 0
+  if (first) {
+    const [y, m, d] = first.split('-').map(Number)
+    const days = Math.round((endOf(0).getTime() - new Date(y, m - 1, d).getTime()) / 86_400_000)
+    maxPage = Math.max(0, Math.floor(days / 7))
+  }
+  const p = Math.min(maxPage, Math.max(0, Math.floor(page)))
+  return { page: p, days: recentDays(records, endOf(p).getTime(), 7, now), hasOlder: p < maxPage, hasNewer: p > 0 }
+}
+
 export interface WeekTotals {
   /** 이번 주(월~오늘) 인정 분 */
   thisWeek: number

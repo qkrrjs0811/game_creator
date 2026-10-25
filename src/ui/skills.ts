@@ -2,10 +2,10 @@ import { SKILLS, type SkillId } from '../core/skills'
 import type { StatRow } from '../core/stats'
 import type { StampCalendar } from '../core/goal'
 import type { WeekGoal } from '../core/week'
-import type { RecordSummary } from '../core/history'
+import type { HistoryDay, HistoryPage, RecordSummary } from '../core/history'
 import { ACTIVITIES } from '../core/activities'
 import type { ActivityId } from '../core/types'
-import { bestDayText, formatMinutes, weekDoneText, weekGoalText, weekTotalText } from './format'
+import { bestDayText, dayDetail, formatMinutes, pageRangeText, weekDoneText, weekGoalText, weekTotalText } from './format'
 
 export interface SkillsView {
   points: number
@@ -13,6 +13,8 @@ export interface SkillsView {
   stats: StatRow[]
   board: { calendar: StampCalendar; stamps: number; streak: number; week: WeekGoal }
   history: RecordSummary
+  /** 내 기록 막대를 앞뒤 주로 넘겨 볼 때의 7일 쪽(0 = 최근 7일) */
+  historyPage(page: number): HistoryPage
 }
 
 const WEEK = ['일', '월', '화', '수', '목', '금', '토']
@@ -49,19 +51,28 @@ const ACTIVITY_IDS = Object.keys(ACTIVITIES) as ActivityId[]
 /** 막대 꼭대기 눈금. 조금만 한 날이 칸을 꽉 채워 보이지 않게 적어도 1시간으로 잡는다 */
 const BAR_MIN_SCALE = 60
 
-/** 내 기록: 최근 7일 활동별 색을 쌓은 막대(오래된 날부터) */
-export function historyBarsHtml(h: RecordSummary): string {
-  const scale = Math.max(BAR_MIN_SCALE, ...h.days.map((d) => d.total))
-  return h.days
+/** 내 기록: 7일 활동별 색을 쌓은 막대(오래된 날부터). 누르면 그날 말풍선, selected = 고른 날 */
+export function historyBarsHtml(days: HistoryDay[], selected: string | null = null): string {
+  const scale = Math.max(BAR_MIN_SCALE, ...days.map((d) => d.total))
+  return days
     .map((d, i) => {
-      const cls = ['hist-day', d.today && 'now', d.total === 0 && 'rest'].filter(Boolean).join(' ')
+      const cls = ['hist-day', d.today && 'now', d.total === 0 && 'rest', d.key === selected && 'sel'].filter(Boolean).join(' ')
       const parts = ACTIVITY_IDS.filter((id) => d.minutes[id] > 0)
         .map((id) => `<i class="hist-seg act-${id}" style="height:${((d.minutes[id] / scale) * 100).toFixed(1)}%"></i>`)
         .join('')
       const label = ` aria-label="${WEEK[d.weekday]}요일 ${formatMinutes(d.total)}${d.stamped ? ' 도장' : ''}"`
-      return `<li class="${cls}" data-testid="hist-day-${i}"${label}><span class="hist-star">${d.stamped ? '🌟' : ''}</span><span class="hist-bar">${parts}</span><small>${d.today ? '오늘' : WEEK[d.weekday]}</small></li>`
+      return `<li><button type="button" class="${cls}" data-testid="hist-day-${i}" data-key="${d.key}" aria-pressed="${d.key === selected}"${label}><span class="hist-star">${d.stamped ? '🌟' : ''}</span><span class="hist-bar">${parts}</span><small>${d.today ? '오늘' : WEEK[d.weekday]}</small></button></li>`
     })
     .join('')
+}
+
+/** 막대 말풍선: 그날 합계, 활동별 분, 도장 */
+export function dayTipHtml(d: HistoryDay): string {
+  const t = dayDetail(d)
+  const parts = ACTIVITY_IDS.filter((id) => d.minutes[id] > 0)
+    .map((id, i) => `<li><i class="hist-dot act-${id}" aria-hidden="true"></i>${t.parts[i]}</li>`)
+    .join('')
+  return `<b data-testid="hist-tip-title">${t.title}</b>${parts ? `<ul class="hist-tip-parts" data-testid="hist-tip-parts">${parts}</ul>` : ''}<span class="hist-tip-stamp${d.stamped ? ' stamped' : ''}" data-testid="hist-tip-stamp">${t.stamp}</span>`
 }
 
 /** 내 기록: 활동별 누적 시간 */
@@ -123,7 +134,13 @@ export function createSkills(root: HTMLElement, h: { view(): SkillsView; onLearn
         <p class="hist-empty" data-testid="hist-empty">아직 기록이 없어요 · 타이머를 켜면 여기에 쌓여요</p>
         <div class="hist-body" data-testid="hist-body">
           <b class="hist-week" data-testid="hist-week"></b>
+          <div class="hist-nav">
+            <button type="button" class="hist-arrow" data-testid="hist-prev" aria-label="앞 주 보기">‹</button>
+            <span class="hist-range" data-testid="hist-range"></span>
+            <button type="button" class="hist-arrow" data-testid="hist-next" aria-label="다음 주 보기">›</button>
+          </div>
           <ul class="hist-bars" data-testid="hist-bars"></ul>
+          <div class="hist-tip" data-testid="hist-tip" hidden></div>
           <ul class="hist-totals" data-testid="hist-totals"></ul>
           <p class="hist-best" data-testid="hist-best"></p>
         </div>
@@ -142,7 +159,11 @@ export function createSkills(root: HTMLElement, h: { view(): SkillsView; onLearn
   let lastBoard = ''
   let lastWeek = ''
   let lastBars = ''
+  let lastTip = ''
   let lastTotals = ''
+  /** 내 기록에서 보고 있는 7일 쪽과 누른 날 */
+  let page = 0
+  let picked: string | null = null
 
   const draw = () => {
     const v = h.view()
@@ -187,11 +208,30 @@ export function createSkills(root: HTMLElement, h: { view(): SkillsView; onLearn
     if (!hist.empty) {
       q('hist-week').textContent = weekTotalText(hist.week)
       q('hist-best').textContent = hist.best ? bestDayText(hist.best) : ''
-      const bars = historyBarsHtml(hist)
+      const shown = v.historyPage(page)
+      page = shown.page
+      const day = shown.days.find((d) => d.key === picked)
+      if (!day) picked = null
+      q('hist-range').textContent = pageRangeText(
+        shown.days.map((d) => d.key),
+        page,
+      )
+      ;(q('hist-prev') as HTMLButtonElement).disabled = !shown.hasOlder
+      ;(q('hist-next') as HTMLButtonElement).disabled = !shown.hasNewer
+      const bars = historyBarsHtml(shown.days, picked)
       if (bars !== lastBars) {
         lastBars = bars
         q('hist-bars').innerHTML = bars
       }
+      const tip = q('hist-tip')
+      tip.hidden = !day
+      const tipHtml = day ? dayTipHtml(day) : ''
+      if (tipHtml !== lastTip) {
+        lastTip = tipHtml
+        tip.innerHTML = tipHtml
+      }
+      // 말풍선 꼬리가 누른 막대를 가리키게
+      if (day) tip.style.setProperty('--at', `${((shown.days.indexOf(day) + 0.5) / 7) * 100}%`)
       const totals = historyTotalsHtml(hist)
       if (totals !== lastTotals) {
         lastTotals = totals
@@ -228,8 +268,23 @@ export function createSkills(root: HTMLElement, h: { view(): SkillsView; onLearn
       draw()
     })
   }
+  q('hist-bars').addEventListener('click', (e) => {
+    const key = (e.target as HTMLElement).closest<HTMLElement>('[data-key]')?.dataset.key
+    if (!key) return
+    picked = picked === key ? null : key
+    draw()
+  })
+  const turn = (by: number) => {
+    page += by
+    picked = null
+    draw()
+  }
+  q('hist-prev').addEventListener('click', () => turn(1))
+  q('hist-next').addEventListener('click', () => turn(-1))
   const close = () => {
     asking = null
+    page = 0
+    picked = null
     wrap.hidden = true
   }
   q('skills-close').addEventListener('click', close)

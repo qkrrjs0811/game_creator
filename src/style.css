@@ -1052,9 +1052,75 @@ body {
   padding: 0;
   display: grid;
   grid-template-columns: repeat(7, minmax(0, 1fr));
-  gap: 4px;
+  gap: 2px;
 }
-.hist-day { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+/* 막대 한 칸이 누르는 버튼이다(폭 44px 넘게) */
+.hist-day {
+  width: 100%;
+  min-height: 44px;
+  margin: 0;
+  padding: 2px 0;
+  border: 0;
+  border-radius: 14px;
+  background: none;
+  font: inherit;
+  color: inherit;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.hist-day.sel { background: var(--chip); }
+.hist-day.sel .hist-bar { box-shadow: inset 0 0 0 2px var(--ink-soft); }
+.hist-nav { display: flex; align-items: center; justify-content: space-between; margin: 0 0 4px; }
+.hist-range { font-size: 13px; font-weight: 700; color: var(--ink-soft); }
+.hist-arrow {
+  width: 44px;
+  height: 44px;
+  border: 0;
+  border-radius: 50%;
+  background: var(--chip);
+  color: var(--ink);
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+}
+.hist-arrow:disabled { opacity: 0.35; cursor: default; }
+/* 막대를 누르면 뜨는 그날 말풍선. 꼬리(--at)가 누른 막대를 가리킨다 */
+.hist-tip {
+  position: relative;
+  margin: 4px 0 10px;
+  padding: 10px 12px;
+  border-radius: 16px;
+  background: var(--chip);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--ink);
+}
+.hist-tip[hidden] { display: none; }
+.hist-tip::before {
+  content: '';
+  position: absolute;
+  top: -7px;
+  left: var(--at, 50%);
+  width: 14px;
+  height: 14px;
+  margin-left: -7px;
+  border-radius: 3px;
+  background: var(--chip);
+  transform: rotate(45deg);
+}
+.hist-tip b { position: relative; font-size: 14px; }
+.hist-tip-parts { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; justify-content: center; gap: 4px 10px; }
+.hist-tip-parts li { display: flex; align-items: center; gap: 4px; white-space: nowrap; }
+.hist-tip-stamp { font-weight: 700; color: var(--ink-soft); }
+.hist-tip-stamp.stamped { color: var(--accent); }
 .hist-star { height: 16px; font-size: 12px; line-height: 16px; }
 .hist-bar {
   display: flex;

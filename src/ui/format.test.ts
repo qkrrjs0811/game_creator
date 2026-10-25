@@ -1,6 +1,6 @@
 import { test, expect } from 'vitest'
 import { WINNABLE_MAX } from '../core/coach'
-import { autoRunCard, awayAdventure, awayCard, formatElapsed, formatMinutes, goalText, objectJosa, weekChip, weekDoneText, weekGoalText, sessionSummary, topicJosa, weekTotalText, bestDayText } from './format'
+import { autoRunCard, awayAdventure, awayCard, formatElapsed, formatMinutes, goalText, objectJosa, weekChip, weekDoneText, weekGoalText, sessionSummary, topicJosa, weekTotalText, bestDayText, dayDetail, pageRangeText } from './format'
 import { AUTO_RUN_MAX } from '../core/autorun'
 import type { Cosmetic } from '../core/cosmetics'
 import type { AwaySummary } from '../core/away'
@@ -160,4 +160,34 @@ test('내 기록의 이번 주 합계는 지난주와 견준다', () => {
 
 test('가장 많이 한 날은 월·일과 시간', () => {
   expect(bestDayText({ key: '2026-10-21', minutes: 130 })).toBe('🏆 가장 많이 한 날 · 10월 21일 2시간 10분')
+})
+
+const day = (over: object) => ({
+  key: '2026-10-21',
+  weekday: 3,
+  today: false,
+  stamped: false,
+  minutes: { exercise: 0, study: 0, reading: 0, relax: 0 },
+  total: 0,
+  ...over,
+})
+
+test('막대를 누르면 그날 활동별 분과 도장', () => {
+  expect(
+    dayDetail(day({ stamped: true, minutes: { exercise: 60, study: 0, reading: 50, relax: 20 }, total: 130 })),
+  ).toEqual({ title: '10월 21일 수요일 · 2시간 10분', parts: ['운동 1시간', '독서 50분', '휴식 20분'], stamp: '🌟 도장 찍은 날' })
+  expect(dayDetail(day({ minutes: { exercise: 0, study: 15, reading: 0, relax: 0 }, total: 15 })).stamp).toBe('도장은 30분부터')
+  expect(dayDetail(day({ today: true, minutes: { exercise: 0, study: 12, reading: 0, relax: 0 }, total: 12 }))).toEqual({
+    title: '오늘 10월 21일 · 12분',
+    parts: ['공부 12분'],
+    stamp: '🎯 도장까지 18분 더',
+  })
+  expect(dayDetail(day({}))).toEqual({ title: '10월 21일 수요일 · 0분', parts: [], stamp: '😴 쉬어 간 날' })
+  expect(dayDetail(day({ today: true })).stamp).toBe('🎯 도장까지 30분 더')
+})
+
+test('넘겨 보는 7일 쪽 이름', () => {
+  expect(pageRangeText(['2026-10-19', '2026-10-25'], 0)).toBe('최근 7일')
+  expect(pageRangeText(['2026-10-12', '2026-10-18'], 1)).toBe('10월 12일 ~ 18일')
+  expect(pageRangeText(['2026-09-28', '2026-10-04'], 4)).toBe('9월 28일 ~ 10월 4일')
 })

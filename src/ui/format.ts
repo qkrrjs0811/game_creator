@@ -2,10 +2,10 @@ import type { SessionGain } from '../core/gain'
 import { STAT_INFO } from '../core/stats'
 import { ACTIVITIES } from '../core/activities'
 import type { ActivityId } from '../core/types'
-import type { TodayGoal } from '../core/goal'
+import { DAILY_GOAL_MINUTES, type TodayGoal } from '../core/goal'
 import type { AwaySummary } from '../core/away'
 import type { WeekGoal } from '../core/week'
-import type { BestDay, WeekTotals } from '../core/history'
+import type { BestDay, HistoryDay, WeekTotals } from '../core/history'
 import { WINNABLE_MAX } from '../core/coach'
 import { AUTO_RUN_MAX, type AutoRun } from '../core/autorun'
 
@@ -73,6 +73,33 @@ export function weekTotalText(w: WeekTotals): string {
 export function bestDayText(b: BestDay): string {
   const [, m, d] = b.key.split('-').map(Number)
   return `🏆 가장 많이 한 날 · ${m}월 ${d}일 ${formatMinutes(b.minutes)}`
+}
+
+const WEEKDAY_NAMES = ['일', '월', '화', '수', '목', '금', '토']
+
+/** 내 기록 막대를 누르면 뜨는 말풍선: 그날 합계, 활동별 분(1분 이상만), 도장 */
+export function dayDetail(d: HistoryDay): { title: string; parts: string[]; stamp: string } {
+  const [, m, day] = d.key.split('-').map(Number)
+  const date = d.today ? `오늘 ${m}월 ${day}일` : `${m}월 ${day}일 ${WEEKDAY_NAMES[d.weekday]}요일`
+  const parts = (Object.keys(ACTIVITIES) as ActivityId[])
+    .filter((id) => d.minutes[id] > 0)
+    .map((id) => `${ACTIVITIES[id].label} ${formatMinutes(d.minutes[id])}`)
+  const stamp = d.stamped
+    ? '🌟 도장 찍은 날'
+    : d.today
+      ? `🎯 도장까지 ${formatMinutes(DAILY_GOAL_MINUTES - d.total)} 더`
+      : d.total === 0
+        ? '😴 쉬어 간 날'
+        : `도장은 ${DAILY_GOAL_MINUTES}분부터`
+  return { title: `${date} · ${formatMinutes(d.total)}`, parts, stamp }
+}
+
+/** 넘겨 보는 7일 쪽 이름. keys = 그 쪽 날짜들(오래된 날부터), page 0 은 최근 7일 */
+export function pageRangeText(keys: string[], page: number): string {
+  if (page === 0) return '최근 7일'
+  const [, m1, d1] = keys[0].split('-').map(Number)
+  const [, m2, d2] = keys[keys.length - 1].split('-').map(Number)
+  return m1 === m2 ? `${m1}월 ${d1}일 ~ ${d2}일` : `${m1}월 ${d1}일 ~ ${m2}월 ${d2}일`
 }
 
 /**

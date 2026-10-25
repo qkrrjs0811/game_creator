@@ -1,5 +1,5 @@
 import { describe, test, expect } from 'vitest'
-import { activityTotals, bestDay, dayMinutes, recentDays, recordSummary, weekTotals } from './history'
+import { activityTotals, bestDay, dayMinutes, historyPage, recentDays, recordSummary, weekTotals } from './history'
 import type { ActivityId, ActivityRecord } from './types'
 
 const kst = (s: string) => Date.parse(`${s}+09:00`)
@@ -142,5 +142,42 @@ describe('기록 돌아보기', () => {
     const copy = JSON.parse(JSON.stringify(records))
     recordSummary(records, NOW)
     expect(records).toEqual(copy)
+  })
+
+  test('앞뒤 주로 넘겨 보는 7일 쪽', () => {
+    const records = [
+      rec('exercise', '2026-10-06T08:00:00', '2026-10-06T08:40:00'),
+      rec('study', '2026-10-24T08:00:00', '2026-10-24T08:30:00'),
+    ]
+    const p0 = historyPage(records, NOW, 0)
+    expect(p0.page).toBe(0)
+    expect(p0.days.map((d) => d.key)).toEqual([
+      '2026-10-19', '2026-10-20', '2026-10-21', '2026-10-22', '2026-10-23', '2026-10-24', '2026-10-25',
+    ])
+    expect(p0.days[6].today).toBe(true)
+    expect(p0.hasNewer).toBe(false)
+    expect(p0.hasOlder).toBe(true)
+
+    const p1 = historyPage(records, NOW, 1)
+    expect(p1.days[0].key).toBe('2026-10-12')
+    expect(p1.days[6].key).toBe('2026-10-18')
+    expect(p1.days.some((d) => d.today)).toBe(false)
+    expect(p1.hasNewer).toBe(true)
+    expect(p1.hasOlder).toBe(true)
+
+    const p2 = historyPage(records, NOW, 2)
+    expect(p2.days[0].key).toBe('2026-10-05')
+    expect(p2.days[1]).toMatchObject({ key: '2026-10-06', total: 40, stamped: true })
+    expect(p2.hasOlder).toBe(false)
+  })
+
+  test('기록보다 더 앞이나 오늘 뒤로는 넘어가지 않는다', () => {
+    const records = [rec('exercise', '2026-10-06T08:00:00', '2026-10-06T08:40:00')]
+    expect(historyPage(records, NOW, 9).page).toBe(2)
+    expect(historyPage(records, NOW, -3).page).toBe(0)
+    const none = historyPage([], NOW, 4)
+    expect(none.page).toBe(0)
+    expect(none.hasOlder).toBe(false)
+    expect(none.hasNewer).toBe(false)
   })
 })

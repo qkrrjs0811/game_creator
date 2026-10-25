@@ -11,7 +11,12 @@ async function badButtons(page: Page): Promise<string[]> {
     const bad: string[] = []
     if (document.documentElement.scrollWidth > vw) bad.push(`가로로 넘침 ${document.documentElement.scrollWidth}px`)
     for (const b of document.querySelectorAll<HTMLElement>('button')) {
-      const r = b.getBoundingClientRect()
+      let r = b.getBoundingClientRect()
+      // 길어서 내려 보는 창(나 창 등) 아래쪽 버튼은 내려서 잰다
+      if ((r.top < 0 || r.bottom > vh) && b.closest('.sheet')) {
+        b.scrollIntoView({ block: 'center' })
+        r = b.getBoundingClientRect()
+      }
       if (r.width === 0 || r.height === 0 || getComputedStyle(b).visibility === 'hidden') continue
       const name = b.dataset.testid ?? b.textContent?.trim() ?? '?'
       // 크기는 튀어나오는 연출(scale) 중에도 흔들리지 않게 레이아웃 크기로 잰다
