@@ -17,7 +17,7 @@ import { createBattleBar } from './ui/battle'
 import { enemyDamagePercent, playerFighter, simulateBattle } from './core/battle'
 import { battleTimeline, stepDelay } from './core/replay'
 import { applyBattleResult, type BattleOutcome } from './core/result'
-import { ownedCosmetics, toggleWear, wornCosmetics } from './core/cosmetics'
+import { cosmeticCatalog, ownedCosmetics, toggleWear, wornCosmetics } from './core/cosmetics'
 import { createCosmetics } from './ui/cosmetics'
 import { statRows } from './core/stats'
 import { nextStageAdvice, stageMinutesToWin } from './core/coach'
@@ -142,7 +142,7 @@ const skills = createSkills(app, {
 
 // 꾸미기는 모습만 바꾼다(입은 꾸미기 저장만 바뀜)
 const cosmetics = createCosmetics(app, {
-  view: () => ({ owned: ownedCosmetics(save), worn: wornCosmetics(save) }),
+  view: () => ({ catalog: cosmeticCatalog(save), owned: ownedCosmetics(save), worn: wornCosmetics(save) }),
   onWear(id) {
     pullSave()
     const next = toggleWear(save, id)

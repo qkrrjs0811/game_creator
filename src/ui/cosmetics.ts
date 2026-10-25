@@ -1,10 +1,17 @@
-import { COSMETICS, type Cosmetic, type Worn } from '../core/cosmetics'
+import type { Cosmetic, Worn } from '../core/cosmetics'
 import { endlessStage } from '../core/endless'
 import { stageLabel } from './stages'
 
 export interface CosmeticsView {
+  /** 보여 줄 꾸미기(가진 것과 다음에 얻을 것) */
+  catalog: Cosmetic[]
   owned: Cosmetic[]
   worn: Worn
+}
+
+/** 아직 없는 꾸미기를 얻는 곳. 장 모자는 "1장 보스" */
+function where(c: Cosmetic): string {
+  return c.chapter ? `${c.chapter}장 보스` : stageLabel(endlessStage(c.stage))
 }
 
 /** 꾸미기 창: 가진 모자·색을 골라 말랑이에게 입힌다. 아직 없는 건 얻는 곳을 알려 준다 */
@@ -30,18 +37,20 @@ export function createCosmetics(root: HTMLElement, h: { view(): CosmeticsView; o
     const v = h.view()
     const wornIds = [v.worn.hat?.id, v.worn.color?.id]
     q('cosmetics-desc').textContent =
-      v.owned.length > 0 ? `모자 하나, 색 하나를 골라 입혀요 · ${v.owned.length} / ${COSMETICS.length}개 모았어요` : '스테이지를 처음 깨면 꾸미기를 받아요.'
-    grid.innerHTML = COSMETICS.map((c) => {
+      v.owned.length > 0 ? `모자 하나, 색 하나를 골라 입혀요 · ${v.owned.length}개 모았어요` : '스테이지를 처음 깨면 꾸미기를 받아요.'
+    grid.innerHTML = v.catalog.map((c) => {
       const owned = v.owned.some((o) => o.id === c.id)
       const worn = wornIds.includes(c.id)
       const state = worn ? 'worn' : owned ? 'owned' : 'locked'
       const kind = c.kind === 'hat' ? '모자' : '색'
       const btn = owned
         ? `<button type="button" class="cosmetic-wear" data-id="${c.id}" data-testid="wear-${c.id}">${worn ? '벗기' : '입기'}</button>`
-        : `<span class="cosmetic-lock">🔒 ${stageLabel(endlessStage(c.stage))}</span>`
+        : `<span class="cosmetic-lock">🔒 ${where(c)}</span>`
+      // 장 모자는 같은 그림이 여러 색으로 나와서 아이콘 바탕을 모자 색으로 칠한다
+      const tint = owned && c.hat ? ` style="background:${c.hat.color}"` : ''
       return `
         <li class="cosmetic ${state}" data-testid="cosmetic-${c.id}" data-state="${state}">
-          <span class="cosmetic-icon" aria-hidden="true">${owned ? c.icon : '❔'}</span>
+          <span class="cosmetic-icon" aria-hidden="true"${tint}>${owned ? c.icon : '❔'}</span>
           <b>${owned ? c.name : '???'}</b>
           <small>${worn ? `${kind} · 입는 중` : kind}</small>
           ${btn}

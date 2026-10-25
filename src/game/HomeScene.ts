@@ -1,7 +1,7 @@
 import Phaser from 'phaser'
 import type { ReplayStep, Timeline } from '../core/replay'
 import { MONSTERS, type Monster } from '../core/monsters'
-import type { Worn } from '../core/cosmetics'
+import type { Cosmetic, HatLook, HatShape, Worn } from '../core/cosmetics'
 
 const MASCOT = 0xffd7a8
 const MASCOT_SHADE = 0xf7b97a
@@ -28,6 +28,66 @@ const BAR_W = 78
 const WIN_HOP = 18
 /** 자리(가운데)에서 머리끝(모자 포함)까지. 이긴 쪽 머리가 HP 막대에 닿는지 e2e가 보게 쓴다 */
 const HAT_TOP: Record<string, number> = { 'hat-sprout': -58, 'hat-mushroom': -58, 'hat-ribbon': -48, 'hat-crown': -58 }
+/** 장 모자 모양마다 머리끝 */
+const CHAPTER_HAT_TOP: Record<HatShape, number> = { cone: -58, beret: -52, flower: -53, star: -53 }
+
+function hatTop(hat: Cosmetic | null): number {
+  if (hat?.hat) return CHAPTER_HAT_TOP[hat.hat.shape]
+  return HAT_TOP[hat?.id ?? ''] ?? -FEET
+}
+
+/** 장 모자. 모양 하나에 파스텔 색과 무늬(물방울·줄무늬)를 입힌다. 모두 머리 위(y≈-38) 둘레에 붙는다 */
+function drawChapterHat(g: Phaser.GameObjects.Graphics, look: HatLook) {
+  const col = Phaser.Display.Color.HexStringToColor(look.color)
+  const main = col.color
+  const dark = col.clone().darken(12).color
+  const light = col.clone().lighten(12).color
+  const dots = look.pattern === 'dots'
+  const stripes = look.pattern === 'stripes'
+  switch (look.shape) {
+    case 'cone':
+      g.fillStyle(main).fillTriangle(-15, -34, 15, -34, 0, -54)
+      if (stripes) for (const y of [-47, -41]) {
+        const hw = (15 * (y + 54)) / 20
+        g.fillStyle(0xffffff, 0.8).fillRect(-hw, y, hw * 2, 3)
+      }
+      if (dots) g.fillStyle(0xffffff, 0.9).fillCircle(-5, -40, 2.5).fillCircle(5, -42, 2.5).fillCircle(0, -48, 2)
+      g.fillStyle(dark).fillRoundedRect(-17, -37, 34, 6, 3)
+      g.fillStyle(0xffffff).fillCircle(0, -54, 4)
+      break
+    case 'beret':
+      // 머리 둘레에 얹히게 낮고 넓게, 아래 띠가 이마에 닿는다
+      g.fillStyle(main).fillEllipse(3, -38, 56, 22)
+      if (stripes) g.fillStyle(0xffffff, 0.75).fillRect(-18, -43, 42, 2.5).fillRect(-20, -37, 46, 2.5)
+      if (dots) g.fillStyle(0xffffff, 0.9).fillCircle(-12, -38, 2.5).fillCircle(4, -42, 2.5).fillCircle(18, -37, 2.5)
+      g.fillStyle(dark).fillEllipse(2, -30, 50, 7).fillCircle(5, -49, 3)
+      break
+    case 'flower':
+      for (let i = 0; i < 5; i++) {
+        const a = (i / 5) * Math.PI * 2 - Math.PI / 2
+        const x = 18 + Math.cos(a) * 8
+        const y = -38 + Math.sin(a) * 8
+        g.fillStyle(stripes && i % 2 === 1 ? light : main).fillCircle(x, y, 7)
+        if (dots) g.fillStyle(0xffffff, 0.9).fillCircle(18 + Math.cos(a) * 10, -38 + Math.sin(a) * 10, 1.8)
+      }
+      g.fillStyle(0xffffff).fillCircle(18, -38, 4.5)
+      g.fillStyle(dark).fillCircle(18, -38, 2)
+      break
+    case 'star': {
+      const star = (r1: number, r2: number) =>
+        Array.from({ length: 10 }, (_, i) => {
+          const a = (i / 10) * Math.PI * 2 - Math.PI / 2
+          const r = i % 2 === 0 ? r1 : r2
+          return new Phaser.Math.Vector2(16 + Math.cos(a) * r, -40 + Math.sin(a) * r)
+        })
+      g.fillStyle(dark).fillPoints(star(14, 7), true)
+      g.fillStyle(main).fillPoints(star(12, 6), true)
+      if (stripes) g.fillStyle(0xffffff, 0.75).fillPoints(star(6, 3), true)
+      if (dots) g.fillStyle(0xffffff, 0.9).fillCircle(16, -40, 3)
+      break
+    }
+  }
+}
 const MONSTER_TOP: Record<Monster['shape'], number> = { slime: -38, mushroom: -36, drop: -42, cloud: -36, rock: -22, king: -50 }
 
 /** 두 캐릭터 머리 위 HP 막대(높이 10, 흰 테두리 3)의 위쪽 y */
@@ -316,6 +376,8 @@ export class HomeScene extends Phaser.Scene {
         g.fillTriangle(-16, -42, -8, -42, -14, -54).fillTriangle(-5, -42, 5, -42, 0, -58).fillTriangle(8, -42, 16, -42, 14, -54)
         g.fillStyle(0xff8fa8).fillCircle(0, -39, 3)
         break
+      default:
+        if (worn.hat?.hat) drawChapterHat(g, worn.hat.hat)
     }
     return [...parts, g]
   }
@@ -507,7 +569,7 @@ export class HomeScene extends Phaser.Scene {
     if (!b?.ended) return
     const winner = b.win ? this.mascot : this.monster
     const bar = b.bars[b.win ? 0 : 1]
-    const headTop = b.win ? (HAT_TOP[this.look.hat?.id ?? ''] ?? -FEET) : MONSTER_TOP[this.monsterShape]
+    const headTop = b.win ? hatTop(this.look.hat) : MONSTER_TOP[this.monsterShape]
     const rest = groundY(this.scale.height) + (b.win ? 0 : 6) + headTop
     const top = winner.y + winner.scaleY * headTop
     // 막대 바깥 흰 테두리 위끝과 아래끝

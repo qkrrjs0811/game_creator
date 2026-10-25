@@ -104,6 +104,8 @@ test('장 보스를 이기면 새 장이 열림', async ({ page }) => {
   // 새 장 연출: 카드 위 배지와 장면 색종이
   await expect(page.getByTestId('battle-result-chapter')).toBeVisible()
   await expect(page.getByTestId('battle-result-chapter')).toHaveText('🗺️ 2장 도착!')
+  // 장 보스는 그 장의 모자를 준다
+  await expect(page.getByTestId('battle-result-reward')).toHaveText('🎁 새 꾸미기 · 🥳 딸기 고깔모자')
   await expect(page.getByTestId('scene')).toHaveAttribute('data-chapter-celebrations', '1')
   await page.waitForTimeout(600)
   await page.screenshot({ path: 'test-results/screens/result-boss.png' })
@@ -117,7 +119,9 @@ test('장 보스를 이기면 새 장이 열림', async ({ page }) => {
   expect(badge.x).toBeGreaterThanOrEqual(0)
   expect(badge.x + badge.width).toBeLessThanOrEqual(390)
   expect(badge.y + badge.height).toBeLessThanOrEqual(title.y + 2)
-  expect(await page.evaluate(() => window.__debug.getSave().stageProgress)).toBe(10)
+  const saved = await page.evaluate(() => window.__debug.getSave())
+  expect(saved.stageProgress).toBe(10)
+  expect(saved.cosmetics).toEqual(['hat-ch1'])
 
   // 돌아오면 홈에는 새 장 첫 몬스터, 모험 지도는 새 장
   await page.getByTestId('battle-action').click()

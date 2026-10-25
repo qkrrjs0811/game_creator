@@ -1,6 +1,6 @@
 import { describe, test, expect } from 'vitest'
 import { applyBattleResult } from './result'
-import { stageReward } from './cosmetics'
+import { chapterCosmetic, stageReward } from './cosmetics'
 import { newSave } from './session'
 import type { SaveData } from './types'
 
@@ -57,6 +57,14 @@ describe('applyBattleResult', () => {
     const r = applyBattleResult(saveAt(0), 1, true)
     expect(r.reward).toEqual(stageReward(1))
     expect(r.save.cosmetics).toEqual([stageReward(1)!.id])
+  })
+
+  test('장 보스를 처음 깨면 그 장의 모자를 받음', () => {
+    const r = applyBattleResult(saveAt(9), 10, true)
+    expect(r.reward).toEqual(chapterCosmetic(1))
+    expect(r.save.cosmetics).toEqual(['hat-ch1'])
+    expect(applyBattleResult(saveAt(19), 20, true).reward).toEqual(chapterCosmetic(2))
+    expect(applyBattleResult(saveAt(10), 11, true).reward).toBeNull()
   })
 
   test('지거나 다시 이기면 꾸미기를 받지 않음', () => {

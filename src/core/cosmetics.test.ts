@@ -1,5 +1,14 @@
 import { describe, test, expect } from 'vitest'
-import { COSMETICS, ownedCosmetics, stageReward, toggleWear, wornCosmetics } from './cosmetics'
+import {
+  COSMETICS,
+  chapterCosmetic,
+  cosmeticById,
+  cosmeticCatalog,
+  ownedCosmetics,
+  stageReward,
+  toggleWear,
+  wornCosmetics,
+} from './cosmetics'
 import { STAGES } from './stages'
 import { newSave } from './session'
 
@@ -20,7 +29,63 @@ describe('stageReward', () => {
   })
 })
 
+describe('chapterCosmetic', () => {
+  test('장 보스(장 × 10스테이지)에서 얻는 모자', () => {
+    expect(chapterCosmetic(1)).toMatchObject({ id: 'hat-ch1', kind: 'hat', stage: 10, chapter: 1 })
+    expect(chapterCosmetic(3)!.stage).toBe(30)
+  })
+
+  test('앞쪽 60장은 모자 모양·색·무늬 조합과 이름이 모두 다름', () => {
+    const list = Array.from({ length: 60 }, (_, i) => chapterCosmetic(i + 1)!)
+    const looks = list.map((c) => `${c.hat!.shape} ${c.hat!.color} ${c.hat!.pattern}`)
+    expect(new Set(looks).size).toBe(60)
+    expect(new Set(list.map((c) => c.name)).size).toBe(60)
+  })
+
+  test('끝없이 만들 수 있음', () => {
+    expect(chapterCosmetic(1000)).toMatchObject({ id: 'hat-ch1000', stage: 10000 })
+  })
+
+  test('없는 장은 null', () => {
+    for (const no of [0, -1, 1.5, NaN]) expect(chapterCosmetic(no)).toBeNull()
+  })
+
+  test('장 보스 스테이지의 보상은 장 모자, 다른 스테이지는 그대로', () => {
+    expect(stageReward(10)).toEqual(chapterCosmetic(1))
+    expect(stageReward(20)).toEqual(chapterCosmetic(2))
+    expect(stageReward(6)!.id).toBe('hat-crown')
+    expect(stageReward(11)).toBeNull()
+  })
+})
+
+describe('cosmeticById', () => {
+  test('처음 꾸미기와 장 모자를 찾음', () => {
+    expect(cosmeticById('hat-crown')!.stage).toBe(6)
+    expect(cosmeticById('hat-ch12')).toEqual(chapterCosmetic(12))
+  })
+
+  test('모르는 이름은 null', () => {
+    for (const id of ['???', 'hat-ch0', 'hat-ch01', 'hat-chx', 'hat-ch']) expect(cosmeticById(id)).toBeNull()
+  })
+})
+
+describe('cosmeticCatalog', () => {
+  test('처음 꾸미기와 다음 장 모자 하나까지 보여 줌', () => {
+    expect(cosmeticCatalog(newSave()).map((c) => c.id)).toEqual([...COSMETICS.map((c) => c.id), 'hat-ch1'])
+    expect(cosmeticCatalog({ ...newSave(), stageProgress: 25 }).map((c) => c.id).slice(-3)).toEqual(['hat-ch1', 'hat-ch2', 'hat-ch3'])
+  })
+})
+
 describe('ownedCosmetics', () => {
+  test('장 보스를 깬 저장은 그 장 모자를 가짐(예전 저장 포함)', () => {
+    const ids = ownedCosmetics({ ...newSave(), stageProgress: 25 }).map((c) => c.id)
+    expect(ids).toEqual([...COSMETICS.map((c) => c.id), 'hat-ch1', 'hat-ch2'])
+  })
+
+  test('저장에 있는 장 모자는 남김', () => {
+    expect(ownedCosmetics({ ...newSave(), stageProgress: 3, cosmetics: ['hat-ch1'] }).map((c) => c.id)).toContain('hat-ch1')
+  })
+
   test('처음에는 아무것도 없음', () => {
     expect(ownedCosmetics(newSave())).toEqual([])
   })
@@ -82,6 +147,17 @@ describe('toggleWear', () => {
     const save = { ...newSave(), stageProgress: 1 }
     expect(toggleWear(save, 'hat-crown')).toBe(save)
     expect(toggleWear(save, '???')).toBe(save)
+  })
+
+  test('장 모자를 쓰면 다른 모자를 벗고 색은 그대로, 다시 누르면 벗음', () => {
+    const on = toggleWear({ ...newSave(), stageProgress: 10, worn: ['hat-crown', 'color-sky'] }, 'hat-ch1')
+    expect(wornCosmetics(on)).toEqual({ hat: chapterCosmetic(1), color: byId('color-sky') })
+    expect(toggleWear(on, 'hat-ch1').worn).toEqual(['color-sky'])
+  })
+
+  test('아직 못 깬 장 모자는 입을 수 없음', () => {
+    const save = { ...newSave(), stageProgress: 9 }
+    expect(toggleWear(save, 'hat-ch1')).toBe(save)
   })
 
   test('입기는 기록·스킬·스테이지·가진 꾸미기를 바꾸지 않음', () => {

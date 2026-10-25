@@ -31,7 +31,10 @@ test('가진 모자와 색을 입히면 장면의 말랑이가 바뀌고 저장�
   await useSave(page, 6, ['hat-sprout'])
   await expect(page.getByTestId('scene')).toHaveAttribute('data-look', '')
   await page.getByTestId('open-cosmetics').click()
-  await expect(page.getByTestId('cosmetics-desc')).toContainText('6 / 6')
+  await expect(page.getByTestId('cosmetics-desc')).toContainText('6개 모았어요')
+  // 다음 장 보스 모자는 잠겨서 얻는 곳을 알려 준다
+  await expect(page.getByTestId('cosmetic-hat-ch1')).toHaveAttribute('data-state', 'locked')
+  await expect(page.getByTestId('cosmetic-hat-ch1')).toContainText('1장 보스')
 
   await page.getByTestId('wear-hat-crown').click()
   await page.getByTestId('wear-color-sky').click()
@@ -78,4 +81,40 @@ test('솜사탕 분홍과 버섯 모자', async ({ page }) => {
   await expect(page.getByTestId('scene')).toHaveAttribute('data-look', 'hat-mushroom color-cotton')
   await page.waitForTimeout(300)
   await page.screenshot({ path: 'test-results/screens/home-dressed-cotton.png' })
+})
+
+test('장 보스를 깬 저장은 장 모자를 가지고, 다음 장 모자는 잠겨 있음', async ({ page }) => {
+  await useSave(page, 40)
+  await page.getByTestId('open-cosmetics').click()
+  await expect(page.getByTestId('cosmetics-desc')).toContainText('10개 모았어요')
+  for (const ch of [1, 2, 3, 4]) await expect(page.getByTestId(`cosmetic-hat-ch${ch}`)).toHaveAttribute('data-state', 'owned')
+  await expect(page.getByTestId('cosmetic-hat-ch1')).toContainText('딸기 고깔모자')
+  await expect(page.getByTestId('cosmetic-hat-ch5')).toHaveAttribute('data-state', 'locked')
+  await expect(page.getByTestId('cosmetic-hat-ch5')).toContainText('5장 보스')
+  await expect(page.getByTestId('cosmetic-hat-ch6')).toHaveCount(0)
+
+  // 같은 종류는 하나만: 장 모자를 쓰면 왕관을 벗는다
+  await page.getByTestId('wear-hat-crown').click()
+  await page.getByTestId('wear-hat-ch4').click()
+  await expect(page.getByTestId('cosmetic-hat-crown')).toHaveAttribute('data-state', 'owned')
+  await expect(page.getByTestId('cosmetic-hat-ch4')).toHaveAttribute('data-state', 'worn')
+  await page.screenshot({ path: 'test-results/screens/cosmetics-chapter.png' })
+
+  // 모양(고깔·베레모·꽃핀·별핀)마다 장면의 말랑이가 쓴다
+  for (const ch of [1, 2, 3, 4]) {
+    const card = page.getByTestId(`cosmetic-hat-ch${ch}`)
+    if ((await card.getAttribute('data-state')) !== 'worn') await page.getByTestId(`wear-hat-ch${ch}`).click()
+    await page.getByTestId('cosmetics-close').click()
+    await expect(page.getByTestId('scene')).toHaveAttribute('data-look', `hat-ch${ch}`)
+    await page.waitForTimeout(300)
+    await page.screenshot({ path: `test-results/screens/home-chapter-hat-${ch}.png` })
+    await page.getByTestId('open-cosmetics').click()
+  }
+
+  // 새로고침해도 쓰고 있고, 깬 스테이지는 그대로
+  await page.reload()
+  await expect(page.getByTestId('scene')).toHaveAttribute('data-look', 'hat-ch4')
+  const s = await page.evaluate(() => window.__debug.getSave())
+  expect(s.worn).toEqual(['hat-ch4'])
+  expect(s.stageProgress).toBe(40)
 })
