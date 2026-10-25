@@ -3,7 +3,7 @@ import type { ActivityId, ActivityRecord, Progress, StatId } from './types'
 
 export const EXP_PER_MINUTE = 10
 export const BASE_STAT = 5
-/** 오르는 활동을 이만큼(인정 분) 하면 능력치가 1 오른다 */
+/** 운동을 이만큼(인정 분) 하면 힘·체력이 1 오른다. 활동마다 값은 `ACTIVITIES[id].minutesPerStat` */
 export const MINUTES_PER_STAT = 10
 
 const MINUTE = 60_000
@@ -63,13 +63,13 @@ export function todayStatus(records: ActivityRecord[], activity: ActivityId, now
   return { minutes, cap, reached: minutes >= cap }
 }
 
-/** 활동별 인정 분으로 정해지는 능력치 */
-export function statsFromMinutes(minutes: Record<ActivityId, number>): Record<StatId, number> {
+/** 활동별 인정 분으로 정해지는 능력치. 없는 활동은 0분으로 본다 */
+export function statsFromMinutes(minutes: Partial<Record<ActivityId, number>>): Record<StatId, number> {
   const ids = Object.keys(ACTIVITIES) as ActivityId[]
   const stats: Record<StatId, number> = { str: BASE_STAT, vit: BASE_STAT, int: BASE_STAT }
-  for (const stat of Object.keys(stats) as StatId[]) {
-    const linked = ids.filter((id) => ACTIVITIES[id].stats.includes(stat)).reduce((sum, id) => sum + minutes[id], 0)
-    stats[stat] += Math.floor(linked / MINUTES_PER_STAT)
+  for (const id of ids) {
+    const gained = Math.floor((minutes[id] ?? 0) / ACTIVITIES[id].minutesPerStat)
+    for (const stat of ACTIVITIES[id].stats) stats[stat] += gained
   }
   return stats
 }

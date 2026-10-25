@@ -12,6 +12,14 @@ test('진행 중에 다시 시작해도 시작 시각이 안 바뀜', () => {
   expect(startSession(s1, 'exercise', 5000)).toBe(s1)
 })
 
+test('운동 타이머가 켜져 있으면 공부 타이머를 켤 수 없다(동시에 두 활동 안 됨)', () => {
+  const s1 = startSession(newSave(), 'exercise', 1000)
+  expect(startSession(s1, 'study', 5000)).toBe(s1)
+  const s2 = startSession(stopSession(s1, 2000), 'study', 3000)
+  expect(s2.active).toEqual({ activity: 'study', startedAt: 3000 })
+  expect(stopSession(s2, 63_000).records[1]).toEqual({ id: 'study-3000', activity: 'study', startedAt: 3000, endedAt: 63_000 })
+})
+
 test('진행 중 아닐 때 정지는 변화 없음', () => {
   const s = newSave()
   expect(stopSession(s, 5000)).toBe(s)

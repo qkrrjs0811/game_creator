@@ -2,6 +2,7 @@ import { playerFighter, type Fighter } from './battle'
 import { likelyWin } from './coach'
 import { EXP_PER_MINUTE, expToNext, statsFromMinutes } from './progression'
 import { SKILLS } from './skills'
+import type { ActivityId } from './types'
 
 /** 난이도를 잴 때 찾아보는 누적 운동 분의 끝(기본 200시간) */
 const MEASURE_MINUTES = 12_000
@@ -24,7 +25,13 @@ export function rotatedSkills(level: number): string[] {
 
 /** 처음부터 운동만 누적 minutes 분 한 말랑이(스킬은 골고루) */
 export function freshFighter(minutes: number): Fighter {
-  return playerFighter(statsFromMinutes({ exercise: minutes }), rotatedSkills(levelFromMinutes(minutes)))
+  return freshMixFighter({ exercise: minutes })
+}
+
+/** 처음부터 활동마다 누적 minutes 분씩 한 말랑이. 레벨은 모든 활동의 합으로 오른다(스킬은 골고루) */
+export function freshMixFighter(minutes: Partial<Record<ActivityId, number>>): Fighter {
+  const total = Object.values(minutes).reduce((sum, m) => sum + (m ?? 0), 0)
+  return playerFighter(statsFromMinutes(minutes), rotatedSkills(levelFromMinutes(total)))
 }
 
 /**

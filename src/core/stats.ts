@@ -1,5 +1,4 @@
 import { ACTIVITIES } from './activities'
-import { MINUTES_PER_STAT } from './progression'
 import type { ActivityId, Progress, StatId } from './types'
 
 export interface StatRow {
@@ -20,7 +19,7 @@ export interface StatRow {
 export const STAT_INFO: { id: StatId; name: string; icon: string; role: string }[] = [
   { id: 'str', name: '힘', icon: '💪', role: '공격' },
   { id: 'vit', name: '체력', icon: '❤️', role: 'HP·방어' },
-  { id: 'int', name: '지능', icon: '🧠', role: '치명타·스킬' },
+  { id: 'int', name: '지능', icon: '🧠', role: '치명타·두루' },
 ]
 
 /** 화면에 보여 줄 능력치 줄. 값은 computeProgress 결과를 그대로 쓴다. cappedToday = 오늘 상한을 채운 활동 */
@@ -29,12 +28,14 @@ export function statRows(p: Progress, cappedToday: ActivityId[] = []): StatRow[]
   return STAT_INFO.map((s) => {
     const linked = ids.filter((id) => ACTIVITIES[id].stats.includes(s.id))
     if (linked.length === 0) return { ...s, value: p.stats[s.id], source: null, toNext: null, tomorrow: false }
+    // 능력치마다 올리는 활동은 하나라서 그 활동의 분으로 센다
+    const per = ACTIVITIES[linked[0]].minutesPerStat
     const minutes = linked.reduce((sum, id) => sum + p.creditedMinutes[id], 0)
     return {
       ...s,
       value: p.stats[s.id],
       source: linked.map((id) => ACTIVITIES[id].label).join('·'),
-      toNext: MINUTES_PER_STAT - (minutes % MINUTES_PER_STAT),
+      toNext: per - (minutes % per),
       tomorrow: linked.every((id) => cappedToday.includes(id)),
     }
   })
