@@ -3,6 +3,7 @@ import type { ReplayStep, Timeline } from '../core/replay'
 import { MONSTERS, type Monster } from '../core/monsters'
 import type { Cosmetic, HatLook, HatShape, Worn } from '../core/cosmetics'
 import { chapterBackdrop, type Backdrop } from '../core/backdrop'
+import { FILL_ALPHA, sceneryFill, type Box } from '../core/sceneryFill'
 import type { ActivityId } from '../core/types'
 import { keepChatIndex, nextChatIndex } from '../core/chatter'
 import { stepSound } from '../core/sound'
@@ -325,13 +326,28 @@ function starPoints(cx: number, cy: number, r: number): Phaser.Math.Vector2[] {
  * 장 배경: 하늘의 둥근 장식과 땅 띠. 캐릭터·HP 막대보다 뒤에 그리고, 장식은 반투명이라 앞의 것을 가리지 않는다.
  * 자리는 장면 크기의 비율이라 장면 높이가 바뀌어도 같은 모습이다
  */
-function drawScenery(g: Phaser.GameObjects.Graphics, b: Backdrop, w: number, h: number) {
+function drawScenery(g: Phaser.GameObjects.Graphics, b: Backdrop, w: number, h: number, keepOut: Box[]): string {
   const col = (hex: string) => Phaser.Display.Color.HexStringToColor(hex)
   const ground = col(b.ground)
   const top = groundTop(h)
   /** 하늘 안의 자리(가로 비율, 땅 위끝까지 세로 비율) */
   const at = (fx: number, fy: number): [number, number] => [w * fx, top * fy]
   g.clear()
+
+  // 빈 하늘·땅 채우기(연하게): 하늘 가장자리 작은 구름, 땅 뒤 먼 언덕과 둥근 나무
+  const fill = sceneryFill({ w, h, top, feet: groundY(h) + FEET, keepOut })
+  g.fillStyle(0xffffff, FILL_ALPHA.puffs)
+  for (const p of fill.puffs) g.fillEllipse(p.x, p.y, 56 * p.s, 18 * p.s).fillCircle(p.x + 6 * p.s, p.y - 6 * p.s, 12 * p.s)
+  const far = Phaser.Display.Color.Interpolate.ColorWithColor(col(b.skyLow), ground, 100, 55)
+  g.fillStyle(Phaser.Display.Color.GetColor(far.r, far.g, far.b), FILL_ALPHA.farHills)
+  for (const c of fill.farHills) g.fillCircle(c.x, c.y, c.r)
+  for (const t of fill.trees) {
+    g.fillStyle(0xc9a27e, FILL_ALPHA.trees).fillRoundedRect(t.x - 2.5, t.y - t.size * 1.2, 5, t.size * 1.2, 2)
+    g.fillStyle(ground.clone().darken(8).color, FILL_ALPHA.trees)
+    g.fillCircle(t.x, t.y - t.size * 1.6, t.size).fillCircle(t.x - t.size * 0.55, t.y - t.size * 1.25, t.size * 0.62)
+    g.fillCircle(t.x + t.size * 0.55, t.y - t.size * 1.25, t.size * 0.62)
+    g.fillStyle(0xffffff, 0.35).fillCircle(t.x - t.size * 0.35, t.y - t.size * 1.95, t.size * 0.28)
+  }
 
   // 땅 뒤에 서는 장식(언덕)은 땅보다 먼저 그린다
   if (b.decor === 'hills') {
@@ -345,6 +361,14 @@ function drawScenery(g: Phaser.GameObjects.Graphics, b: Backdrop, w: number, h: 
   for (let x = -20; x < w + 40; x += 56) g.fillCircle(x, top + 18, 22)
   g.fillStyle(0xffffff, 0.4)
   for (let x = -20; x < w + 40; x += 56) g.fillEllipse(x - 4, top + 3, 16, 5)
+
+  // 땅 위 풀 포기: 잎 세 개
+  g.fillStyle(ground.clone().darken(14).color, FILL_ALPHA.tufts)
+  for (const t of fill.tufts) {
+    const s = t.s
+    g.fillEllipse(t.x - 4 * s, t.y - 4 * s, 4 * s, 9 * s).fillEllipse(t.x + 4 * s, t.y - 4 * s, 4 * s, 9 * s)
+    g.fillEllipse(t.x, t.y - 5.5 * s, 4.5 * s, 11 * s)
+  }
 
   switch (b.decor) {
     case 'clouds':
@@ -425,6 +449,7 @@ function drawScenery(g: Phaser.GameObjects.Graphics, b: Backdrop, w: number, h: 
       break
     }
   }
+  return `hills:${fill.farHills.length} trees:${fill.trees.length} tufts:${fill.tufts.length} puffs:${fill.puffs.length}`
 }
 
 /** 두 캐릭터 머리 위 HP 막대(높이 10, 흰 테두리 3)의 위쪽 y */
@@ -961,7 +986,7 @@ export class HomeScene extends Phaser.Scene {
    * 소품 자리(아래끝 가운데). 말랑이 왼쪽에, 자란 말랑이 몸·특징 그림(반 너비 약 50)과 닿지 않게 둔다.
    * 좁은 화면에서 자리가 모자라면 소품을 조금 줄인다
    */
-  private placeProp(w: number, ground: number) {
+  private placeProp(w: number, ground: number): Box {
     const room = w * 0.3 - 50 * this.growth.scale - 6
     const scale = Phaser.Math.Clamp(room / (PROP_HALF * 2), 0.6, 1)
     const half = PROP_HALF * scale
@@ -971,6 +996,7 @@ export class HomeScene extends Phaser.Scene {
     // e2e가 소품이 차지하는 칸을 볼 수 있게 남긴다
     const box = [x - half, y - PROP_HEIGHT * scale, half * 2, PROP_HEIGHT * scale].map(Math.round).join(',')
     this.game.canvas.parentElement?.setAttribute('data-prop-box', box)
+    return { x0: x - half, x1: x + half, y0: y - PROP_HEIGHT * scale, y1: y + 4 }
   }
 
   /**
@@ -1666,12 +1692,21 @@ export class HomeScene extends Phaser.Scene {
 
   private layout(w: number, h: number) {
     const ground = groundY(h)
-    drawScenery(this.scenery, this.backdrop, w, h)
-    // e2e가 지금 그린 장식을 볼 수 있게 남긴다
-    this.game.canvas.parentElement?.setAttribute('data-decor', this.backdrop.decor)
     this.mascot.setPosition(w * 0.3, ground)
     this.monster.setPosition(w * 0.72, ground + 6)
-    this.placeProp(w, ground)
+    const prop = this.placeProp(w, ground)
+    // 나무·풀은 말랑이(자란 몸 포함)·몬스터(커진 보스 포함)·소품 칸을 비켜 선다
+    const feet = ground + FEET + 4
+    const body = 50 * this.growth.scale + 6
+    const keepOut: Box[] = [
+      { x0: w * 0.3 - body, x1: w * 0.3 + body, y0: 0, y1: feet },
+      { x0: w * 0.72 - 64, x1: w * 0.72 + 64, y0: 0, y1: feet },
+      prop,
+    ]
+    const fill = drawScenery(this.scenery, this.backdrop, w, h, keepOut)
+    // e2e가 지금 그린 장식과 채우기 수를 볼 수 있게 남긴다
+    this.game.canvas.parentElement?.setAttribute('data-decor', this.backdrop.decor)
+    this.game.canvas.parentElement?.setAttribute('data-fill', fill)
     this.bubble.setPosition(w / 2, Math.max(28, h * 0.16))
     this.placeTaps()
     // e2e가 말랑이·몬스터 발끝(장면 위에서부터 px)을 볼 수 있게 남긴다
