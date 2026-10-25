@@ -1,7 +1,8 @@
 import Phaser from 'phaser'
 import './style.css'
 import { HomeScene, HOME_READY } from './game/HomeScene'
-import { computeProgress, todayStatus } from './core/progression'
+import { computeProgress, dayKey, todayStatus } from './core/progression'
+import { todayGoal } from './core/goal'
 import { levelUpPoints, levelUpTo, restoreShownLevel } from './core/levelup'
 import { liveRecords, startSession, stopSession } from './core/session'
 import { backupFileName, exportBackup, importLosesProgress } from './core/backup'
@@ -255,6 +256,19 @@ function readKey(key: string): string | null {
   }
 }
 
+// 도장 쾅! 연출은 하루 한 번만. 닫아 둔 사이 채웠으면 다시 열 때 보여 준다
+const STAMP_DAY_KEY = `${SAVE_KEY}:stamp-day`
+let stampDay = readKey(STAMP_DAY_KEY)
+
+function rememberStampDay(day: string) {
+  stampDay = day
+  try {
+    kv.setItem(STAMP_DAY_KEY, day)
+  } catch {
+    // 못 남기면 다시 열 때 한 번 더 찍을 뿐이다
+  }
+}
+
 function rememberShownLevel(level: number) {
   try {
     kv.setItem(SEEN_LEVEL_KEY, String(level))
@@ -289,6 +303,12 @@ function render() {
     celebratePending = false
     homeScene()?.celebrate()
   }
+  // 하루 목표는 모든 활동을 합쳐 센다(켜 둔 타이머의 지금까지 포함, 상한 넘긴 시간은 빼고)
+  const goal = todayGoal(records, now)
+  if (goal.done && stampDay !== dayKey(now)) {
+    rememberStampDay(dayKey(now))
+    hud.showStamp()
+  }
   hud.render({
     level: p.level,
     expIntoLevel: p.expIntoLevel,
@@ -302,6 +322,7 @@ function render() {
     capReached: today.reached,
     skillPoints: remainingSkillPoints(p.level, save.skills),
     saveFailed: !saveOk,
+    goal,
   })
   skills.refresh()
   homeScene()?.showHomeMonster(homeMonster(save.stageProgress))

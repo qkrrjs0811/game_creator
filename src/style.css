@@ -171,16 +171,57 @@ body {
   font-variant-numeric: tabular-nums;
 }
 .today.full { background: #ffe2d4; color: var(--accent); }
+/* 모든 활동을 합친 오늘 목표. 카드 맨 위 한 줄 */
+.goal {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 6px;
+  font-size: 13px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.goal-text { white-space: nowrap; }
+.goal-bar { flex: 1; height: 10px; border-radius: 999px; background: var(--track); overflow: hidden; }
+.goal-bar i { display: block; height: 100%; width: 0; border-radius: 999px; background: #ffd36b; transition: width 0.4s; }
+.goal.done { color: var(--accent); }
+.goal.done .goal-bar i { background: var(--accent); }
+/* 오늘 목표를 채운 순간 카드 오른쪽 위에 찍히는 도장 */
+.stamp {
+  position: absolute;
+  top: -14px;
+  right: 10px;
+  z-index: 2;
+  padding: 8px 16px;
+  border: 3px solid #fff;
+  border-radius: 999px;
+  background: var(--accent);
+  color: #fff;
+  font-size: 15px;
+  font-weight: 800;
+  box-shadow: 0 3px 0 #e8703f;
+  transform: rotate(-8deg);
+  animation: stamp-pop 0.5s cubic-bezier(0.2, 1.6, 0.4, 1);
+  pointer-events: none;
+}
+.stamp[hidden] { display: none; }
+@keyframes stamp-pop {
+  0% { transform: rotate(-8deg) scale(2.2); opacity: 0; }
+  60% { transform: rotate(-8deg) scale(0.9); opacity: 1; }
+  100% { transform: rotate(-8deg) scale(1); }
+}
 .timer-card {
+  position: relative;
   margin: 14px;
-  padding: 16px;
+  /* 오늘 목표 줄이 들어선 만큼 위아래를 줄여 장면 높이를 지킨다 */
+  padding: 12px 16px;
   background: #fff;
   border-radius: 24px;
   text-align: center;
   box-shadow: 0 4px 0 var(--track);
 }
 .timer-label { font-size: 13px; color: var(--ink-soft); }
-.timer { font-size: 40px; font-weight: 800; color: var(--accent); font-variant-numeric: tabular-nums; margin: 4px 0 10px; }
+.timer { font-size: 40px; font-weight: 800; color: var(--accent); font-variant-numeric: tabular-nums; line-height: 1.1; margin: 2px 0 6px; }
 .toggle {
   border: 0;
   padding: 12px 36px;

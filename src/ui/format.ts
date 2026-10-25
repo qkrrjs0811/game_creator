@@ -2,6 +2,7 @@ import type { SessionGain } from '../core/gain'
 import { STAT_INFO } from '../core/stats'
 import { ACTIVITIES } from '../core/activities'
 import type { ActivityId } from '../core/types'
+import type { TodayGoal } from '../core/goal'
 
 const pad =(n: number) => String(n).padStart(2, '0')
 
@@ -31,6 +32,11 @@ function hasBatchim(word: string): boolean {
 export const objectJosa = (word: string) => (hasBatchim(word) ? '을' : '를')
 /** 받침이 있으면 "은", 없으면 "는"(운동은 · 공부는) */
 export const topicJosa = (word: string) => (hasBatchim(word) ? '은' : '는')
+
+/** 홈 타이머 카드의 하루 목표 글자. 30분을 넘겨도 실제 분을 보여 준다 */
+export function goalText(g: TodayGoal): string {
+  return g.done ? `🌟 오늘 목표 달성 ${g.minutes} / ${g.goal}분` : `🎯 오늘 목표 ${g.minutes} / ${g.goal}분`
+}
 
 /**
  * 활동을 그만둘 때 띄우는 요약. capReached = 오늘 상한에 닿았는지.

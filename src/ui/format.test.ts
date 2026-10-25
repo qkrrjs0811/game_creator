@@ -1,5 +1,5 @@
 import { test, expect } from 'vitest'
-import { formatElapsed, formatMinutes, objectJosa, sessionSummary, topicJosa } from './format'
+import { formatElapsed, formatMinutes, goalText, objectJosa, sessionSummary, topicJosa } from './format'
 
 test('한 시간 미만은 MM:SS', () => {
   expect(formatElapsed(0)).toBe('00:00')
@@ -59,4 +59,11 @@ test('경험치를 못 얻었으면 까닭을 알려 줌', () => {
     title: '🎉 운동을 마쳤어요!',
     detail: '1분 넘게 하면 경험치가 쌓여요',
   })
+})
+
+test('오늘 목표 글자: 채우기 전엔 🎯, 채우면 🌟 달성(넘친 분도 보임)', () => {
+  expect(goalText({ minutes: 0, goal: 30, done: false })).toBe('🎯 오늘 목표 0 / 30분')
+  expect(goalText({ minutes: 12, goal: 30, done: false })).toBe('🎯 오늘 목표 12 / 30분')
+  expect(goalText({ minutes: 30, goal: 30, done: true })).toBe('🌟 오늘 목표 달성 30 / 30분')
+  expect(goalText({ minutes: 45, goal: 30, done: true })).toBe('🌟 오늘 목표 달성 45 / 30분')
 })

@@ -1,5 +1,6 @@
-import { formatElapsed, objectJosa, topicJosa } from './format'
+import { formatElapsed, goalText, objectJosa, topicJosa } from './format'
 import { ACTIVITIES } from '../core/activities'
+import type { TodayGoal } from '../core/goal'
 import type { ActivityId } from '../core/types'
 
 export interface HudView {
@@ -19,6 +20,8 @@ export interface HudView {
   skillPoints: number
   /** 브라우저 저장소에 저장하지 못했으면 true */
   saveFailed: boolean
+  /** 모든 활동을 합친 오늘 목표 진행 */
+  goal: TodayGoal
 }
 
 /** 활동마다 타이머 카드에 쓰는 안내 */
@@ -83,6 +86,11 @@ export function createHud(
       <button type="button" class="adventure" data-testid="open-stages">⚔️ 모험</button>
     </section>
     <section class="timer-card">
+      <div class="goal" data-testid="goal">
+        <span class="goal-text" data-testid="goal-text"></span>
+        <span class="goal-bar"><i data-testid="goal-bar"></i></span>
+      </div>
+      <div class="stamp" data-testid="stamp" role="status" hidden>🌟 오늘 도장 쾅!</div>
       <div class="today" data-testid="today"></div>
       <div class="timer-label" data-testid="timer-label"></div>
       <div class="timer" data-testid="timer">00:00</div>
@@ -137,6 +145,11 @@ export function createHud(
   const activityTabs = [...root.querySelectorAll<HTMLElement>('[data-activity]')]
   for (const tab of activityTabs) tab.addEventListener('click', () => onSelect(tab.dataset.activity as ActivityId))
   const toastDetail = toast.querySelector('span')!
+  const goal = q('goal')
+  const goalLabel = q('goal-text')
+  const goalBar = q('goal-bar')
+  const stamp = q('stamp')
+  let stampTimer: ReturnType<typeof setTimeout> | undefined
 
   return {
     sceneHost: q('scene'),
@@ -169,6 +182,17 @@ export function createHud(
       skillBadge.hidden = v.skillPoints < 1
       skillBadge.textContent = String(v.skillPoints)
       saveWarning.hidden = !v.saveFailed
+      goalLabel.textContent = goalText(v.goal)
+      goalBar.style.width = `${Math.min(100, (v.goal.minutes / v.goal.goal) * 100)}%`
+      goal.classList.toggle('done', v.goal.done)
+    },
+    /** 오늘 목표를 채운 순간 타이머 카드에 도장을 쾅 찍는다 */
+    showStamp() {
+      stamp.hidden = true
+      void stamp.offsetWidth
+      stamp.hidden = false
+      clearTimeout(stampTimer)
+      stampTimer = setTimeout(() => (stamp.hidden = true), 3500)
     },
     /** 하루 상한에 닿았다는 안내를 잠깐 띄운다 */
     showCapToast(activity: ActivityId) {
