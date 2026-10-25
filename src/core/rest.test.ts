@@ -1,7 +1,7 @@
 import { describe, test, expect } from 'vitest'
 import { goalStreak, stampCount } from './goal'
 import { computeProgress } from './progression'
-import { REST_EVERY_STAMPS, REST_MAX, restStreak, restedInMonth, restText } from './rest'
+import { REST_EVERY_STAMPS, REST_MAX, parseSeenRests, restEarnedNow, restStreak, restedInMonth, restedYesterday, restText } from './rest'
 import { achievementProgress, bestStreak } from './achievements'
 import { chatLines } from './chatter'
 import { upcomingRewards } from './rewards'
@@ -36,6 +36,7 @@ describe('쉼표', () => {
       toNextRest: 7,
       restedDays: [],
       best: 0,
+      earned: 0,
     })
   })
 
@@ -52,7 +53,7 @@ describe('쉼표', () => {
   test('하루 빈 날을 쉼표로 메워 이어 간다(지킨 날도 센다)', () => {
     const rs = run(1, 10, [8])
     const r = restStreak(rs, kst('2026-10-10T20:00:00'))
-    expect(r).toEqual({ streak: 10, rests: 0, toNextRest: 5, restedDays: ['2026-10-08'], best: 10 })
+    expect(r).toEqual({ streak: 10, rests: 0, toNextRest: 5, restedDays: ['2026-10-08'], best: 10, earned: 1 })
     expect(goalStreak(rs, kst('2026-10-10T20:00:00'))).toBe(2)
   })
 
@@ -67,7 +68,7 @@ describe('쉼표', () => {
 
   test('어제를 못 찍은 오늘: 아직 오늘을 안 찍어도 어제를 지켜 준다', () => {
     const r = restStreak(run(1, 7), kst('2026-10-09T07:00:00'))
-    expect(r).toEqual({ streak: 8, rests: 0, toNextRest: 7, restedDays: ['2026-10-08'], best: 7 })
+    expect(r).toEqual({ streak: 8, rests: 0, toNextRest: 7, restedDays: ['2026-10-08'], best: 7, earned: 1 })
     // best 는 도장 찍은 날에만 늘린다: 오늘을 못 찍어 내일 지킨 날이 풀려도 업적이 내려가지 않게
   })
 
@@ -169,5 +170,57 @@ describe('도장판 쉼표 표시', () => {
 
   test('가득 들고 있으면 더 모으지 않는다고 알려 줌', () => {
     expect(restText({ rests: 2, toNextRest: 4 })).toBe('🛟 쉼표 2 / 2개 · 가득 찼어요')
+  })
+})
+
+describe('쉼표 알림', () => {
+  test('실제로 얻은 쉼표 수(가득 차서 버려진 것은 빼고)', () => {
+    expect(restStreak(run(1, 6), kst('2026-10-06T20:00:00')).earned).toBe(0)
+    expect(restStreak(run(1, 7), kst('2026-10-07T20:00:00')).earned).toBe(1)
+    expect(restStreak(run(1, 14), kst('2026-10-14T20:00:00')).earned).toBe(2)
+    // 21번째 도장에서 얻은 쉼표는 가득 차서 버려짐
+    expect(restStreak(run(1, 21), kst('2026-10-21T20:00:00')).earned).toBe(2)
+    // 쉼표를 쓴 뒤 다시 얻으면 늘어남
+    expect(restStreak(run(1, 22, [8]), kst('2026-10-22T20:00:00')).earned).toBe(3)
+  })
+
+  test('얻은 쉼표 수는 기록이 늘어도 내려가지 않음', () => {
+    let prev = 0
+    for (let d = 1; d <= 30; d++) {
+      const e = restStreak(run(1, d, [8, 15, 16]), kst(`2026-10-${String(d).padStart(2, '0')}T20:00:00`)).earned
+      expect(e).toBeGreaterThanOrEqual(prev)
+      prev = e
+    }
+  })
+
+  test('어제를 쉼표로 지켰는지', () => {
+    const r = restStreak(run(1, 7), kst('2026-10-09T07:00:00'))
+    expect(restedYesterday(r.restedDays, kst('2026-10-09T07:00:00'))).toBe(true)
+    const r2 = restStreak(run(1, 10, [8]), kst('2026-10-10T20:00:00'))
+    expect(restedYesterday(r2.restedDays, kst('2026-10-10T20:00:00'))).toBe(false)
+    expect(restedYesterday(r2.restedDays, kst('2026-10-09T20:00:00'))).toBe(true)
+  })
+
+  test('본 쉼표 수 읽기', () => {
+    expect(parseSeenRests(null)).toBeNull()
+    expect(parseSeenRests('abc')).toBeNull()
+    expect(parseSeenRests('-1')).toBeNull()
+    expect(parseSeenRests('2')).toBe(2)
+  })
+
+  test('새로 얻었을 때만 한 번 띄움, 처음 여는 창은 기억만 함', () => {
+    expect(restEarnedNow(1, null)).toEqual({ show: false, remember: 1 })
+    expect(restEarnedNow(1, 0)).toEqual({ show: true, remember: 1 })
+    expect(restEarnedNow(1, 1)).toEqual({ show: false, remember: null })
+    expect(restEarnedNow(0, 0)).toEqual({ show: false, remember: null })
+    expect(restEarnedNow(1, 3)).toEqual({ show: false, remember: null })
+  })
+
+  test('어제를 쉼표로 지켰으면 말랑이 한마디 맨 앞에서 알려 줌', () => {
+    const now = kst('2026-10-09T07:00:00')
+    const lines = chatLines({ records: run(1, 7), stageProgress: 0, skills: [], now, lastSeen: now - 60_000 })
+    expect(lines[0]).toEqual({ kind: 'rested', text: '🛟 어제는 쉼표가 지켜 줬어!' })
+    const plain = chatLines({ records: run(1, 8), stageProgress: 0, skills: [], now, lastSeen: now - 60_000 })
+    expect(plain.some((l) => l.kind === 'rested')).toBe(false)
   })
 })

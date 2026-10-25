@@ -3,7 +3,7 @@ import { winnableStages } from './coach'
 import { todayGoal } from './goal'
 import { todayMission } from './mission'
 import { computeProgress } from './progression'
-import { restStreak } from './rest'
+import { restedYesterday, restStreak } from './rest'
 import { upcomingRewards, type RewardKind, type UpcomingReward } from './rewards'
 import type { ActivityRecord } from './types'
 import { weekGoal } from './week'
@@ -19,7 +19,7 @@ export const CHAT_MAX_CHARS = 18
 /** 마지막으로 본 뒤 이만큼 지났으면 "보고 싶었어" */
 export const MISSED_MS = 24 * 60 * 60_000
 
-export type ChatKind = 'welcome' | 'missed' | 'goal' | 'mission' | 'allDone' | 'reward' | 'winnable' | 'streak' | 'week' | 'cheer'
+export type ChatKind = 'rested' | 'welcome' | 'missed' | 'goal' | 'mission' | 'allDone' | 'reward' | 'winnable' | 'streak' | 'week' | 'cheer'
 
 export interface ChatLine {
   kind: ChatKind
@@ -73,6 +73,10 @@ export function chatLines({ records, stageProgress, skills, now, lastSeen }: Cha
   const goal = todayGoal(records, now)
   const mission = todayMission(records, now)
   const missionLabel = ACTIVITIES[mission.activity].label
+  const rest = restStreak(records, now)
+
+  // 어제를 쉼표가 지켜 줬으면 가장 먼저 알려 준다
+  if (restedYesterday(rest.restedDays, now)) lines.push({ kind: 'rested', text: '🛟 어제는 쉼표가 지켜 줬어!' })
 
   if (records.length === 0) lines.push({ kind: 'welcome', text: '👋 안녕! 타이머 켜 볼까?' })
   else if (!goal.done && lastSeen !== null && now - lastSeen >= MISSED_MS) {
@@ -100,7 +104,7 @@ export function chatLines({ records, stageProgress, skills, now, lastSeen }: Cha
   const minutes = computeProgress(records).creditedMinutes
   if (winnableStages(minutes, skills, stageProgress, 1) > 0) lines.push({ kind: 'winnable', text: '🍀 이길 만한 곳이 있어!' })
 
-  const streak = restStreak(records, now).streak
+  const streak = rest.streak
   if (streak > 0) {
     lines.push({ kind: 'streak', text: goal.done ? `🔥 ${streak}일째 같이 하는 중!` : `🔥 오늘 하면 ${streak + 1}일째야!` })
   }

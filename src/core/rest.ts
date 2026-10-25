@@ -18,6 +18,8 @@ export interface RestStreak {
   restedDays: string[]
   /** 쉼표로 지킨 날까지 넣어 가장 길게 이어 온 날 수(끊겨도 내려가지 않음) */
   best: number
+  /** 지금까지 실제로 얻은 쉼표 수(가득 차서 버려진 것은 빼고, 기록이 늘어도 내려가지 않음) */
+  earned: number
 }
 
 /** 쉼표로 지킨 날 중 그 달(month 1~12)의 일(日) 번호 */
@@ -41,7 +43,7 @@ const nextDay =(d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate() 
  */
 export function restStreak(records: ActivityRecord[], now: number): RestStreak {
   const days = goalDays(records)
-  const result: RestStreak = { streak: 0, rests: 0, toNextRest: REST_EVERY_STAMPS, restedDays: [], best: 0 }
+  const result: RestStreak = { streak: 0, rests: 0, toNextRest: REST_EVERY_STAMPS, restedDays: [], best: 0, earned: 0 }
   if (days.size === 0) return result
   const todayKey = dayKey(now)
   const first = [...days].sort()[0]
@@ -55,7 +57,10 @@ export function restStreak(records: ActivityRecord[], now: number): RestStreak {
       counter++
       if (counter === REST_EVERY_STAMPS) {
         counter = 0
-        result.rests = Math.min(REST_MAX, result.rests + 1)
+        if (result.rests < REST_MAX) {
+          result.rests++
+          result.earned++
+        }
       }
       continue
     }
@@ -72,4 +77,26 @@ export function restStreak(records: ActivityRecord[], now: number): RestStreak {
   }
   result.toNextRest = REST_EVERY_STAMPS - counter
   return result
+}
+
+/** 어제를 쉼표로 지켰는지 */
+export function restedYesterday(restedDays: string[], now: number): boolean {
+  const d = new Date(now)
+  return restedDays.includes(dayKey(new Date(d.getFullYear(), d.getMonth(), d.getDate() - 1).getTime()))
+}
+
+/** 보조 키에 남긴 "알린 쉼표 수". 없거나 이상하면 null */
+export function parseSeenRests(raw: string | null): number | null {
+  if (raw === null || !/^\d+$/.test(raw)) return null
+  return Number(raw)
+}
+
+/**
+ * 쉼표를 새로 얻었으면 배지를 한 번 띄운다. 처음 여는 창(본 수 없음)은 지금 수를 기억만 한다.
+ * remember 가 null 이 아니면 그 수를 보조 키에 남긴다.
+ */
+export function restEarnedNow(earned: number, seen: number | null): { show: boolean; remember: number | null } {
+  if (seen === null) return { show: false, remember: earned }
+  if (earned > seen) return { show: true, remember: earned }
+  return { show: false, remember: null }
 }

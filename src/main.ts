@@ -3,7 +3,7 @@ import './style.css'
 import { HomeScene, HOME_READY } from './game/HomeScene'
 import { computeProgress, dayKey, todayStatus } from './core/progression'
 import { stampCalendar, stampCount, todayGoal } from './core/goal'
-import { restStreak, restedInMonth, restText } from './core/rest'
+import { parseSeenRests, restEarnedNow, restStreak, restedInMonth, restText } from './core/rest'
 import { weekGoal } from './core/week'
 import { missionStars, todayMission } from './core/mission'
 import { historyPage, recordSummary } from './core/history'
@@ -158,6 +158,8 @@ const settings = createSettings(app, {
     persist()
     shownLevel = undefined
     stageQuiet = true
+    // 백업으로 들어온 쉼표는 새로 얻은 것으로 알리지 않는다
+    writeKey(SEEN_RESTS_KEY, String(restStreak(save.records, Date.now()).earned))
     render()
   },
 })
@@ -479,6 +481,9 @@ function rememberMissionDay(day: string) {
   }
 }
 
+// 이미 알린(얻은) 쉼표 수. 처음 여는 창이면 지금 수를 기억만 한다
+const SEEN_RESTS_KEY = `${SAVE_KEY}:seen-rests`
+
 // 이미 알린 업적 id. 처음 여는 창(null)이면 기존 기록으로 닿아 있던 업적을 묶어 한 번만 알린다
 const SEEN_ACHIEVEMENTS_KEY = `${SAVE_KEY}:seen-achievements`
 
@@ -596,6 +601,10 @@ function render() {
     rememberMissionDay(dayKey(now))
     hud.showMissionDone()
   }
+  // 쉼표는 얻은 개수마다 한 번만 알린다(다른 창이 먼저 알렸으면 건너뛰게 매번 저장소에서 읽는다)
+  const restEarned = restEarnedNow(restStreak(records, now).earned, parseSeenRests(readKey(SEEN_RESTS_KEY)))
+  if (restEarned.remember !== null) writeKey(SEEN_RESTS_KEY, String(restEarned.remember))
+  if (restEarned.show) hud.showRestEarned()
   checkAchievements(records)
   const focus = save.active
     ? focusProgress(focusTargetFor(parseFocusGoal(readKey(FOCUS_GOAL_KEY)), save.active), save.active.startedAt, now)

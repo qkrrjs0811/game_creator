@@ -130,6 +130,7 @@ export function createHud(
       <div class="stamp mission-stamp" data-testid="mission-stamp" role="status" hidden>📜 미션 완료!</div>
       <div class="stamp focus-stamp" data-testid="focus-stamp" role="status" hidden></div>
       <div class="stamp grow-stamp" data-testid="grow-stamp" role="status" hidden></div>
+      <div class="stamp rest-stamp" data-testid="rest-stamp" role="status" hidden>🛟 쉼표를 얻었어요!</div>
       <div class="today-row">
         <span class="today" data-testid="today"></span>
         <span class="mission" data-testid="mission"></span>
@@ -242,8 +243,8 @@ export function createHud(
   let growTimer: ReturnType<typeof setTimeout> | undefined
   const popGrow = () => {
     clearTimeout(growTimer)
-    // 오늘·주간·미션 도장이 떠 있으면 그게 사라진 뒤에 찍는다(겹치지 않게)
-    if (!stamp.hidden || !weekStamp.hidden || !missionStamp.hidden) {
+    // 오늘·주간·미션 도장이나 쉼표 배지가 떠 있으면 그게 사라진 뒤에 찍는다(겹치지 않게)
+    if (!stamp.hidden || !weekStamp.hidden || !missionStamp.hidden || !restStamp.hidden) {
       growTimer = setTimeout(popGrow, 600)
       return
     }
@@ -253,6 +254,21 @@ export function createHud(
     yieldFocus()
     growTimer = setTimeout(() => (growStamp.hidden = true), 3500)
   }
+  const restStamp = q('rest-stamp')
+  let restTimer: ReturnType<typeof setTimeout> | undefined
+  const popRest = () => {
+    clearTimeout(restTimer)
+    // 오늘·주간·미션 도장이나 자람 배지가 떠 있으면 그게 사라진 뒤에 찍는다(겹치지 않게)
+    if (!stamp.hidden || !weekStamp.hidden || !missionStamp.hidden || !growStamp.hidden) {
+      restTimer = setTimeout(popRest, 600)
+      return
+    }
+    restStamp.hidden = true
+    void restStamp.offsetWidth
+    restStamp.hidden = false
+    yieldFocus()
+    restTimer = setTimeout(() => (restStamp.hidden = true), 3500)
+  }
   const focusStamp = q('focus-stamp')
   let focusTimer: ReturnType<typeof setTimeout> | undefined
   // 띄울(또는 떠 있는) 집중 목표 배지. 같은 자리의 다른 도장이 먼저이고, 그게 사라진 뒤에 찍는다
@@ -260,7 +276,7 @@ export function createHud(
   const popFocus = () => {
     clearTimeout(focusTimer)
     if (!focusPending) return
-    if (!stamp.hidden || !weekStamp.hidden || !missionStamp.hidden || !growStamp.hidden) {
+    if (!stamp.hidden || !weekStamp.hidden || !missionStamp.hidden || !growStamp.hidden || !restStamp.hidden) {
       focusTimer = setTimeout(popFocus, 600)
       return
     }
@@ -388,6 +404,8 @@ export function createHud(
       growStamp.textContent = `✨ 말랑이가 자랐어요! · ${stageName}`
       popGrow()
     },
+    /** 쉼표를 새로 얻은 순간 같은 자리에 쉼표 배지를 찍는다 */
+    showRestEarned: popRest,
     /** 오늘의 미션을 채운 순간 같은 자리에 미션 도장을 찍는다 */
     showMissionDone: popMission,
     /** 오늘 목표를 채운 순간 타이머 카드에 도장을 쾅 찍는다 */
