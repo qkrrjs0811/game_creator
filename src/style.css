@@ -85,21 +85,6 @@ body {
 .toast[hidden] { display: none; }
 .toast b { font-size: 16px; color: var(--accent); }
 .toast span { font-size: 13px; line-height: 1.4; color: var(--ink-soft); }
-/* 마침 요약 제목 옆 집중 목표. 카드가 길어지지 않게 작은 꼬리표로 붙인다 */
-.summary-head { display: flex; align-items: center; gap: 6px; }
-.summary-head b { white-space: nowrap; }
-.summary-goal {
-  flex: none;
-  padding: 2px 8px;
-  border-radius: 999px;
-  background: var(--chip);
-  color: var(--ink);
-  font-size: 12px;
-  font-style: normal;
-  font-weight: 700;
-  white-space: nowrap;
-}
-.summary-goal[hidden] { display: none; }
 .toast-close {
   position: absolute;
   top: 50%;

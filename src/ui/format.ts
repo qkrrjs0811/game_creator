@@ -130,22 +130,14 @@ export function pageRangeText(keys: string[], page: number): string {
  * 활동을 그만둘 때 띄우는 요약. capReached = 오늘 상한에 닿았는지.
  * 안내는 폰 폭에서 한 줄에 들어가게 짧게 쓴다(두 줄이면 카드가 길어져 말랑이를 가린다)
  */
-export function sessionSummary(
-  g: SessionGain,
-  capReached: boolean,
-  activity: ActivityId = 'exercise',
-  focus: FocusProgress | null = null,
-): { title: string; detail: string; goal?: string } {
+export function sessionSummary(g: SessionGain, capReached: boolean, activity: ActivityId = 'exercise'): { title: string; detail: string } {
   const name = ACTIVITIES[activity].label
-  // 집중 목표는 카드가 길어지지 않게 제목 옆에 작게 붙이고, 한 줄에 들어가게 제목을 줄인다
-  const done = focus ? '!' : ' 했어요!'
-  const title = g.minutes > 0 ? `🎉 ${name} ${formatMinutes(g.minutes)}${done}` : `🎉 ${name}${objectJosa(name)} 마쳤어요!`
-  const goal = focus ? { goal: focus.reached ? `🎯 ${focus.target}분 ✓` : `🎯 ${focus.target}분 중 ${focus.elapsedMinutes}분` } : {}
+  const title = g.minutes > 0 ? `🎉 ${name} ${formatMinutes(g.minutes)} 했어요!` : `🎉 ${name}${objectJosa(name)} 마쳤어요!`
   if (g.exp <= 0) {
-    return { title, detail: capReached ? '상한을 채워서 경험치는 내일 쌓여요' : '1분 넘게 하면 경험치가 쌓여요', ...goal }
+    return { title, detail: capReached ? '상한을 채워서 경험치는 내일 쌓여요' : '1분 넘게 하면 경험치가 쌓여요' }
   }
   const stats = STAT_INFO.filter((s) => g.stats[s.id] > 0).map((s) => `${s.icon} ${s.name} +${g.stats[s.id]}`)
-  return { title, detail: [`EXP +${g.exp}`, ...stats].join(' · '), ...goal }
+  return { title, detail: [`EXP +${g.exp}`, ...stats].join(' · ') }
 }
 
 /** 자리 비운 시간. 하루 넘게 비우면 N일 M시간(분은 뺀다) */

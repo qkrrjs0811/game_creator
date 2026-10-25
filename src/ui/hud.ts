@@ -112,7 +112,7 @@ export function createHud(
         <button type="button" class="toast-close" data-testid="cap-toast-close" aria-label="닫기">✕</button>
       </div>
       <div class="toast summary" data-testid="session-summary" role="status" hidden>
-        <div class="summary-head"><b data-testid="session-summary-title"></b><em class="summary-goal" data-testid="session-summary-goal" hidden></em></div>
+        <b data-testid="session-summary-title"></b>
         <span data-testid="session-summary-detail"></span>
         <button type="button" class="toast-close" data-testid="session-summary-close" aria-label="닫기">✕</button>
       </div>
@@ -411,12 +411,9 @@ export function createHud(
       toastTimer = setTimeout(hideToast, 6000)
     },
     /** 활동을 그만둔 순간 이번에 얻은 것을 잠깐 띄운다(상한 안내와 같은 자리라 그건 닫는다) */
-    showSessionSummary(s: { title: string; detail: string; goal?: string }) {
+    showSessionSummary(s: { title: string; detail: string }) {
       hideToast()
       q('session-summary-title').textContent = s.title
-      const goal = q('session-summary-goal')
-      goal.textContent = s.goal ?? ''
-      goal.hidden = !s.goal
       q('session-summary-detail').textContent = s.detail
       summary.hidden = true
       void summary.offsetWidth

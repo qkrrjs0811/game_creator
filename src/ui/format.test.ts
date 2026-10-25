@@ -49,16 +49,6 @@ test('휴식 마침 요약은 휴식 이름과 오른 체력을 보여 줌', () 
   expect(sessionSummary(g, true, 'relax')).toEqual({ title: '🎉 휴식 30분 했어요!', detail: 'EXP +300 · ❤️ 체력 +2' })
 })
 
-test('마침 요약에 집중 목표: 채웠으면 ✓, 못 채웠으면 몇 분까지 했는지', () => {
-  const g = { minutes: 32, exp: 320, stats: { str: 3, vit: 3, int: 0, focus: 0 } }
-  const done = { target: 25, elapsedMinutes: 32, remainingMinutes: 0, ratio: 1, reached: true }
-  const short = { target: 25, elapsedMinutes: 18, remainingMinutes: 7, ratio: 0.72, reached: false }
-  expect(sessionSummary(g, false, 'exercise', done)).toEqual({ title: '🎉 운동 32분!', detail: 'EXP +320 · 💪 힘 +3 · ❤️ 체력 +3', goal: '🎯 25분 ✓' })
-  expect(sessionSummary({ ...g, minutes: 18 }, false, 'exercise', short).goal).toBe('🎯 25분 중 18분')
-  expect(sessionSummary({ ...g, minutes: 0, exp: 0 }, true, 'study', { ...short, elapsedMinutes: 0 }).goal).toBe('🎯 25분 중 0분')
-  expect(sessionSummary(g, false, 'exercise', null).goal).toBeUndefined()
-})
-
 test('받침에 맞춰 을/를, 은/는을 고른다', () => {
   expect(['운동', '공부', '독서', '휴식'].map(objectJosa)).toEqual(['을', '를', '를', '을'])
   expect(['운동', '공부', '독서', '휴식'].map(topicJosa)).toEqual(['은', '는', '는', '은'])
