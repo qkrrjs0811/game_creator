@@ -2,6 +2,9 @@ import { describe, test, expect } from 'vitest'
 import { goalStreak, stampCount } from './goal'
 import { computeProgress } from './progression'
 import { REST_EVERY_STAMPS, REST_MAX, restStreak } from './rest'
+import { achievementProgress, bestStreak } from './achievements'
+import { chatLines } from './chatter'
+import { upcomingRewards } from './rewards'
 import type { ActivityRecord } from './types'
 
 const kst = (s: string) => Date.parse(`${s}+09:00`)
@@ -32,6 +35,7 @@ describe('쉼표', () => {
       rests: 0,
       toNextRest: 7,
       restedDays: [],
+      best: 0,
     })
   })
 
@@ -48,7 +52,7 @@ describe('쉼표', () => {
   test('하루 빈 날을 쉼표로 메워 이어 간다(지킨 날도 센다)', () => {
     const rs = run(1, 10, [8])
     const r = restStreak(rs, kst('2026-10-10T20:00:00'))
-    expect(r).toEqual({ streak: 10, rests: 0, toNextRest: 5, restedDays: ['2026-10-08'] })
+    expect(r).toEqual({ streak: 10, rests: 0, toNextRest: 5, restedDays: ['2026-10-08'], best: 10 })
     expect(goalStreak(rs, kst('2026-10-10T20:00:00'))).toBe(2)
   })
 
@@ -63,7 +67,8 @@ describe('쉼표', () => {
 
   test('어제를 못 찍은 오늘: 아직 오늘을 안 찍어도 어제를 지켜 준다', () => {
     const r = restStreak(run(1, 7), kst('2026-10-09T07:00:00'))
-    expect(r).toEqual({ streak: 8, rests: 0, toNextRest: 7, restedDays: ['2026-10-08'] })
+    expect(r).toEqual({ streak: 8, rests: 0, toNextRest: 7, restedDays: ['2026-10-08'], best: 7 })
+    // best 는 도장 찍은 날에만 늘린다: 오늘을 못 찍어 내일 지킨 날이 풀려도 업적이 내려가지 않게
   })
 
   test('어제·그제를 다 못 찍었으면 끊기고 쉼표는 남는다', () => {
@@ -102,5 +107,46 @@ describe('쉼표', () => {
     restStreak(rs, kst('2026-10-10T20:00:00'))
     expect(rs).toEqual(copy)
     expect(computeProgress(rs)).toEqual(before)
+  })
+
+  test('가장 길게 이어 온 날(best)은 끊겨도 남는다', () => {
+    expect(restStreak(run(1, 12, [8, 9]), kst('2026-10-12T20:00:00'))).toMatchObject({ streak: 3, best: 7 })
+  })
+})
+
+describe('쉼표를 쓰는 곳', () => {
+  // 1~10일 중 8일만 빠짐: 쉼표로 10일 이어 옴(쉼표 없이는 2일)
+  const rs = run(1, 10, [8])
+  const now = kst('2026-10-10T20:00:00')
+
+  test('업적의 가장 긴 이어 온 날도 쉼표로 지킨 날을 넣어 센다', () => {
+    expect(bestStreak(rs)).toBe(10)
+    expect(achievementProgress(rs).find((a) => a.kind === 'streak' && a.goal === 7)!.done).toBe(true)
+    expect(bestStreak([])).toBe(0)
+  })
+
+  test('업적의 가장 긴 이어 온 날은 쉼표 없는 셈보다 짧아지지 않음', () => {
+    for (let mask = 0; mask < 4096; mask += 11) {
+      const skip: number[] = []
+      for (let b = 0; b < 12; b++) if (mask & (1 << b)) skip.push(b * 2 + 2)
+      const records = run(1, 25, skip)
+      // 쉼표 없이 센 가장 긴 날 = 날마다 저녁의 goalStreak 중 가장 큰 값
+      let plain = 0
+      for (let d = 1; d <= 25; d++) plain = Math.max(plain, goalStreak(records, kst(`2026-10-${String(d).padStart(2, '0')}T20:00:00`)))
+      expect(bestStreak(records)).toBeGreaterThanOrEqual(plain)
+    }
+  })
+
+  test('말랑이 한마디의 이어 온 날', () => {
+    const lines = chatLines({ records: rs, stageProgress: 0, skills: [], now, lastSeen: now - 60_000 })
+    expect(lines.find((l) => l.kind === 'streak')?.text).toBe('🔥 10일째 같이 하는 중!')
+  })
+
+  test('곧 받을 보상의 이어 하기 업적은 쉼표로 이어 온 날부터 센다', () => {
+    // 1~28일 중 20일만 빠짐: 쉼표로 28일(쉼표 없이는 8일)
+    const records = run(1, 28, [20])
+    const rewards = upcomingRewards({ records, stageProgress: 0, skills: [], now: kst('2026-10-28T20:00:00') })
+    const streak = rewards.find((r) => r.kind === 'achievement')!
+    expect(streak).toMatchObject({ value: 28, goal: 30, need: '2일 더 이어 하기' })
   })
 })

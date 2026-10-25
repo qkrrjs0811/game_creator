@@ -2,7 +2,8 @@ import Phaser from 'phaser'
 import './style.css'
 import { HomeScene, HOME_READY } from './game/HomeScene'
 import { computeProgress, dayKey, todayStatus } from './core/progression'
-import { goalStreak, stampCalendar, stampCount, todayGoal } from './core/goal'
+import { stampCalendar, stampCount, todayGoal } from './core/goal'
+import { restStreak } from './core/rest'
 import { weekGoal } from './core/week'
 import { missionStars, todayMission } from './core/mission'
 import { historyPage, recordSummary } from './core/history'
@@ -176,7 +177,7 @@ const skills = createSkills(app, {
     const board = {
       calendar: stampCalendar(records, now),
       stamps: stampCount(records),
-      streak: goalStreak(records, now),
+      streak: restStreak(records, now).streak,
       week: weekGoal(records, now),
       missions: missionStars(records),
     }

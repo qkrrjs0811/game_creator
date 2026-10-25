@@ -1,7 +1,7 @@
 import { ACTIVITIES } from './activities'
 import { goalDays } from './goal'
 import { dayMinutes } from './history'
-import { dayKey } from './progression'
+import { restStreak } from './rest'
 import type { ActivityId, ActivityRecord, SaveData } from './types'
 
 /**
@@ -81,19 +81,13 @@ export function titleName(titleId: string): string | null {
   return ACHIEVEMENTS.find((a) => a.titleId === titleId)?.titleName ?? null
 }
 
-/** 하루 목표를 채운 날이 가장 길게 이어진 날 수. 끊겨도 내려가지 않는다 */
+/** 하루 목표를 채운 날이 쉼표로 지킨 날까지 넣어 가장 길게 이어진 날 수. 끊겨도 내려가지 않는다 */
 export function bestStreak(records: ActivityRecord[]): number {
-  const days = goalDays(records)
-  let best = 0
-  for (const key of days) {
-    const [y, m, d] = key.split('-').map(Number)
-    // 이어진 줄의 첫날에서만 센다
-    if (days.has(dayKey(new Date(y, m - 1, d - 1).getTime()))) continue
-    let length = 0
-    while (days.has(dayKey(new Date(y, m - 1, d + length).getTime()))) length++
-    best = Math.max(best, length)
-  }
-  return best
+  const days = [...goalDays(records)].sort()
+  if (days.length === 0) return 0
+  // 가장 긴 줄은 도장 찍은 날에서 끝나므로 마지막 도장 날까지만 따라가면 된다
+  const [y, m, d] = days[days.length - 1].split('-').map(Number)
+  return restStreak(records, new Date(y, m - 1, d, 12).getTime()).best
 }
 
 export interface AchievementProgress extends Achievement {

@@ -3,10 +3,11 @@ import { achievementProgress, ACHIEVEMENTS, type Achievement } from './achieveme
 import { stageMinutesToWin } from './coach'
 import { chapterCosmetic, MISSION_COSMETICS, STAMP_COSMETICS, WEEK_COSMETICS, type Cosmetic } from './cosmetics'
 import { STAGES_PER_CHAPTER } from './endless'
-import { goalStreak, stampCount } from './goal'
+import { stampCount } from './goal'
 import { GROWTH_STAGES, growthStage } from './look'
 import { missionStars } from './mission'
 import { computeProgress, EXP_PER_MINUTE, expToNext } from './progression'
+import { restStreak } from './rest'
 import type { ActivityRecord } from './types'
 import { doneWeeks } from './week'
 
@@ -65,7 +66,7 @@ const prevGoal = (a: Achievement) =>
   Math.max(0, ...ACHIEVEMENTS.filter((b) => b.kind === a.kind && b.activity === a.activity && b.goal < a.goal).map((b) => b.goal))
 
 function nearestAchievement(records: ActivityRecord[], now: number): UpcomingReward | null {
-  const streak = goalStreak(records, now)
+  const streak = restStreak(records, now).streak
   let best: UpcomingReward | null = null
   for (const a of achievementProgress(records)) {
     if (a.done) continue

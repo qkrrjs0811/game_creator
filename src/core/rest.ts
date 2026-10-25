@@ -16,6 +16,8 @@ export interface RestStreak {
   toNextRest: number
   /** 쉼표로 지킨 날의 YYYY-MM-DD 키(날짜순) */
   restedDays: string[]
+  /** 쉼표로 지킨 날까지 넣어 가장 길게 이어 온 날 수(끊겨도 내려가지 않음) */
+  best: number
 }
 
 const nextDay = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate() + 1)
@@ -27,7 +29,7 @@ const nextDay = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate()
  */
 export function restStreak(records: ActivityRecord[], now: number): RestStreak {
   const days = goalDays(records)
-  const result: RestStreak = { streak: 0, rests: 0, toNextRest: REST_EVERY_STAMPS, restedDays: [] }
+  const result: RestStreak = { streak: 0, rests: 0, toNextRest: REST_EVERY_STAMPS, restedDays: [], best: 0 }
   if (days.size === 0) return result
   const todayKey = dayKey(now)
   const first = [...days].sort()[0]
@@ -37,6 +39,7 @@ export function restStreak(records: ActivityRecord[], now: number): RestStreak {
   for (let key = dayKey(cursor.getTime()); key <= todayKey; cursor = nextDay(cursor), key = dayKey(cursor.getTime())) {
     if (days.has(key)) {
       result.streak++
+      result.best = Math.max(result.best, result.streak)
       counter++
       if (counter === REST_EVERY_STAMPS) {
         counter = 0

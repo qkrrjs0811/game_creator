@@ -1,8 +1,9 @@
 import { ACTIVITIES } from './activities'
 import { winnableStages } from './coach'
-import { goalStreak, todayGoal } from './goal'
+import { todayGoal } from './goal'
 import { todayMission } from './mission'
 import { computeProgress } from './progression'
+import { restStreak } from './rest'
 import { upcomingRewards, type RewardKind, type UpcomingReward } from './rewards'
 import type { ActivityRecord } from './types'
 import { weekGoal } from './week'
@@ -99,7 +100,7 @@ export function chatLines({ records, stageProgress, skills, now, lastSeen }: Cha
   const minutes = computeProgress(records).creditedMinutes
   if (winnableStages(minutes, skills, stageProgress, 1) > 0) lines.push({ kind: 'winnable', text: '🍀 이길 만한 곳이 있어!' })
 
-  const streak = goalStreak(records, now)
+  const streak = restStreak(records, now).streak
   if (streak > 0) {
     lines.push({ kind: 'streak', text: goal.done ? `🔥 ${streak}일째 같이 하는 중!` : `🔥 오늘 하면 ${streak + 1}일째야!` })
   }
