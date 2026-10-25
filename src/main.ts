@@ -3,6 +3,7 @@ import './style.css'
 import { HomeScene, HOME_READY } from './game/HomeScene'
 import { computeProgress, dayKey, todayStatus } from './core/progression'
 import { stampCalendar, stampCount, todayGoal } from './core/goal'
+import { lastWeekLetter, letterNow, parseSeenLetter } from './core/letter'
 import { parseSeenRests, restEarnedNow, restStreak, restedInMonth, restText } from './core/rest'
 import { weekGoal } from './core/week'
 import { missionStars, todayMission } from './core/mission'
@@ -31,7 +32,7 @@ import { cosmeticCatalog, ownedCosmetics, toggleWear, wornCosmetics } from './co
 import { createCosmetics } from './ui/cosmetics'
 import { statRows } from './core/stats'
 import { nextStageAdvice, stageMinutesToWin, winnableStages } from './core/coach'
-import { achievementToast, autoRunCard, awayAdventure, awayCard, dexNewText, formatMinutes, sessionSummary } from './ui/format'
+import { achievementToast, autoRunCard, awayAdventure, awayCard, dexNewText, formatMinutes, letterCard, sessionSummary } from './ui/format'
 import { autoRun } from './core/autorun'
 import { awaySummary, shouldShowAway } from './core/away'
 import { sessionGain } from './core/gain'
@@ -160,6 +161,9 @@ const settings = createSettings(app, {
     stageQuiet = true
     // 백업으로 들어온 쉼표는 새로 얻은 것으로 알리지 않는다
     writeKey(SEEN_RESTS_KEY, String(restStreak(save.records, Date.now()).earned))
+    // 백업으로 들어온 지난주 기록도 편지로 다시 띄우지 않는다
+    const letter = lastWeekLetter(save.records, Date.now())
+    if (letter) writeKey(SEEN_LETTER_KEY, letter.week)
     render()
   },
 })
@@ -484,6 +488,17 @@ function rememberMissionDay(day: string) {
 // 이미 알린(얻은) 쉼표 수. 처음 여는 창이면 지금 수를 기억만 한다
 const SEEN_RESTS_KEY = `${SAVE_KEY}:seen-rests`
 
+// 지난주 편지를 띄운 주(월요일). 처음 여는 창이면 지금 편지의 주를 기억만 한다
+const SEEN_LETTER_KEY = `${SAVE_KEY}:seen-letter`
+
+/** 새 주에 처음 열면 지난주 편지를 한 번 띄운다(다른 창이 먼저 띄웠으면 건너뛰게 저장소에서 읽는다). 계산만 한다 */
+function checkLetter(now: number) {
+  const letter = lastWeekLetter(liveRecords(save, now), now)
+  const r = letterNow(letter?.week ?? null, parseSeenLetter(readKey(SEEN_LETTER_KEY)))
+  if (r.remember !== null) writeKey(SEEN_LETTER_KEY, r.remember)
+  if (r.show) hud.showLetter(letterCard(letter!))
+}
+
 // 이미 알린 업적 id. 처음 여는 창(null)이면 기존 기록으로 닿아 있던 업적을 묶어 한 번만 알린다
 const SEEN_ACHIEVEMENTS_KEY = `${SAVE_KEY}:seen-achievements`
 
@@ -667,6 +682,7 @@ new ResizeObserver(() => {
 }).observe(hud.sceneHost)
 
 checkAway(Date.now())
+checkLetter(Date.now())
 render()
 setInterval(render, 1000)
 // 설치한 앱과 브라우저 탭을 함께 열어도 오래된 창이 새 기록을 덮어쓰지 않게 저장을 따라간다
@@ -676,7 +692,10 @@ window.addEventListener('storage', (e) => {
 document.addEventListener('visibilitychange', () => {
   pullSave()
   // 앱을 끄지 않고 뒤로 보냈다가 돌아와도 자리 비운 동안을 보여 준다
-  if (document.visibilityState === 'visible') checkAway(Date.now())
+  if (document.visibilityState === 'visible') {
+    checkAway(Date.now())
+    checkLetter(Date.now())
+  }
   render()
 })
 window.__debug = { getSave: () => save }

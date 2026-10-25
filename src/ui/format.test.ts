@@ -1,6 +1,6 @@
 import { test, expect } from 'vitest'
 import { WINNABLE_MAX } from '../core/coach'
-import { autoRunCard, awayAdventure, awayCard, formatElapsed, formatMinutes, goalText, objectJosa, weekChip, weekDoneText, weekGoalText, sessionSummary, topicJosa, weekTotalText, bestDayText, dayDetail, pageRangeText, dexShadowText, dexNewText, missionChip, achievementValueText, farAchievementIds, achievementToast, focusText, focusChipLabel, focusDoneText } from './format'
+import { autoRunCard, awayAdventure, awayCard, formatElapsed, formatMinutes, goalText, objectJosa, weekChip, weekDoneText, weekGoalText, sessionSummary, topicJosa, weekTotalText, bestDayText, dayDetail, pageRangeText, dexShadowText, dexNewText, missionChip, achievementValueText, farAchievementIds, achievementToast, focusText, focusChipLabel, focusDoneText, letterCard } from './format'
 import { ACHIEVEMENTS, achievementProgress } from '../core/achievements'
 import { AUTO_RUN_MAX } from '../core/autorun'
 import type { Cosmetic } from '../core/cosmetics'
@@ -271,4 +271,36 @@ test('집중 목표 칩 글자는 없음 또는 N분', () => {
 test('집중 목표 달성 배지 글자', () => {
   expect(focusDoneText(25)).toBe('⏰ 목표 25분 채웠어요!')
   expect(focusDoneText(60)).toBe('⏰ 목표 60분 채웠어요!')
+})
+
+const letter = (over: object = {}) => ({
+  week: '2026-10-19',
+  total: 250,
+  prevTotal: 210,
+  diff: 40,
+  stamped: 5,
+  goal: 5,
+  goalDone: true,
+  minutes: { exercise: 150, study: 60, reading: 0, relax: 40 },
+  top: 'exercise' as const,
+  best: { key: '2026-10-21', minutes: 90 },
+  suggest: 'reading' as const,
+  suggestText: '이번 주엔 📚 독서도 해 볼까?',
+  ...over,
+})
+
+test('지난주 편지 카드: 합계와 지난번 차이, 도장, 가장 많이 한 활동·날, 권하는 한 줄', () => {
+  expect(letterCard(letter())).toEqual({
+    title: '💌 지난주 편지',
+    total: '지난주 4시간 10분 했어! · 지난번보다 +40분',
+    chips: ['🏅 도장 5일 · 목표 달성', '🏃 운동 2시간 30분', '📆 수요일 1시간 30분'],
+    suggest: '이번 주엔 📚 독서도 해 볼까?',
+  })
+})
+
+test('지난주 편지 카드: 그 전 주가 비면 견주지 않고, 줄었으면 나무라지 않음', () => {
+  expect(letterCard(letter({ prevTotal: 0, diff: 250 })).total).toBe('지난주 4시간 10분 했어!')
+  expect(letterCard(letter({ prevTotal: 250, diff: 0 })).total).toBe('지난주 4시간 10분 했어! · 지난번과 똑같아')
+  expect(letterCard(letter({ prevTotal: 300, diff: -50 })).total).toBe('지난주 4시간 10분 했어! · 수고했어')
+  expect(letterCard(letter({ stamped: 2, goalDone: false })).chips[0]).toBe('🌟 도장 2 / 5일')
 })

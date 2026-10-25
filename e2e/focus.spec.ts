@@ -143,9 +143,14 @@ test('닫아 둔 사이 집중 목표에 닿았으면 다시 열 때 오늘 도�
   // 같은 자리의 오늘 도장이 먼저 찍히고, 그게 사라진 뒤 목표 배지가 찍힌다(겹치지 않는다)
   await expect(page.getByTestId('stamp')).toBeVisible()
   await expect(badge).toBeHidden()
-  await page.clock.runFor(4500)
+  // 시계가 실제 시간으로도 흘러 검사가 느리면 3.5초 배지를 지나칠 수 있으므로 조금씩 넘기며 기다린다
+  await expect
+    .poll(async () => {
+      await page.clock.runFor(300)
+      return badge.isVisible()
+    })
+    .toBe(true)
   await expect(page.getByTestId('stamp')).toBeHidden()
-  await expect(badge).toBeVisible()
   await expect(badge).toHaveText('⏰ 목표 25분 채웠어요!')
   expect(await vibrated(page)).toBe(1)
   await page.screenshot({ path: 'test-results/screens/focus-done-away.png' })

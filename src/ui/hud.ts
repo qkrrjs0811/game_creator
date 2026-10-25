@@ -106,6 +106,13 @@ export function createHud(
         </div>
         <button type="button" class="toast-close" data-testid="away-close" aria-label="닫기">✕</button>
       </div>
+      <div class="away letter" data-testid="letter" role="status" hidden>
+        <b data-testid="letter-title"></b>
+        <span class="away-gain" data-testid="letter-total"></span>
+        <div class="away-chips" data-testid="letter-chips"></div>
+        <span class="letter-suggest" data-testid="letter-suggest"></span>
+        <button type="button" class="toast-close" data-testid="letter-close" aria-label="닫기">✕</button>
+      </div>
       <div class="toast" data-testid="cap-toast" role="status" hidden>
         <b>오늘은 충분히 했어요!</b>
         <span>오늘 경험치는 다 모았어요. 내일 또 만나요</span>
@@ -296,6 +303,36 @@ export function createHud(
   }
   const away = q('away')
   const hideAway = () => (away.hidden = true)
+  // 지난주 편지. 같은 자리(장면 위쪽)의 자리 비운 동안 카드·레벨업 배지가 사라진 뒤에 띄우고, 닫기 전까지 남는다
+  const letter = q('letter')
+  let letterTimer: ReturnType<typeof setTimeout> | undefined
+  let letterNext: { title: string; total: string; chips: string[]; suggest: string } | null = null
+  const popLetter = () => {
+    clearTimeout(letterTimer)
+    const c = letterNext
+    if (!c) return
+    if (!levelUp.hidden || !away.hidden) {
+      letterTimer = setTimeout(popLetter, 600)
+      return
+    }
+    q('letter-title').textContent = c.title
+    q('letter-total').textContent = c.total
+    q('letter-chips').replaceChildren(
+      ...c.chips.map((t) => {
+        const chip = document.createElement('em')
+        chip.textContent = t
+        return chip
+      }),
+    )
+    q('letter-suggest').textContent = c.suggest
+    letter.hidden = true
+    void letter.offsetWidth
+    letter.hidden = false
+  }
+  q('letter-close').addEventListener('click', () => {
+    letterNext = null
+    letter.hidden = true
+  })
   const achieve = q('achievement-toast')
   let achieveTimer: ReturnType<typeof setTimeout> | undefined
   // 떠 있는(또는 기다리는) 업적 알림. 레벨업이 끼어들면 다시 기다렸다 띄운다
@@ -309,7 +346,7 @@ export function createHud(
     const t = achieveNext
     if (!t) return
     // 같은 자리(장면 위쪽)의 레벨업 배지나 자리 비운 동안 카드가 떠 있으면 그게 사라진 뒤에 띄운다
-    if (!levelUp.hidden || !away.hidden) {
+    if (!levelUp.hidden || !away.hidden || !letter.hidden) {
       achieveTimer = setTimeout(popAchievement, 600)
       return
     }
@@ -494,6 +531,16 @@ export function createHud(
       away.hidden = true
       void away.offsetWidth
       away.hidden = false
+      // 편지가 떠 있었으면 이 카드를 닫은 뒤 다시 띄운다(겹치지 않게)
+      if (!letter.hidden) {
+        letter.hidden = true
+        popLetter()
+      }
+    },
+    /** 새 주에 처음 열면 지난주 편지를 장면 위쪽에 띄운다. 닫기 전까지 남는다 */
+    showLetter(c: { title: string; total: string; chips: string[]; suggest: string }) {
+      letterNext = c
+      popLetter()
     },
     /** 레벨이 오른 순간 축하 배지를 띄우고 레벨 글자를 통통 튀게 한다. 받은 스킬 포인트는 "나" 탭으로 안내한다 */
     showLevelUp(newLevel: number, points: number) {
@@ -512,6 +559,11 @@ export function createHud(
         levelUp.hidden = true
         level.classList.remove('pop')
       }, 3500)
+      // 편지가 떠 있었으면 잠깐 내리고 레벨업 배지가 사라진 뒤 다시 띄운다
+      if (!letter.hidden) {
+        letter.hidden = true
+        popLetter()
+      }
       // 업적 알림이 떠 있었으면 잠깐 내리고 레벨업 배지가 사라진 뒤 다시 띄운다(겹치지 않게)
       if (!achieve.hidden) {
         setAchieveShown(false)
