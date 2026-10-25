@@ -350,6 +350,55 @@ body {
   white-space: nowrap;
 }
 .goal-week.done { background: #ffe1a6; color: var(--accent); }
+/* 시작 버튼과 오늘의 다짐을 한 줄에. 다짐이 들어서도 카드가 높아지지 않아 장면이 줄지 않는다 */
+.toggle-row { display: flex; align-items: stretch; gap: 8px; }
+.toggle-row .toggle { flex: none; padding: 12px 22px; }
+/* 오늘의 다짐: 하늘색 알약. 누르면 고르기 창, 진행은 바탕이 차오르고, 채운 뒤엔 누를 수 없다 */
+.pledge-line {
+  --pledge: 0%;
+  flex: 1;
+  min-width: 0;
+  /* 높이는 시작 버튼에 맞춘다(카드가 높아지지 않게) */
+  min-height: 44px;
+  box-sizing: border-box;
+  padding: 0 8px;
+  border: 2px dashed #a9cdee;
+  border-radius: 999px;
+  background: #eef6ff;
+  color: #3f6f9c;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+}
+.pledge-line.set {
+  border-style: solid;
+  background: linear-gradient(90deg, #c9e2fb var(--pledge), #eef6ff var(--pledge));
+}
+.pledge-line.done, .pledge-line:disabled { border: 2px solid #8fd0b4; background: #dff5ea; color: #2f8a63; cursor: default; opacity: 1; }
+.pledge-text { white-space: nowrap; }
+/* 다짐 고르기 창 */
+.pledge-label { margin: 4px 0 -4px; font-size: 13px; font-weight: 700; color: var(--ink-soft); text-align: left; }
+.pledge-row { display: flex; gap: 8px; margin: 8px 0; }
+.pledge-pick {
+  flex: 1;
+  min-height: 48px;
+  border: 2px solid transparent;
+  border-radius: 999px;
+  background: #fff;
+  color: var(--ink);
+  font: inherit;
+  font-size: 15px;
+  font-weight: 700;
+  box-shadow: 0 3px 0 var(--track);
+  cursor: pointer;
+}
+.pledge-pick.on { background: #e3f0ff; border-color: #7fb6ea; color: #3f6f9c; }
+.pledge-pick:disabled { opacity: 0.4; cursor: default; }
+.pledge-hint { min-height: 20px; margin: 4px 0 10px; font-weight: 700; color: #3f6f9c; }
+.sheet.pledge .sheet-btn { width: 100%; }
+.sheet.pledge .sheet-btn:disabled { opacity: 0.45; }
 /* 주간 도장은 오늘 도장보다 노랗게, 반대로 기운다 */
 .stamp.week-stamp {
   background: #ffc94d;

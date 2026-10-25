@@ -1,4 +1,5 @@
-import { focusChipLabel, focusDoneText, focusText, formatElapsed, goalText, missionChip, objectJosa, topicJosa, weekChip } from './format'
+import { focusChipLabel, focusDoneText, focusText, formatElapsed, goalText, missionChip, objectJosa, pledgeText, topicJosa, weekChip } from './format'
+import type { PledgeProgress } from '../core/pledge'
 import { ACTIVITIES } from '../core/activities'
 import { FOCUS_TARGETS, type FocusProgress } from '../core/focus'
 import type { TodayGoal } from '../core/goal'
@@ -35,6 +36,8 @@ export interface HudView {
   focusTarget: number
   /** 켜 둔 타이머의 집중 목표 진행. 목표 없이 켰거나 꺼져 있으면 null */
   focus: FocusProgress | null
+  /** 오늘의 다짐 진행. 다짐이 없으면 null */
+  pledge: PledgeProgress | null
 }
 
 /** 활동마다 타이머 카드에 쓰는 안내 */
@@ -67,6 +70,8 @@ export function createHud(
   onAchievementShown: (shown: boolean) => void = () => {},
   /** 켜기 전 집중 목표 칩을 골랐을 때(분, 0 = 없음) */
   onFocus: (minutes: number) => void = () => {},
+  /** 오늘의 다짐 줄을 눌렀을 때(채우기 전에만) */
+  onPledge: () => void = () => {},
 ) {
   root.innerHTML = `
     <header class="top">
@@ -156,7 +161,12 @@ export function createHud(
           (m) => `<button type="button" class="focus-chip" data-testid="focus-${m}" data-minutes="${m}">${focusChipLabel(m)}</button>`,
         ).join('')}
       </div>
-      <button class="toggle" data-testid="toggle" type="button">운동 시작</button>
+      <div class="toggle-row">
+        <button class="toggle" data-testid="toggle" type="button">운동 시작</button>
+        <button type="button" class="pledge-line" data-testid="pledge">
+          <span class="pledge-text" data-testid="pledge-text"></span>
+        </button>
+      </div>
     </section>
     <nav class="tabs">
       ${TABS.map((t) => {
@@ -211,6 +221,9 @@ export function createHud(
   const focusLive = q('focus-live')
   const focusLabel = q('focus-text')
   const focusBar = q('focus-bar')
+  const pledgeLine = q('pledge') as HTMLButtonElement
+  const pledgeLabel = q('pledge-text')
+  pledgeLine.addEventListener('click', onPledge)
   const activityTabs = [...root.querySelectorAll<HTMLElement>('[data-activity]')]
   for (const tab of activityTabs) tab.addEventListener('click', () => onSelect(tab.dataset.activity as ActivityId))
   const toastDetail = toast.querySelector('span')!
@@ -462,6 +475,13 @@ export function createHud(
       goalWeek.classList.toggle('done', v.week.done)
       mission.textContent = missionChip(v.mission)
       mission.classList.toggle('done', v.mission.done)
+      // 다짐은 채우기 전까지만 바꿀 수 있어 채운 뒤엔 누를 수 없게 한다
+      pledgeLabel.textContent = pledgeText(v.pledge)
+      // 진행은 버튼 바탕이 왼쪽부터 차오르는 것으로 보여 준다(줄이 늘지 않게)
+      pledgeLine.style.setProperty('--pledge', `${(v.pledge?.ratio ?? 0) * 100}%`)
+      pledgeLine.classList.toggle('set', v.pledge !== null)
+      pledgeLine.classList.toggle('done', v.pledge?.done ?? false)
+      pledgeLine.disabled = v.pledge?.done ?? false
     },
     /** 새로 닿은 업적을 장면 위쪽에 잠깐 알린다. 말랑이·버튼을 가리지 않게 누를 수 없는 작은 배지로 띄운다 */
     showAchievement(t: { title: string; detail: string }) {

@@ -40,6 +40,8 @@ import { sessionGain } from './core/gain'
 import { GROWTH_STAGES, grownStage, lookLine, malangLook, restoreSeenStage } from './core/look'
 import { chatLines } from './core/chatter'
 import { upcomingRewards } from './core/rewards'
+import { canChangePledge, parsePledge, pledgeOptions, pledgeProgress, serializePledge } from './core/pledge'
+import { createPledge } from './ui/pledge'
 import { focusCelebrateNow, focusProgress, focusTargetFor, parseFocusDefault, parseFocusGoal, serializeFocusGoal } from './core/focus'
 
 declare global {
@@ -123,6 +125,11 @@ const hud = createHud(
     writeKey(FOCUS_DEFAULT_KEY, String(minutes))
     render()
   },
+  () => {
+    pullSave()
+    const now = Date.now()
+    if (canChangePledge(parsePledge(readKey(PLEDGE_KEY), now), liveRecords(save, now), now)) pledgeSheet.open()
+  },
 )
 // 업적 알림이 떠 있는 동안 장면 말풍선이 비켜 준다(장면이 늦게 준비돼도 render에서 맞춘다)
 let achievementShown = false
@@ -169,6 +176,26 @@ const settings = createSettings(app, {
     writeKey(SEEN_BESTS_KEY, JSON.stringify(bestValues(personalBests(save.records, Date.now()))))
     // 백업으로 들어온 소품도 새로 얻은 것으로 알리지 않고 기억만 한다
     rememberProps(ownedPropIds(save.records))
+    render()
+  },
+})
+
+// 오늘의 다짐: 고른 활동·분을 저장 원본 밖 보조 키에 둔다. 채움은 기록의 인정 분으로만 센다
+const PLEDGE_KEY = `${SAVE_KEY}:pledge`
+const pledgeSheet = createPledge(app, {
+  view() {
+    const now = Date.now()
+    const records = liveRecords(save, now)
+    return { pledge: parsePledge(readKey(PLEDGE_KEY), now), selected, options: (a) => pledgeOptions(records, a, now) }
+  },
+  onPledge(activity, minutes) {
+    pullSave()
+    const now = Date.now()
+    const records = liveRecords(save, now)
+    // 창을 연 사이 채웠거나 고를 수 없게 됐으면 바꾸지 않는다
+    if (!canChangePledge(parsePledge(readKey(PLEDGE_KEY), now), records, now)) return render()
+    if (!pledgeOptions(records, activity, now).includes(minutes)) return render()
+    writeKey(PLEDGE_KEY, serializePledge({ day: dayKey(now), activity, minutes }))
     render()
   },
 })
@@ -700,6 +727,7 @@ function render() {
     title: wornTitle({ records, worn: save.worn })?.titleName ?? null,
     focusTarget: focusDefault,
     focus,
+    pledge: pledgeProgress(parsePledge(readKey(PLEDGE_KEY), now), records, now),
   })
   skills.refresh()
   paintBackdrop()
