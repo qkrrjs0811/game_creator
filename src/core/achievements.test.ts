@@ -1,5 +1,5 @@
 import { describe, test, expect } from 'vitest'
-import { ACHIEVEMENTS, achievementProgress, achievedIds, bestStreak, titleName } from './achievements'
+import { ACHIEVEMENTS, achievementProgress, achievedIds, bestStreak, parseSeenAchievements, titleName, unseenAchievements } from './achievements'
 import { computeProgress } from './progression'
 import type { ActivityId, ActivityRecord } from './types'
 
@@ -144,5 +144,31 @@ describe('업적 진행', () => {
     achievementProgress(records)
     expect(records).toEqual(copy)
     expect(computeProgress(records)).toEqual(before)
+  })
+})
+
+describe('본 업적 기억', () => {
+  test('저장된 값이 없으면 null(처음 여는 창)', () => {
+    expect(parseSeenAchievements(null)).toBeNull()
+  })
+
+  test('본 업적 id 목록을 읽는다', () => {
+    expect(parseSeenAchievements('["exercise-1","stamps-10"]')).toEqual(['exercise-1', 'stamps-10'])
+    expect(parseSeenAchievements('[]')).toEqual([])
+  })
+
+  test('깨진 값이나 배열이 아닌 값은 null, 글자가 아닌 칸은 버린다', () => {
+    expect(parseSeenAchievements('{oops')).toBeNull()
+    expect(parseSeenAchievements('{"a":1}')).toBeNull()
+    expect(parseSeenAchievements('["exercise-1",3,null]')).toEqual(['exercise-1'])
+  })
+
+  test('아직 알리지 않은 업적만 목록 순서대로 고른다', () => {
+    expect(unseenAchievements(['exercise-1', 'study-1', 'stamps-10'], ['study-1'])).toEqual(['exercise-1', 'stamps-10'])
+    expect(unseenAchievements(['exercise-1'], ['exercise-1', 'study-1'])).toEqual([])
+  })
+
+  test('처음 여는 창(null)은 이미 닿은 업적을 모두 한 번에 알린다', () => {
+    expect(unseenAchievements(['exercise-1', 'study-1'], null)).toEqual(['exercise-1', 'study-1'])
   })
 })

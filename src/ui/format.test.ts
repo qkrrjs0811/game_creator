@@ -1,6 +1,6 @@
 import { test, expect } from 'vitest'
 import { WINNABLE_MAX } from '../core/coach'
-import { autoRunCard, awayAdventure, awayCard, formatElapsed, formatMinutes, goalText, objectJosa, weekChip, weekDoneText, weekGoalText, sessionSummary, topicJosa, weekTotalText, bestDayText, dayDetail, pageRangeText, dexShadowText, dexNewText, missionChip, achievementValueText, farAchievementIds } from './format'
+import { autoRunCard, awayAdventure, awayCard, formatElapsed, formatMinutes, goalText, objectJosa, weekChip, weekDoneText, weekGoalText, sessionSummary, topicJosa, weekTotalText, bestDayText, dayDetail, pageRangeText, dexShadowText, dexNewText, missionChip, achievementValueText, farAchievementIds, achievementToast } from './format'
 import { ACHIEVEMENTS, achievementProgress } from '../core/achievements'
 import { AUTO_RUN_MAX } from '../core/autorun'
 import type { Cosmetic } from '../core/cosmetics'
@@ -235,4 +235,14 @@ test('먼 업적: 같은 줄(활동·종류)에서 아직 못 닿은 첫 업적 
   expect(far2.has('exercise-1')).toBe(false)
   expect(far2.has('exercise-10')).toBe(false)
   expect(far2.has('exercise-50')).toBe(true)
+})
+
+test('업적 달성 알림: 하나면 업적 이름과 칭호, 여럿이면 묶어서 하나만', () => {
+  expect(achievementToast(['exercise-1'])).toEqual({ title: '🏆 업적 달성!', detail: '운동 1시간 · 🏅 땀방울 새싹' })
+  expect(achievementToast(['exercise-1', 'study-1', 'stamps-10'])).toEqual({
+    title: '🏆 업적 3개 달성!',
+    detail: '🏅 땀방울 새싹 외 칭호 2개',
+  })
+  expect(achievementToast(['nope'])).toBeNull()
+  expect(achievementToast([])).toBeNull()
 })

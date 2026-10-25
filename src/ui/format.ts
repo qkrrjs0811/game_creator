@@ -9,7 +9,7 @@ import type { TodayMission } from '../core/mission'
 import type { BestDay, HistoryDay, WeekTotals } from '../core/history'
 import { WINNABLE_MAX } from '../core/coach'
 import { AUTO_RUN_MAX, type AutoRun } from '../core/autorun'
-import type { AchievementProgress } from '../core/achievements'
+import { ACHIEVEMENTS, type AchievementProgress } from '../core/achievements'
 
 const pad =(n: number) => String(n).padStart(2, '0')
 
@@ -237,4 +237,12 @@ export function farAchievementIds(list: AchievementProgress[]): Set<string> {
     else next.add(line)
   }
   return far
+}
+
+/** 새로 닿은 업적 알림 글자. 여럿이면(처음 열 때 기존 기록 등) 묶어서 하나로 보여 준다 */
+export function achievementToast(ids: string[]): { title: string; detail: string } | null {
+  const list = ids.map((id) => ACHIEVEMENTS.find((a) => a.id === id)).filter((a) => a !== undefined)
+  if (list.length === 0) return null
+  if (list.length === 1) return { title: '🏆 업적 달성!', detail: `${list[0].label} · 🏅 ${list[0].titleName}` }
+  return { title: `🏆 업적 ${list.length}개 달성!`, detail: `🏅 ${list[0].titleName} 외 칭호 ${list.length - 1}개` }
 }

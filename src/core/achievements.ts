@@ -120,6 +120,23 @@ export function achievementProgress(records: ActivityRecord[]): AchievementProgr
   })
 }
 
+/** 보조 키에 남긴 이미 알린 업적 id 목록. 없거나 깨졌으면 null(처음 여는 창으로 본다) */
+export function parseSeenAchievements(raw: string | null): string[] | null {
+  if (raw === null) return null
+  try {
+    const list: unknown = JSON.parse(raw)
+    return Array.isArray(list) ? list.filter((id): id is string => typeof id === 'string') : null
+  } catch {
+    return null
+  }
+}
+
+/** 달성했지만 아직 알리지 않은 업적 id. 처음 여는 창(seen = null)이면 이미 닿은 것을 모두 묶어 한 번에 알린다 */
+export function unseenAchievements(achieved: string[], seen: string[] | null): string[] {
+  const known = new Set(seen ?? [])
+  return achieved.filter((id) => !known.has(id))
+}
+
 /** 달성한 업적 id(목록 순서) */
 export function achievedIds(records: ActivityRecord[]): string[] {
   return achievementProgress(records)

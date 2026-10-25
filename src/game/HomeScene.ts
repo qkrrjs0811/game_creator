@@ -138,6 +138,7 @@ export class HomeScene extends Phaser.Scene {
   private bubble!: Phaser.GameObjects.Container
   private bubbleText!: Phaser.GameObjects.Text
   private bubbleBg!: Phaser.GameObjects.Graphics
+  private bubbleAway = false
   private jump?: Phaser.Tweens.Tween
   /** 숨쉬기(쉬는 중) 또는 꾹꾹 누르기(운동 중) 움직임 */
   private breathe?: Phaser.Tweens.Tween
@@ -212,6 +213,16 @@ export class HomeScene extends Phaser.Scene {
     this.bubbleBg.clear().fillStyle(0xffffff).fillRoundedRect(-w / 2 - 12, -15, w + 24, 30, 15)
     // e2e가 말랑이 기분을 볼 수 있게 남긴다
     this.game.canvas.parentElement?.setAttribute('data-mood', this.mood)
+  }
+
+  /** 업적 알림이 장면 위쪽에 떠 있는 동안 말풍선이 자리를 비켜 준다. 모습만 바뀐다 */
+  setBubbleAway(away: boolean) {
+    if (this.bubbleAway === away) return
+    this.bubbleAway = away
+    // 전투 중에는 말풍선이 이미 숨어 있고, 끝날 때 맞춰진다
+    if (!this.bubble || this.battle) return
+    this.tweens.killTweensOf(this.bubble)
+    this.tweens.add({ targets: this.bubble, alpha: away ? 0 : 1, duration: 200 })
   }
 
   /** 레벨업: 마스코트가 폴짝 뛰고 파스텔 색종이가 터진다. 말풍선은 축하 배지에 자리를 비켜 준다 */
@@ -347,7 +358,7 @@ export class HomeScene extends Phaser.Scene {
     if (this.homeLook) this.setMonster(this.homeLook)
     this.layout(this.scale.width, this.scale.height)
     this.idle()
-    this.tweens.add({ targets: this.bubble, alpha: 1, duration: 300 })
+    this.tweens.add({ targets: this.bubble, alpha: this.bubbleAway ? 0 : 1, duration: 300 })
   }
 
   /** 말랑이에게 입은 꾸미기(모자·색)를 입힌다. 모습만 바뀐다 */

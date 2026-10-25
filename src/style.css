@@ -117,6 +117,30 @@ body {
   font-weight: 700;
   white-space: nowrap;
 }
+/* 새로 닿은 업적. 레벨업 배지 자리(장면 위쪽)에 잠깐 띄우고 누르는 데 방해하지 않는다 */
+.achieve-toast {
+  position: absolute;
+  top: 12px;
+  left: 50%;
+  z-index: 4;
+  max-width: calc(100% - 24px);
+  padding: 10px 24px;
+  border-radius: 999px;
+  background: #ffe1a6;
+  color: var(--ink);
+  box-shadow: 0 4px 0 #f2c46d;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  white-space: nowrap;
+  transform: translateX(-50%);
+  animation: levelup-pop 0.6s cubic-bezier(0.2, 1.6, 0.4, 1);
+  pointer-events: none;
+}
+.achieve-toast[hidden] { display: none; }
+.achieve-toast b { font-size: 18px; color: #c9771f; }
+.achieve-toast span { font-size: 13px; font-weight: 700; overflow: hidden; text-overflow: ellipsis; }
 /* 다시 열 때 자리 비운 동안 늘어난 것. 레벨업 배지 자리(장면 위쪽)에 띄워 말랑이·버튼을 가리지 않는다 */
 .away {
   position: absolute;
@@ -778,6 +802,7 @@ body {
 .scene.in-battle .adventure { display: none; }
 /* 전투 중에 상한에 닿아도 안내가 전투 띠 버튼을 덮지 않게 한다(타이머 카드가 이미 알려 준다) */
 .scene.in-battle .toast,
+.scene.in-battle .achieve-toast,
 .scene.in-battle .away { display: none; }
 .battle-result {
   position: absolute;

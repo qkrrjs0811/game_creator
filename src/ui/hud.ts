@@ -56,6 +56,8 @@ export function createHud(
   onDress: () => void,
   onSelect: (activity: ActivityId) => void,
   onAutoRun: () => void,
+  /** 업적 알림이 뜨고 질 때(장면 말풍선이 비켜 주게) */
+  onAchievementShown: (shown: boolean) => void = () => {},
 ) {
   root.innerHTML = `
     <header class="top">
@@ -78,6 +80,10 @@ export function createHud(
         <b>레벨 업!</b>
         <span data-testid="levelup-level"></span>
         <small class="levelup-points" data-testid="levelup-points"></small>
+      </div>
+      <div class="achieve-toast" data-testid="achievement-toast" role="status" hidden>
+        <b data-testid="achievement-toast-title"></b>
+        <span data-testid="achievement-toast-detail"></span>
       </div>
       <div class="away" data-testid="away" role="status" hidden>
         <b data-testid="away-title"></b>
@@ -204,6 +210,33 @@ export function createHud(
   }
   const away = q('away')
   const hideAway = () => (away.hidden = true)
+  const achieve = q('achievement-toast')
+  let achieveTimer: ReturnType<typeof setTimeout> | undefined
+  // 떠 있는(또는 기다리는) 업적 알림. 레벨업이 끼어들면 다시 기다렸다 띄운다
+  let achieveNext: { title: string; detail: string } | null = null
+  const setAchieveShown = (shown: boolean) => {
+    achieve.hidden = !shown
+    onAchievementShown(shown)
+  }
+  const popAchievement = () => {
+    clearTimeout(achieveTimer)
+    const t = achieveNext
+    if (!t) return
+    // 같은 자리(장면 위쪽)의 레벨업 배지나 자리 비운 동안 카드가 떠 있으면 그게 사라진 뒤에 띄운다
+    if (!levelUp.hidden || !away.hidden) {
+      achieveTimer = setTimeout(popAchievement, 600)
+      return
+    }
+    q('achievement-toast-title').textContent = t.title
+    q('achievement-toast-detail').textContent = t.detail
+    achieve.hidden = true
+    void achieve.offsetWidth
+    setAchieveShown(true)
+    achieveTimer = setTimeout(() => {
+      achieveNext = null
+      setAchieveShown(false)
+    }, 4000)
+  }
   q('away-close').addEventListener('click', hideAway)
   // 이길 만한 스테이지가 있으면 카드에서 바로 모험 지도를 연다(카드는 닫는다)
   const awayGo = q('away-go')
@@ -256,6 +289,11 @@ export function createHud(
       goalWeek.classList.toggle('done', v.week.done)
       mission.textContent = missionChip(v.mission)
       mission.classList.toggle('done', v.mission.done)
+    },
+    /** 새로 닿은 업적을 장면 위쪽에 잠깐 알린다. 말랑이·버튼을 가리지 않게 누를 수 없는 작은 배지로 띄운다 */
+    showAchievement(t: { title: string; detail: string }) {
+      achieveNext = t
+      popAchievement()
     },
     /** 오늘의 미션을 채운 순간 같은 자리에 미션 도장을 찍는다 */
     showMissionDone: popMission,
@@ -348,6 +386,11 @@ export function createHud(
         levelUp.hidden = true
         level.classList.remove('pop')
       }, 3500)
+      // 업적 알림이 떠 있었으면 잠깐 내리고 레벨업 배지가 사라진 뒤 다시 띄운다(겹치지 않게)
+      if (!achieve.hidden) {
+        setAchieveShown(false)
+        popAchievement()
+      }
     },
   }
 }

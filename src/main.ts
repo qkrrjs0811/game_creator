@@ -6,12 +6,12 @@ import { goalStreak, stampCalendar, stampCount, todayGoal } from './core/goal'
 import { weekGoal } from './core/week'
 import { missionStars, todayMission } from './core/mission'
 import { historyPage, recordSummary } from './core/history'
-import { achievementProgress } from './core/achievements'
+import { achievedIds, achievementProgress, parseSeenAchievements, unseenAchievements } from './core/achievements'
 import { levelUpPoints, levelUpTo, restoreShownLevel } from './core/levelup'
 import { liveRecords, startSession, stopSession } from './core/session'
 import { backupFileName, exportBackup, importLosesProgress } from './core/backup'
 import { canPersist, loadSave, syncSave, writeSave, SAVE_KEY, type KV } from './core/storage'
-import type { ActivityId, SaveData } from './core/types'
+import type { ActivityId, ActivityRecord, SaveData } from './core/types'
 import { ACTIVITIES } from './core/activities'
 import { createHud } from './ui/hud'
 import { createSettings } from './ui/settings'
@@ -29,7 +29,7 @@ import { cosmeticCatalog, ownedCosmetics, toggleWear, wornCosmetics } from './co
 import { createCosmetics } from './ui/cosmetics'
 import { statRows } from './core/stats'
 import { nextStageAdvice, stageMinutesToWin, winnableStages } from './core/coach'
-import { autoRunCard, awayAdventure, awayCard, dexNewText, formatMinutes, sessionSummary } from './ui/format'
+import { achievementToast, autoRunCard, awayAdventure, awayCard, dexNewText, formatMinutes, sessionSummary } from './ui/format'
 import { autoRun } from './core/autorun'
 import { awaySummary, shouldShowAway } from './core/away'
 import { sessionGain } from './core/gain'
@@ -101,7 +101,13 @@ const hud = createHud(
     render()
   },
   () => startAutoRun(),
+  (shown) => {
+    achievementShown = shown
+    homeScene()?.setBubbleAway(shown)
+  },
 )
+// 업적 알림이 떠 있는 동안 장면 말풍선이 비켜 준다(장면이 늦게 준비돼도 render에서 맞춘다)
+let achievementShown = false
 
 // 설정 창은 HUD 뒤에 붙인다(HUD가 #app 내용을 새로 채우기 때문)
 const settings = createSettings(app, {
@@ -409,6 +415,24 @@ function rememberMissionDay(day: string) {
   }
 }
 
+// 이미 알린 업적 id. 처음 여는 창(null)이면 기존 기록으로 닿아 있던 업적을 묶어 한 번만 알린다
+const SEEN_ACHIEVEMENTS_KEY = `${SAVE_KEY}:seen-achievements`
+
+/** 새로 닿은 업적이 있으면 알리고 기억한다(다른 창에서 이미 알린 것은 건너뛴다). 보여 줄 값일 뿐이다 */
+function checkAchievements(records: ActivityRecord[]) {
+  const achieved = achievedIds(records)
+  const seen = parseSeenAchievements(readKey(SEEN_ACHIEVEMENTS_KEY))
+  const fresh = unseenAchievements(achieved, seen)
+  if (seen !== null && fresh.length === 0) return
+  try {
+    kv.setItem(SEEN_ACHIEVEMENTS_KEY, JSON.stringify([...new Set([...(seen ?? []), ...achieved])]))
+  } catch {
+    // 못 남기면 다음에 열 때 한 번 더 알릴 뿐이다
+  }
+  const toast = achievementToast(fresh)
+  if (toast) hud.showAchievement(toast)
+}
+
 // 마지막으로 화면을 본 시각. 한동안 닫아 뒀다가 다시 열면 그 사이 늘어난 것을 한 번 보여 준다
 const LAST_SEEN_KEY = `${SAVE_KEY}:last-seen`
 const storedSeen = Number(readKey(LAST_SEEN_KEY))
@@ -491,6 +515,7 @@ function render() {
     rememberMissionDay(dayKey(now))
     hud.showMissionDone()
   }
+  checkAchievements(records)
   hud.render({
     level: p.level,
     expIntoLevel: p.expIntoLevel,
@@ -513,6 +538,7 @@ function render() {
   homeScene()?.dress(wornCosmetics({ ...save, records }))
   // 상한을 채운 뒤에도 타이머가 켜져 있으면 말랑이가 그만 쉬자고 한다(모습만 바뀜)
   homeScene()?.setMood(live === null ? 'rest' : liveFull ? 'full' : live)
+  homeScene()?.setBubbleAway(achievementShown)
 }
 
 const game = new Phaser.Game({
