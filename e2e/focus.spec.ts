@@ -123,7 +123,16 @@ test('집중 목표에 닿는 순간 배지를 한 번 찍고 진동하며, 타�
   await page.getByTestId('toggle').click()
   await page.getByTestId('toggle').click()
   await page.clock.fastForward('15:00')
-  await expect(badge).toBeVisible()
+  // 오늘 운동이 30분을 넘어 오늘 도장이 먼저 찍히고, 그게 사라진 뒤 목표 배지가 찍힌다. 조금씩 넘기며 기다린다
+  await expect
+    .poll(
+      async () => {
+        await page.clock.runFor(300)
+        return badge.isVisible()
+      },
+      { timeout: 20_000 },
+    )
+    .toBe(true)
 })
 
 test('닫아 둔 사이 집중 목표에 닿았으면 다시 열 때 오늘 도장 다음에 한 번 찍는다', async ({ context }) => {
@@ -148,7 +157,7 @@ test('닫아 둔 사이 집중 목표에 닿았으면 다시 열 때 오늘 도�
     .poll(async () => {
       await page.clock.runFor(300)
       return badge.isVisible()
-    })
+    }, { timeout: 20_000 })
     .toBe(true)
   await expect(page.getByTestId('stamp')).toBeHidden()
   await expect(badge).toHaveText('⏰ 목표 25분 채웠어요!')

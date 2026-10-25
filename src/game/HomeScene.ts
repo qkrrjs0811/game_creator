@@ -9,6 +9,9 @@ import { stepSound } from '../core/sound'
 import { playSound } from '../ui/sound'
 import { contactAt, finishDelay, hitImpact, hpTrail, isFinalBlow, type Impact } from '../core/impact'
 import { skillFxSize, skillFxTiming, stepSkillFx, type SkillFxKind, type SkillStyle } from '../core/skillfx'
+import { BLINK_MS, HAPPY_MS, blinkGap, endFace, moodFace, pickFace, stepFace, type Face, type Mood } from '../core/face'
+
+export type { Mood } from '../core/face'
 
 const MASCOT = 0xffd7a8
 const MASCOT_SHADE = 0xf7b97a
@@ -83,8 +86,7 @@ function drawTraits(g: Phaser.GameObjects.Graphics, traits: ActivityId[]) {
     g.fillStyle(0xa8d4ff).fillTriangle(29, -16, 35, -16, 32, -24).fillCircle(32, -14, 3.6)
   }
   if (traits.includes('relax')) {
-    g.lineStyle(2.6, INK)
-    for (const x of [-12, 12]) g.beginPath().arc(x, -7, 5, Math.PI * 0.15, Math.PI * 0.85, false).strokePath()
+    // 졸린 눈은 표정(sleepy)이 그린다
     g.fillStyle(0xfff0a0).fillPoints(starPoints(42, -18, 7), true)
     g.fillStyle(0xffe07a).fillPoints(starPoints(48, -31, 4), true)
   }
@@ -98,6 +100,72 @@ function drawTraits(g: Phaser.GameObjects.Graphics, traits: ActivityId[]) {
     g.fillStyle(0xc7a6ff).fillRect(-30, -36, 6, 12).fillTriangle(-30, -24, -24, -24, -30, -20).fillTriangle(-24, -24, -24, -20, -30, -24)
     g.fillStyle(0x7cc576).fillEllipse(-23, -38, 16, 9)
     g.fillStyle(0xa6dc8e).fillEllipse(-31, -41, 12, 7)
+  }
+}
+
+/** 말랑이 표정. 눈(±12, -6)과 입(0, 5) 둘레에 그린다 */
+function drawFace(g: Phaser.GameObjects.Graphics, face: Face) {
+  const MOUTH = 0xd9665e
+  // 동그란 눈과 반짝임
+  const openEyes = () => {
+    for (const x of [-12, 12]) {
+      g.fillStyle(INK).fillEllipse(x, -6, 8.5, 11.5)
+      g.fillStyle(0xffffff).fillCircle(x - 1.6, -8.6, 1.9).fillCircle(x + 1.5, -3.6, 0.9)
+    }
+  }
+  // 웃는 눈(∩)과 감은 눈(∪)
+  const arcEyes = (up: boolean, y: number) => {
+    g.lineStyle(2.8, INK)
+    for (const x of [-12, 12]) {
+      g.beginPath()
+      if (up) g.arc(x, y + 3, 5, Math.PI * 1.15, Math.PI * 1.85, false)
+      else g.arc(x, y - 1, 5, Math.PI * 0.15, Math.PI * 0.85, false)
+      g.strokePath()
+    }
+  }
+  // 아래로 둥근 열린 입(D)
+  const openMouth = (w: number, h: number) => {
+    g.fillStyle(MOUTH).beginPath().arc(0, 3, w / 2, 0, Math.PI, false).closePath().fillPath()
+    g.fillStyle(0xff9fa8).fillEllipse(0, 3 + h * 0.55, w * 0.45, h * 0.35)
+  }
+  switch (face) {
+    case 'idle':
+      openEyes()
+      g.lineStyle(2.4, INK).beginPath().arc(0, 2, 5, Math.PI * 0.2, Math.PI * 0.8, false).strokePath()
+      return
+    case 'blink':
+      g.lineStyle(2.8, INK)
+      for (const x of [-12, 12]) g.lineBetween(x - 5, -5, x + 5, -5)
+      g.lineStyle(2.4, INK).beginPath().arc(0, 2, 5, Math.PI * 0.2, Math.PI * 0.8, false).strokePath()
+      return
+    case 'happy':
+      arcEyes(true, -6)
+      openMouth(12, 7)
+      return
+    case 'win':
+      arcEyes(true, -7)
+      openMouth(18, 10)
+      // 눈가의 작은 반짝임
+      g.fillStyle(0xffe07a).fillPoints(starPoints(-25, -16, 4), true).fillPoints(starPoints(25, -16, 4), true)
+      return
+    case 'hurt':
+      // > < 눈과 오므린 입
+      g.lineStyle(2.8, INK)
+      g.strokePoints([new Phaser.Math.Vector2(-17, -10), new Phaser.Math.Vector2(-9, -6), new Phaser.Math.Vector2(-17, -2)], false)
+      g.strokePoints([new Phaser.Math.Vector2(17, -10), new Phaser.Math.Vector2(9, -6), new Phaser.Math.Vector2(17, -2)], false)
+      g.fillStyle(MOUTH).fillEllipse(0, 7, 7, 8)
+      return
+    case 'focus':
+      openEyes()
+      // 올라간 눈썹과 꾹 다문 입
+      g.lineStyle(2.6, INK)
+      g.lineBetween(-17, -20, -7, -16).lineBetween(17, -20, 7, -16)
+      g.lineBetween(-4, 5, 4, 5)
+      return
+    case 'sleepy':
+      arcEyes(false, -6)
+      g.fillStyle(MOUTH).fillEllipse(0, 6, 5, 4)
+      return
   }
 }
 
@@ -370,8 +438,6 @@ const BODY_COLORS: Record<string, [number, number]> = {
   'color-week12': [0xd9c8f7, 0xbba4ea],
 }
 const CONFETTI =[0xff8a5b, 0xffd36b, 0x9be3c4, 0xa8d4ff, 0xffa8c8, 0xc9a7ff]
-/** 말랑이 기분: 쉬는 중(타이머 꺼짐), 같이 운동·공부·독서·휴식 중, 오늘 상한을 채워 쉬어도 되는 중 */
-export type Mood = 'rest' | 'exercise' | 'study' | 'reading' | 'relax' | 'full'
 /** 장면이 다 준비됐을 때 game.events로 보내는 신호 */
 export const HOME_READY = 'home-ready'
 const BUBBLES: Record<Mood, string> = {
@@ -410,6 +476,14 @@ export class HomeScene extends Phaser.Scene {
   private breathe?: Phaser.Tweens.Tween
   /** 타이머가 켜져 있으면 말랑이도 같이 운동한다. 오늘 상한을 채웠으면 쉬자고 한다 */
   private mood: Mood = 'rest'
+  /** 말랑이 얼굴(표정)만 다시 그리는 그림. 전투 중에는 battleFace를 따른다 */
+  private face?: Phaser.GameObjects.Graphics
+  private shownFace?: Face
+  private battleFace?: Face
+  private happyUntil = -Infinity
+  private blinkUntil = -Infinity
+  private nextBlinkAt = 0
+  private blinks = 0
   /** 쉬는 중 말풍선에 띄울 말랑이 한마디 후보(기록을 읽고 화면이 골라 준다)와 지금 보여 주는 자리 */
   private restLines: string[] = [BUBBLES.rest]
   private chatIndex = 0
@@ -482,6 +556,7 @@ export class HomeScene extends Phaser.Scene {
     this.input.on('pointerdown', (p: Phaser.Input.Pointer) => this.onTap(p.x, p.y))
 
     this.idle()
+    this.nextBlinkAt = this.time.now + 1500
     // 장면이 다 준비되면(RUNNING) 알린다. 그 전에 밀린 축하 등을 화면이 다시 그려 맞춘다
     this.events.once(Phaser.Scenes.Events.CREATE, () => this.game.events.emit(HOME_READY))
   }
@@ -514,6 +589,7 @@ export class HomeScene extends Phaser.Scene {
     if (!this.bubbleTap.contains(x, y) && !this.mascotTap.contains(x, y)) return
     this.chatIndex = nextChatIndex(this.chatIndex, this.restLines.length)
     this.drawBubble()
+    this.happyUntil = this.time.now + HAPPY_MS
     // 레벨업 폴짝 중에는 그대로 둔다
     if (this.jump?.isPlaying()) return
     this.hop?.stop()
@@ -676,6 +752,7 @@ export class HomeScene extends Phaser.Scene {
       onEnd,
       ended: false,
     }
+    this.battleFace = 'focus'
     this.game.canvas.parentElement?.setAttribute('data-final', '0')
     this.game.canvas.parentElement?.setAttribute('data-fainted', '')
     this.game.canvas.parentElement?.setAttribute('data-skill-fx', '')
@@ -705,6 +782,7 @@ export class HomeScene extends Phaser.Scene {
       bar.destroy()
     }
     this.battle = undefined
+    this.battleFace = undefined
     for (const who of [this.mascot, this.monster]) {
       this.tweens.killTweensOf(who)
       who.setAlpha(1).setScale(1).setAngle(0)
@@ -784,21 +862,36 @@ export class HomeScene extends Phaser.Scene {
     this.game.canvas.parentElement?.setAttribute('data-prop-box', box)
   }
 
-  /** 둥근 말랑이. 색 꾸미기는 몸 색을, 모자 꾸미기는 머리 위(y≈-38)를 꾸민다 */
+  /**
+   * 둥근 말랑이. 몸 뒤로 작은 손발이 빼꼼 나오고, 테두리 선·위쪽 빛·아래쪽 그늘·볼터치가 있다.
+   * 색 꾸미기는 몸 색을, 모자 꾸미기는 머리 위(y≈-38)를 꾸민다. 얼굴은 표정마다 따로 그린다
+   */
   private mascotParts(worn: Worn, traits: ActivityId[]): Phaser.GameObjects.GameObject[] {
     const [body, shade] = BODY_COLORS[worn.color?.id ?? ''] ?? [MASCOT, MASCOT_SHADE]
-    // 휴식을 많이 했으면 눈 대신 졸린 눈(특징 그림)을 그린다
-    const eyes = traits.includes('relax') ? [] : [this.add.ellipse(-12, -6, 8, 11, INK), this.add.ellipse(12, -6, 8, 11, INK)]
+    const line = (g: Phaser.GameObjects.Graphics) => g.lineStyle(2.6, INK, 0.5)
+    // 몸 뒤의 손발(발 아래끝이 몸 아래끝과 같은 땅에 닿는다)
+    const limbs = this.add.graphics()
+    for (const [x, y, w, h] of [
+      [-36, 10, 14, 11],
+      [36, 10, 14, 11],
+      [-15, 32.5, 20, 11],
+      [15, 32.5, 20, 11],
+    ]) {
+      limbs.fillStyle(shade).fillEllipse(x, y, w, h)
+      line(limbs).strokeEllipse(x, y, w, h)
+    }
+    const skin = this.add.graphics()
+    skin.fillStyle(body).fillCircle(0, 0, 38)
+    skin.fillStyle(shade, 0.6).fillEllipse(0, 22, 60, 20)
+    // 위쪽 빛
+    skin.fillStyle(0xffffff, 0.55).fillEllipse(-13, -24, 22, 11).fillCircle(4, -29, 3)
+    line(skin).strokeCircle(0, 0, 38)
+    skin.fillStyle(0xffa8a8, 0.7).fillEllipse(-22, 8, 11, 6.5).fillEllipse(22, 8, 11, 6.5)
     const marks = this.add.graphics()
     drawTraits(marks, traits)
-    const parts: Phaser.GameObjects.GameObject[] = [
-      this.add.circle(0, 0, 38, body),
-      this.add.ellipse(0, 22, 60, 20, shade).setAlpha(0.6),
-      ...eyes,
-      this.add.ellipse(-22, 8, 10, 6, 0xffa8a8).setAlpha(0.7),
-      this.add.ellipse(22, 8, 10, 6, 0xffa8a8).setAlpha(0.7),
-      marks,
-    ]
+    this.face = this.add.graphics()
+    this.shownFace = undefined
+    const parts: Phaser.GameObjects.GameObject[] = [limbs, skin, this.face, marks]
     const g = this.add.graphics()
     switch (worn.hat?.id) {
       case 'hat-sprout':
@@ -1029,6 +1122,7 @@ export class HomeScene extends Phaser.Scene {
       const t = skillFxTiming(k, fx)
       this.time.delayedCall(t.start, () => live() && this.skillFx(k, t.duration, fx, dir))
     }
+    this.battleFace = 'focus'
     this.markImpact('windup')
     // 예비 동작: 살짝 뒤로 움츠렸다가 앞으로 튀어 나간다
     this.tweens.add({ targets: attacker, x: home.attacker - fx.pull * dir, scaleX: 0.92, scaleY: 1.06, duration: fx.windup, ease: 'Sine.easeOut' })
@@ -1043,6 +1137,7 @@ export class HomeScene extends Phaser.Scene {
     this.time.delayedCall(contactAt(fx), () => {
       if (!live()) return
       playSound(stepSound(s.kind, !!s.crit))
+      this.battleFace = stepFace(s)
       if (s.kind === 'miss') {
         this.markImpact('back')
         recover()
@@ -1278,6 +1373,7 @@ export class HomeScene extends Phaser.Scene {
     if (!b || b.ended) return
     b.ended = true
     b.timer?.remove()
+    this.battleFace = endFace(b.win)
     for (const who of [this.mascot, this.monster]) this.tweens.killTweensOf(who)
     const winner = b.win ? this.mascot : this.monster
     const loser = b.win ? this.monster : this.mascot
@@ -1443,6 +1539,25 @@ export class HomeScene extends Phaser.Scene {
     if (box.getAttribute('data-mascot-bottom') !== mascot) box.setAttribute('data-mascot-bottom', mascot)
     if (box.getAttribute('data-monster-bottom') !== monster) box.setAttribute('data-monster-bottom', monster)
     this.trackWinnerHop(box)
+    this.updateFace(box)
+  }
+
+  /** 상황에 맞는 표정을 고르고, 몇 초마다 눈을 깜빡인다. 표정이 바뀔 때만 얼굴을 다시 그린다 */
+  private updateFace(box: HTMLElement) {
+    if (!this.face) return
+    const now = this.time.now
+    if (now >= this.nextBlinkAt) {
+      this.blinkUntil = now + BLINK_MS
+      this.nextBlinkAt = now + blinkGap(this.blinks++)
+    }
+    const base = this.battle ? (this.battleFace ?? 'focus') : moodFace(this.mood, this.growth.traits)
+    const face = pickFace(base, { now, happyUntil: this.happyUntil, blinkUntil: this.blinkUntil })
+    if (face === this.shownFace) return
+    this.shownFace = face
+    drawFace(this.face.clear(), face)
+    // e2e가 지금 표정과 깜빡인 횟수를 볼 수 있게 남긴다
+    box.setAttribute('data-face', face)
+    if (face === 'blink') box.setAttribute('data-blinks', String(Number(box.getAttribute('data-blinks') ?? 0) + 1))
   }
 
   /** e2e가 이긴 쪽이 뛰는 동안 머리끝·HP 막대 자리(장면 위에서부터 px)를 볼 수 있게 남긴다 */
