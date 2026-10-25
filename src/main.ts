@@ -2,7 +2,7 @@ import Phaser from 'phaser'
 import './style.css'
 import { HomeScene, HOME_READY } from './game/HomeScene'
 import { computeProgress, dayKey, todayStatus } from './core/progression'
-import { todayGoal } from './core/goal'
+import { goalStreak, stampCalendar, stampCount, todayGoal } from './core/goal'
 import { levelUpPoints, levelUpTo, restoreShownLevel } from './core/levelup'
 import { liveRecords, startSession, stopSession } from './core/session'
 import { backupFileName, exportBackup, importLosesProgress } from './core/backup'
@@ -141,7 +141,9 @@ const skills = createSkills(app, {
     // 오늘 상한을 채운 활동은 능력치 칸에 "내일" 이어서 오른다고 알려 준다
     const capped = (Object.keys(ACTIVITIES) as ActivityId[]).filter((id) => todayStatus(records, id, now).reached)
     const stats = statRows(p, capped)
-    return { points: remainingSkillPoints(p.level, save.skills), ranks: skillRanks(save.skills), stats }
+    // 도장판은 홈의 오늘 목표처럼 켜 둔 타이머의 지금까지도 센다
+    const board = { calendar: stampCalendar(records, now), stamps: stampCount(records), streak: goalStreak(records, now) }
+    return { points: remainingSkillPoints(p.level, save.skills), ranks: skillRanks(save.skills), stats, board }
   },
   onLearn(id) {
     pullSave()

@@ -1,5 +1,5 @@
 import { describe, test, expect } from 'vitest'
-import { DAILY_GOAL_MINUTES, goalDays, goalStreak, stampCount, todayGoal } from './goal'
+import { DAILY_GOAL_MINUTES, goalDays, goalStreak, stampCalendar, stampCount, todayGoal } from './goal'
 import { computeProgress } from './progression'
 import type { ActivityId, ActivityRecord } from './types'
 
@@ -121,4 +121,27 @@ test('하루 목표 계산은 경험치·능력치를 바꾸지 않음(기록만
   goalStreak(rs, kst('2026-10-25T12:00:00'))
   expect(rs).toEqual(copy)
   expect(computeProgress(rs)).toEqual(before)
+})
+
+describe('도장판 달력', () => {
+  test('이번 달 날짜를 일요일부터 칸에 놓고, 찍은 날과 오늘을 표시한다', () => {
+    const rs = [day('2026-10-01'), day('2026-10-24'), day('2026-10-25', 12), day('2026-09-30')]
+    const cal = stampCalendar(rs, kst('2026-10-25T12:00:00'))
+    expect(cal.year).toBe(2026)
+    expect(cal.month).toBe(10)
+    // 2026-10-01은 목요일 → 앞에 빈칸 4개
+    expect(cal.lead).toBe(4)
+    expect(cal.days).toHaveLength(31)
+    expect(cal.days[0]).toEqual({ day: 1, stamped: true, today: false, future: false })
+    expect(cal.days[23]).toEqual({ day: 24, stamped: true, today: false, future: false })
+    expect(cal.days[24]).toEqual({ day: 25, stamped: false, today: true, future: false })
+    expect(cal.days[25].future).toBe(true)
+    // 지난달 도장은 이번 달 칸에 세지 않는다
+    expect(cal.monthStamps).toBe(2)
+  })
+
+  test('2월 윤년도 날 수가 맞다', () => {
+    expect(stampCalendar([], kst('2028-02-10T12:00:00')).days).toHaveLength(29)
+    expect(stampCalendar([], kst('2027-02-10T12:00:00')).days).toHaveLength(28)
+  })
 })

@@ -43,6 +43,49 @@ export function stampCount(records: ActivityRecord[]): number {
   return goalDays(records).size
 }
 
+export interface StampDay {
+  day: number
+  stamped: boolean
+  today: boolean
+  future: boolean
+}
+
+export interface StampCalendar {
+  year: number
+  /** 1~12 */
+  month: number
+  /** 1일 앞 빈칸 수(일요일 시작) */
+  lead: number
+  days: StampDay[]
+  /** 이번 달에 찍은 도장 수 */
+  monthStamps: number
+}
+
+/** now 가 속한 달의 도장판 달력 */
+export function stampCalendar(records: ActivityRecord[], now: number): StampCalendar {
+  const stamped = goalDays(records)
+  const d = new Date(now)
+  const year = d.getFullYear()
+  const month = d.getMonth()
+  const count = new Date(year, month + 1, 0).getDate()
+  const days: StampDay[] = []
+  for (let i = 1; i <= count; i++) {
+    days.push({
+      day: i,
+      stamped: stamped.has(dayKey(new Date(year, month, i).getTime())),
+      today: i === d.getDate(),
+      future: i > d.getDate(),
+    })
+  }
+  return {
+    year,
+    month: month + 1,
+    lead: new Date(year, month, 1).getDay(),
+    days,
+    monthStamps: days.filter((x) => x.stamped).length,
+  }
+}
+
 /**
  * 오늘까지 이어 온 날 수. 오늘을 아직 못 채웠으면 어제까지 센다(오늘 안에 채우면 이어진다).
  */

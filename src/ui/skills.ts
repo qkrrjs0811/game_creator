@@ -1,10 +1,28 @@
 import { SKILLS, type SkillId } from '../core/skills'
 import type { StatRow } from '../core/stats'
+import type { StampCalendar } from '../core/goal'
 
 export interface SkillsView {
   points: number
   ranks: Record<SkillId, number>
   stats: StatRow[]
+  board: { calendar: StampCalendar; stamps: number; streak: number }
+}
+
+const WEEK = ['일', '월', '화', '수', '목', '금', '토']
+
+/** 도장판: 이번 달 달력에 하루 목표를 채운 날을 도장으로 */
+export function boardHtml(cal: StampCalendar): string {
+  const head = WEEK.map((w) => `<li class="board-week">${w}</li>`).join('')
+  const lead = '<li class="board-blank"></li>'.repeat(cal.lead)
+  const days = cal.days
+    .map((d) => {
+      const cls = ['board-day', d.stamped && 'stamped', d.today && 'today', d.future && 'future'].filter(Boolean).join(' ')
+      const label = d.stamped ? ` aria-label="${d.day}일 도장"` : ''
+      return `<li class="${cls}" data-testid="board-day-${d.day}"${label}>${d.stamped ? '🌟' : d.day}</li>`
+    })
+    .join('')
+  return head + lead + days
 }
 
 /** 받침이 있으면 '을', 없으면 '를' */
@@ -39,7 +57,16 @@ export function createSkills(root: HTMLElement, h: { view(): SkillsView; onLearn
         ).join('')}
       </ul>
       <p class="sheet-desc" data-testid="skill-hint"></p>
-      <button type="button" class="sheet-close" data-testid="skills-close">닫기</button>
+      <h3 class="sheet-sub board-title" data-testid="board-title"></h3>
+      <div class="board-summary">
+        <span class="board-chip" data-testid="board-stamps"></span>
+        <span class="board-chip" data-testid="board-streak"></span>
+      </div>
+      <ul class="board" data-testid="board"></ul>
+      <p class="sheet-desc">하루 활동 합쳐 30분을 채우면 도장을 찍어요.</p>
+      <div class="sheet-foot">
+        <button type="button" class="sheet-close" data-testid="skills-close">닫기</button>
+      </div>
     </div>`
   root.append(wrap)
 
@@ -48,6 +75,7 @@ export function createSkills(root: HTMLElement, h: { view(): SkillsView; onLearn
   /** 한 번 누른 스킬. 잘못 눌러 포인트를 쓰지 않게 한 번 더 눌러야 배운다 */
   let asking: SkillId | null = null
   let lastStats = ''
+  let lastBoard = ''
 
   const draw = () => {
     const v = h.view()
@@ -67,6 +95,15 @@ export function createSkills(root: HTMLElement, h: { view(): SkillsView; onLearn
     if (stats !== lastStats) {
       lastStats = stats
       q('stats').innerHTML = stats
+    }
+    const cal = v.board.calendar
+    q('board-title').textContent = `🗓️ ${cal.month}월 도장판`
+    q('board-stamps').textContent = `🌟 모은 도장 ${v.board.stamps}개`
+    q('board-streak').textContent = `🔥 ${v.board.streak}일 이어 왔어요`
+    const board = boardHtml(cal)
+    if (board !== lastBoard) {
+      lastBoard = board
+      q('board').innerHTML = board
     }
     q('skill-points').innerHTML = `남은 포인트 <b>${v.points}</b>`
     const asked = SKILLS.find((s) => s.id === asking)
