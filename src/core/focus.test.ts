@@ -1,5 +1,5 @@
 import { describe, test, expect } from 'vitest'
-import { FOCUS_TARGETS, focusCelebrateNow, focusProgress, focusTargetFor, parseFocusDefault, parseFocusGoal, serializeFocusGoal } from './focus'
+import { FOCUS_TARGETS, focusProgress, focusTargetFor, parseFocusDefault, parseFocusGoal, serializeFocusGoal } from './focus'
 import { computeProgress } from './progression'
 import { newSave, startSession } from './session'
 
@@ -90,24 +90,5 @@ describe('집중 목표 보조 키', () => {
     focusProgress(25, t0, t0 + 30 * MIN)
     parseFocusGoal(serializeFocusGoal({ startedAt: t0, minutes: 25 }))
     expect(computeProgress(save.records)).toEqual(before)
-  })
-})
-
-describe('집중 목표 달성 연출', () => {
-  const active = { activity: 'exercise' as const, startedAt: t0 }
-
-  test('목표에 닿았고 이 타이머로 아직 축하하지 않았으면 축하한다', () => {
-    expect(focusCelebrateNow(focusProgress(25, t0, t0 + 25 * MIN), active, null)).toBe(true)
-    expect(focusCelebrateNow(focusProgress(25, t0, t0 + 90 * MIN), active, String(t0 - 5 * MIN))).toBe(true)
-  })
-
-  test('아직 못 닿았거나 목표가 없으면 축하하지 않는다', () => {
-    expect(focusCelebrateNow(focusProgress(25, t0, t0 + 24 * MIN), active, null)).toBe(false)
-    expect(focusCelebrateNow(focusProgress(0, t0, t0 + 30 * MIN), active, null)).toBe(false)
-    expect(focusCelebrateNow(focusProgress(25, t0, t0 + 30 * MIN), null, null)).toBe(false)
-  })
-
-  test('이 타이머로 이미 축하했으면 다시 열어도 한 번만', () => {
-    expect(focusCelebrateNow(focusProgress(25, t0, t0 + 30 * MIN), active, String(t0))).toBe(false)
   })
 })

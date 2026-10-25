@@ -1,6 +1,6 @@
 import { test, expect } from 'vitest'
 import { WINNABLE_MAX } from '../core/coach'
-import { autoRunCard, awayAdventure, awayCard, formatElapsed, formatMinutes, goalText, objectJosa, weekChip, weekDoneText, weekGoalText, sessionSummary, topicJosa, weekTotalText, bestDayText, dayDetail, pageRangeText, dexShadowText, dexNewText, missionChip, achievementValueText, farAchievementIds, achievementToast, focusText, focusChipLabel, focusDoneText } from './format'
+import { autoRunCard, awayAdventure, awayCard, formatElapsed, formatMinutes, goalText, objectJosa, weekChip, weekDoneText, weekGoalText, sessionSummary, topicJosa, weekTotalText, bestDayText, dayDetail, pageRangeText, dexShadowText, dexNewText, missionChip, achievementValueText, farAchievementIds, achievementToast, focusText, focusChipLabel } from './format'
 import { ACHIEVEMENTS, achievementProgress } from '../core/achievements'
 import { AUTO_RUN_MAX } from '../core/autorun'
 import type { Cosmetic } from '../core/cosmetics'
@@ -256,9 +256,4 @@ test('집중 목표 진행 글자: 지난 분·남은 분, 닿으면 채웠다�
 test('집중 목표 칩 글자는 없음 또는 N분', () => {
   expect(focusChipLabel(0)).toBe('없음')
   expect(focusChipLabel(25)).toBe('25분')
-})
-
-test('집중 목표 달성 배지 글자', () => {
-  expect(focusDoneText(25)).toBe('⏰ 목표 25분 채웠어요!')
-  expect(focusDoneText(60)).toBe('⏰ 목표 60분 채웠어요!')
 })

@@ -299,8 +299,6 @@ body {
 .mission.done { background: #e2d2ff; color: #6a3fb0; }
 /* 미션 도장은 연보라로, 오늘 도장과 같은 자리에 찍힌다 */
 .stamp.mission-stamp { background: #b996f0; box-shadow: 0 3px 0 #9372d0; }
-/* 집중 목표 배지는 민트로, 같은 자리에서 다른 도장이 사라진 뒤 찍힌다 */
-.stamp.focus-stamp { background: #5cc9a7; box-shadow: 0 3px 0 #3fa585; }
 /* 도장판의 모은 미션 별 칩도 같은 연보라 */
 .board-chip.board-mission { background: #efe4ff; color: #7a5aa8; }
 /* 모든 활동을 합친 오늘 목표. 카드 맨 위 한 줄 */

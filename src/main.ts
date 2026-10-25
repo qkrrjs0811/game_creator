@@ -33,7 +33,7 @@ import { achievementToast, autoRunCard, awayAdventure, awayCard, dexNewText, for
 import { autoRun } from './core/autorun'
 import { awaySummary, shouldShowAway } from './core/away'
 import { sessionGain } from './core/gain'
-import { focusCelebrateNow, focusProgress, focusTargetFor, parseFocusDefault, parseFocusGoal, serializeFocusGoal } from './core/focus'
+import { focusProgress, focusTargetFor, parseFocusDefault, parseFocusGoal, serializeFocusGoal } from './core/focus'
 
 declare global {
   interface Window {
@@ -407,8 +407,6 @@ function writeKey(key: string, value: string) {
 const FOCUS_DEFAULT_KEY = `${SAVE_KEY}:focus-default`
 const FOCUS_GOAL_KEY = `${SAVE_KEY}:focus-goal`
 let focusDefault = parseFocusDefault(readKey(FOCUS_DEFAULT_KEY))
-// 목표 달성 배지를 띄운 타이머의 시작 시각. 타이머마다 한 번만(닫아 둔 사이 닿았으면 다시 열 때 한 번)
-const FOCUS_DONE_KEY = `${SAVE_KEY}:focus-done`
 
 // 도장 쾅! 연출은 하루 한 번만. 닫아 둔 사이 채웠으면 다시 열 때 보여 준다
 const STAMP_DAY_KEY = `${SAVE_KEY}:stamp-day`
@@ -550,13 +548,6 @@ function render() {
     hud.showMissionDone()
   }
   checkAchievements(records)
-  const focus = save.active
-    ? focusProgress(focusTargetFor(parseFocusGoal(readKey(FOCUS_GOAL_KEY)), save.active), save.active.startedAt, now)
-    : null
-  if (focusCelebrateNow(focus, save.active, readKey(FOCUS_DONE_KEY))) {
-    writeKey(FOCUS_DONE_KEY, String(save.active!.startedAt))
-    hud.showFocusDone(focus!.target)
-  }
   hud.render({
     level: p.level,
     expIntoLevel: p.expIntoLevel,
@@ -575,7 +566,9 @@ function render() {
     mission,
     title: wornTitle({ records, worn: save.worn })?.titleName ?? null,
     focusTarget: focusDefault,
-    focus,
+    focus: save.active
+      ? focusProgress(focusTargetFor(parseFocusGoal(readKey(FOCUS_GOAL_KEY)), save.active), save.active.startedAt, now)
+      : null,
   })
   skills.refresh()
   homeScene()?.showHomeMonster(homeMonster(save.stageProgress))

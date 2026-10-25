@@ -65,15 +65,6 @@ export function focusTargetFor(goal: FocusGoal | null, active: ActiveSession | n
   return goal.minutes
 }
 
-/**
- * 목표 달성 배지를 지금 띄울지. 축하한 타이머의 시작 시각(보조 키 값)과 다르면 아직 축하하지 않은 것이다.
- * 닫아 둔 사이 닿았어도 다시 열 때 한 번만 띄운다
- */
-export function focusCelebrateNow(p: FocusProgress | null, active: ActiveSession | null, celebratedRaw: string | null): boolean {
-  if (!p || !active || !p.reached) return false
-  return celebratedRaw !== String(active.startedAt)
-}
-
 /** 다음에 켤 때 먼저 골라 둘 목표 분. 고를 수 없는 값이면 없음(0) */
 export function parseFocusDefault(raw: string | null): number {
   if (raw === null || raw.trim() === '') return 0
