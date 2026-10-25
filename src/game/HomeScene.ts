@@ -175,6 +175,58 @@ export class HomeScene extends Phaser.Scene {
     }
   }
 
+  /**
+   * 장 보스를 처음 깼을 때: 장면 양옆과 가운데에서 파스텔 색종이·별이 차례로 터지고 위에서 별이 떨어진다.
+   * 전투 결과 카드와 같이 뜨며, 이긴 말랑이의 폴짝은 그대로 둔다. 모습만 바뀐다
+   */
+  celebrateChapter() {
+    // e2e가 장면이 새 장을 축하했는지 볼 수 있게 센다
+    const host = this.game.canvas.parentElement
+    host?.setAttribute('data-chapter-celebrations', String(Number(host.getAttribute('data-chapter-celebrations') ?? 0) + 1))
+    const { width: w, height: h } = this.scale
+    const bursts: [number, number, number][] = [
+      [w * 0.14, h * 0.5, 0],
+      [w * 0.86, h * 0.5, 260],
+      [w * 0.5, h * 0.62, 520],
+    ]
+    for (const [x, y, delay] of bursts) this.time.delayedCall(delay, () => this.burst(x, y, 18))
+    for (let i = 0; i < 16; i++) {
+      const star = this.add.star(Phaser.Math.Between(16, Math.max(17, w - 16)), -12, 5, 4, 9, Phaser.Utils.Array.GetRandom(CONFETTI))
+      star.setAlpha(0)
+      this.tweens.add({
+        targets: star,
+        y: h * Phaser.Math.FloatBetween(0.5, 0.75),
+        alpha: { from: 1, to: 0 },
+        angle: Phaser.Math.Between(-240, 240),
+        delay: 300 + i * 90,
+        duration: 1700,
+        ease: 'Sine.easeIn',
+        onComplete: () => star.destroy(),
+      })
+    }
+  }
+
+  /** 한 점에서 파스텔 색종이·별이 둥글게 터진다 */
+  private burst(x: number, y: number, count: number) {
+    for (let i = 0; i < count; i++) {
+      const angle = (Math.PI * 2 * i) / count + Phaser.Math.FloatBetween(-0.15, 0.15)
+      const dist = Phaser.Math.Between(40, 80)
+      const color = Phaser.Utils.Array.GetRandom(CONFETTI)
+      const bit = i % 2 === 0 ? this.add.star(x, y, 5, 3, 7, color) : this.add.circle(x, y, Phaser.Math.Between(3, 5), color)
+      bit.setScale(0.4)
+      this.tweens.add({
+        targets: bit,
+        x: x + Math.cos(angle) * dist,
+        y: y + Math.sin(angle) * dist,
+        scale: 1,
+        duration: 520,
+        ease: 'Cubic.easeOut',
+        onComplete: () =>
+          this.tweens.add({ targets: bit, y: '+=40', alpha: 0, duration: 800, ease: 'Sine.easeIn', onComplete: () => bit.destroy() }),
+      })
+    }
+  }
+
   /** 전투 기록을 한 걸음씩 재생한다. 끝나면 onEnd(이겼는지)를 부른다 */
   playBattle(timeline: Timeline, delay: number, foe: Monster, onEnd: (win: boolean) => void) {
     this.endBattle()

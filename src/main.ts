@@ -210,13 +210,19 @@ const stages = createStages(app, {
       reward,
       foe: foe.name,
       damage: enemyDamagePercent(enemy, result),
+      chapter: outcome.newChapter,
     }
     stages.close()
     hud.hideToasts()
     battleBar.start(`${stageLabel(s)} · ${s.name}`, foe.name)
+    // 장 보스를 처음 깼으면 결과 카드에 배지를 달고 장면에서 색종이가 터진다(연출일 뿐)
+    const end = () => {
+      battleBar.end(view)
+      if (outcome.newChapter !== null) homeScene()?.celebrateChapter()
+    }
     const scene = homeScene()
-    if (scene) scene.playBattle(timeline, stepDelay(timeline.steps.length), foe, () => battleBar.end(view))
-    else battleBar.end(view)
+    if (scene) scene.playBattle(timeline, stepDelay(timeline.steps.length), foe, end)
+    else end()
   },
 })
 

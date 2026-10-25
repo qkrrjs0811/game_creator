@@ -596,6 +596,39 @@ body {
   border-radius: 999px;
   background: linear-gradient(90deg, #ffc2a3, var(--accent));
 }
+/* 장 보스를 처음 깨면 카드 위 가장자리에 걸친 배지와 강조된 안내 줄. 배지 자리만큼 카드를 내린다 */
+.battle-result[data-chapter] { top: 28px; }
+.battle-result .battle-result-chapter {
+  position: absolute;
+  top: -14px;
+  left: 50%;
+  padding: 5px 16px;
+  border-radius: 999px;
+  background: #ffd36b;
+  box-shadow: 0 3px 0 #f0b94a;
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 800;
+  white-space: nowrap;
+  transform: translateX(-50%) rotate(-3deg);
+  animation: chapter-badge 0.7s 0.2s cubic-bezier(0.2, 1.6, 0.4, 1) both;
+}
+.battle-result .battle-result-chapter[hidden] { display: none; }
+.battle-result[data-chapter] .battle-result-note {
+  background: var(--accent);
+  color: #fff;
+  box-shadow: 0 3px 0 #e9764a;
+  animation: chapter-note 0.6s 0.45s ease-out both;
+}
+@keyframes chapter-badge {
+  from { transform: translateX(-50%) rotate(-3deg) scale(0); }
+  to { transform: translateX(-50%) rotate(-3deg) scale(1); }
+}
+@keyframes chapter-note {
+  0% { transform: scale(0.8); }
+  60% { transform: scale(1.08); }
+  100% { transform: scale(1); }
+}
 @keyframes result-pop {
   from { transform: translateX(-50%) scale(0.6); opacity: 0; }
   to { transform: translateX(-50%) scale(1); opacity: 1; }

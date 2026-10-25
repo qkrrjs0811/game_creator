@@ -101,8 +101,22 @@ test('장 보스를 이기면 새 장이 열림', async ({ page }) => {
 
   await expect(page.getByTestId('battle-result-title')).toContainText('승리')
   await expect(page.getByTestId('battle-result-note')).toHaveText('🎉 새 장이 열렸어요 · 2장 반짝 나라')
+  // 새 장 연출: 카드 위 배지와 장면 색종이
+  await expect(page.getByTestId('battle-result-chapter')).toBeVisible()
+  await expect(page.getByTestId('battle-result-chapter')).toHaveText('🗺️ 2장 도착!')
+  await expect(page.getByTestId('scene')).toHaveAttribute('data-chapter-celebrations', '1')
   await page.waitForTimeout(600)
   await page.screenshot({ path: 'test-results/screens/result-boss.png' })
+  await page.waitForTimeout(300)
+  await page.screenshot({ path: 'test-results/screens/result-chapter.png' })
+  // 배지는 장면 안에 있고 제목을 덮지 않는다
+  const scene = (await page.getByTestId('scene').boundingBox())!
+  const badge = (await page.getByTestId('battle-result-chapter').boundingBox())!
+  const title = (await page.getByTestId('battle-result-title').boundingBox())!
+  expect(badge.y).toBeGreaterThanOrEqual(scene.y)
+  expect(badge.x).toBeGreaterThanOrEqual(0)
+  expect(badge.x + badge.width).toBeLessThanOrEqual(390)
+  expect(badge.y + badge.height).toBeLessThanOrEqual(title.y + 2)
   expect(await page.evaluate(() => window.__debug.getSave().stageProgress)).toBe(10)
 
   // 돌아오면 홈에는 새 장 첫 몬스터, 모험 지도는 새 장
@@ -111,6 +125,14 @@ test('장 보스를 이기면 새 장이 열림', async ({ page }) => {
   await page.getByTestId('open-stages').click()
   await expect(page.getByTestId('stage-chapter')).toHaveText('2장 · 반짝 나라')
   await expect(page.getByTestId('stage-11')).toHaveAttribute('data-state', 'open')
+
+  // 이미 깬 장 보스를 다시 이기면 새 장 연출은 없다
+  await page.getByTestId('chapter-prev').click()
+  await page.getByTestId('stage-go-10').click()
+  await page.getByTestId('battle-action').click()
+  await expect(page.getByTestId('battle-result-note')).toHaveText('⭐ 이미 깬 스테이지예요')
+  await expect(page.getByTestId('battle-result-chapter')).toBeHidden()
+  await expect(page.getByTestId('scene')).toHaveAttribute('data-chapter-celebrations', '1')
 })
 
 test('예전 마지막(6스테이지)을 깬 저장은 7스테이지부터 이어 감', async ({ page }) => {

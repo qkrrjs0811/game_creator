@@ -10,6 +10,8 @@ export interface BattleResultView {
   foe: string
   /** 몬스터 처음 HP를 몇 % 깎았는지(enemyDamagePercent). 졌을 때만 보여 준다 */
   damage: number
+  /** 장 보스를 처음 깨서 새로 열린 장 번호. 있으면 카드 위에 배지를 단다 */
+  chapter: number | null
 }
 
 /** 전투 중 장면 아래쪽 알림 띠(어느 스테이지인지, 건너뛰기·돌아가기 버튼)와 끝난 뒤 결과 카드 */
@@ -19,6 +21,7 @@ export function createBattleBar(scene: HTMLElement, h: { onSkip(): void; onLeave
   card.dataset.testid = 'battle-result'
   card.hidden = true
   card.innerHTML = `
+    <span class="battle-result-chapter" data-testid="battle-result-chapter" hidden></span>
     <b data-testid="battle-result-title"></b>
     <span data-testid="battle-result-detail"></span>
     <span class="battle-result-damage" data-testid="battle-result-damage">
@@ -73,6 +76,12 @@ export function createBattleBar(scene: HTMLElement, h: { onSkip(): void; onLeave
       const reward = q(card, 'battle-result-reward')
       reward.textContent = r.reward ?? ''
       reward.hidden = r.reward === null
+      // 새 장이 열렸으면 카드 위 가장자리에 배지를 달고 안내 줄을 강조한다
+      const chapter = q(card, 'battle-result-chapter')
+      chapter.hidden = r.chapter === null
+      chapter.textContent = r.chapter === null ? '' : `🗺️ ${r.chapter}장 도착!`
+      if (r.chapter === null) delete card.dataset.chapter
+      else card.dataset.chapter = String(r.chapter)
       card.dataset.win = String(win)
       card.hidden = false
       status.textContent = win ? '이겼어요! 🎉' : '아쉽게 졌어요'
