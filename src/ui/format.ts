@@ -11,7 +11,6 @@ import { WINNABLE_MAX } from '../core/coach'
 import { AUTO_RUN_MAX, type AutoRun } from '../core/autorun'
 import { ACHIEVEMENTS, type AchievementProgress } from '../core/achievements'
 import type { FocusProgress } from '../core/focus'
-import { LETTER_ICONS, type WeekLetter } from '../core/letter'
 
 const pad =(n: number) => String(n).padStart(2, '0')
 
@@ -216,31 +215,6 @@ export function awayCard(a: AwaySummary): { title: string; did: string; gain: st
     did: did.length > 0 ? `${did.join(' · ')} 했어요` : '',
     gain: [`EXP +${a.exp}`, ...stats].join(' · '),
     chips,
-  }
-}
-
-/** 새 주에 띄우는 "지난주 편지" 카드 글자. 지난주보다 줄었으면 견주지 않고 북돋운다 */
-export function letterCard(l: WeekLetter): { title: string; total: string; chips: string[]; suggest: string } {
-  const head = `지난주 ${formatMinutes(l.total)} 했어!`
-  const total =
-    l.prevTotal === 0
-      ? head
-      : l.diff > 0
-        ? `${head} · 지난번보다 +${formatMinutes(l.diff)}`
-        : l.diff === 0
-          ? `${head} · 지난번과 똑같아`
-          : `${head} · 수고했어`
-  const [y, m, d] = l.best.key.split('-').map(Number)
-  const weekday = WEEKDAY_NAMES[new Date(y, m - 1, d).getDay()]
-  return {
-    title: '💌 지난주 편지',
-    total,
-    chips: [
-      l.goalDone ? `🏅 도장 ${l.stamped}일 · 목표 달성` : `🌟 도장 ${l.stamped} / ${l.goal}일`,
-      `${LETTER_ICONS[l.top]} ${ACTIVITIES[l.top].label} ${formatMinutes(l.minutes[l.top])}`,
-      `📆 ${weekday}요일 ${formatMinutes(l.best.minutes)}`,
-    ],
-    suggest: l.suggestText,
   }
 }
 
