@@ -10,6 +10,7 @@ import type { BestDay, HistoryDay, WeekTotals } from '../core/history'
 import { WINNABLE_MAX } from '../core/coach'
 import { AUTO_RUN_MAX, type AutoRun } from '../core/autorun'
 import { ACHIEVEMENTS, type AchievementProgress } from '../core/achievements'
+import type { FocusProgress } from '../core/focus'
 
 const pad =(n: number) => String(n).padStart(2, '0')
 
@@ -245,4 +246,15 @@ export function achievementToast(ids: string[]): { title: string; detail: string
   if (list.length === 0) return null
   if (list.length === 1) return { title: '🏆 업적 달성!', detail: `${list[0].label} · 🏅 ${list[0].titleName}` }
   return { title: `🏆 업적 ${list.length}개 달성!`, detail: `🏅 ${list[0].titleName} 외 칭호 ${list.length - 1}개` }
+}
+
+/** 켜 둔 타이머의 집중 목표 진행 한 줄. 닿은 뒤에도 타이머는 흐르니 몇 분째인지 보여 준다 */
+export function focusText(p: FocusProgress): string {
+  if (p.reached) return `⏰ 목표 ${p.target}분 채웠어요 · ${formatMinutes(p.elapsedMinutes)}째`
+  return `🎯 ${p.target}분 중 ${p.elapsedMinutes}분 · ${p.remainingMinutes}분 남음`
+}
+
+/** 집중 목표 칩 글자 */
+export function focusChipLabel(minutes: number): string {
+  return minutes === 0 ? '없음' : `${minutes}분`
 }

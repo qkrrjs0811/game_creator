@@ -1,6 +1,6 @@
 import { test, expect } from 'vitest'
 import { WINNABLE_MAX } from '../core/coach'
-import { autoRunCard, awayAdventure, awayCard, formatElapsed, formatMinutes, goalText, objectJosa, weekChip, weekDoneText, weekGoalText, sessionSummary, topicJosa, weekTotalText, bestDayText, dayDetail, pageRangeText, dexShadowText, dexNewText, missionChip, achievementValueText, farAchievementIds, achievementToast } from './format'
+import { autoRunCard, awayAdventure, awayCard, formatElapsed, formatMinutes, goalText, objectJosa, weekChip, weekDoneText, weekGoalText, sessionSummary, topicJosa, weekTotalText, bestDayText, dayDetail, pageRangeText, dexShadowText, dexNewText, missionChip, achievementValueText, farAchievementIds, achievementToast, focusText, focusChipLabel } from './format'
 import { ACHIEVEMENTS, achievementProgress } from '../core/achievements'
 import { AUTO_RUN_MAX } from '../core/autorun'
 import type { Cosmetic } from '../core/cosmetics'
@@ -245,4 +245,15 @@ test('업적 달성 알림: 하나면 업적 이름과 칭호, 여럿이면 묶�
   })
   expect(achievementToast(['nope'])).toBeNull()
   expect(achievementToast([])).toBeNull()
+})
+
+test('집중 목표 진행 글자: 지난 분·남은 분, 닿으면 채웠다고', () => {
+  expect(focusText({ target: 25, elapsedMinutes: 12, remainingMinutes: 13, ratio: 0.5, reached: false })).toBe('🎯 25분 중 12분 · 13분 남음')
+  expect(focusText({ target: 25, elapsedMinutes: 25, remainingMinutes: 0, ratio: 1, reached: true })).toBe('⏰ 목표 25분 채웠어요 · 25분째')
+  expect(focusText({ target: 60, elapsedMinutes: 72, remainingMinutes: 0, ratio: 1, reached: true })).toBe('⏰ 목표 60분 채웠어요 · 1시간 12분째')
+})
+
+test('집중 목표 칩 글자는 없음 또는 N분', () => {
+  expect(focusChipLabel(0)).toBe('없음')
+  expect(focusChipLabel(25)).toBe('25분')
 })

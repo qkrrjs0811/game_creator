@@ -33,6 +33,7 @@ import { achievementToast, autoRunCard, awayAdventure, awayCard, dexNewText, for
 import { autoRun } from './core/autorun'
 import { awaySummary, shouldShowAway } from './core/away'
 import { sessionGain } from './core/gain'
+import { focusProgress, focusTargetFor, parseFocusDefault, parseFocusGoal, serializeFocusGoal } from './core/focus'
 
 declare global {
   interface Window {
@@ -88,6 +89,8 @@ const hud = createHud(
     const done = save.active?.activity ?? selected
     save = save.active ? stopSession(save, now) : startSession(save, selected, now)
     persist()
+    // 켤 때 골라 둔 집중 목표를 이 타이머(시작 시각)에 붙여 둔다
+    if (save.active && focusDefault > 0) writeKey(FOCUS_GOAL_KEY, serializeFocusGoal({ startedAt: save.active.startedAt, minutes: focusDefault }))
     if (gain) hud.showSessionSummary(sessionSummary(gain, todayStatus(save.records, done, now).reached, done))
     else hud.hideSessionSummary()
     render()
@@ -104,6 +107,11 @@ const hud = createHud(
   (shown) => {
     achievementShown = shown
     homeScene()?.setBubbleAway(shown)
+  },
+  (minutes) => {
+    focusDefault = minutes
+    writeKey(FOCUS_DEFAULT_KEY, String(minutes))
+    render()
   },
 )
 // 업적 알림이 떠 있는 동안 장면 말풍선이 비켜 준다(장면이 늦게 준비돼도 render에서 맞춘다)
@@ -387,6 +395,19 @@ function readKey(key: string): string | null {
   }
 }
 
+function writeKey(key: string, value: string) {
+  try {
+    kv.setItem(key, value)
+  } catch {
+    // 못 남기면 보조 값(목표 등)을 잊을 뿐 기록은 그대로다
+  }
+}
+
+// 집중 목표: 고른 칩은 다음에도 먼저 골라 두고, 켠 타이머에 붙인 목표는 시작 시각과 함께 남긴다(저장 원본 밖)
+const FOCUS_DEFAULT_KEY = `${SAVE_KEY}:focus-default`
+const FOCUS_GOAL_KEY = `${SAVE_KEY}:focus-goal`
+let focusDefault = parseFocusDefault(readKey(FOCUS_DEFAULT_KEY))
+
 // 도장 쾅! 연출은 하루 한 번만. 닫아 둔 사이 채웠으면 다시 열 때 보여 준다
 const STAMP_DAY_KEY = `${SAVE_KEY}:stamp-day`
 let stampDay = readKey(STAMP_DAY_KEY)
@@ -544,6 +565,10 @@ function render() {
     week,
     mission,
     title: wornTitle({ records, worn: save.worn })?.titleName ?? null,
+    focusTarget: focusDefault,
+    focus: save.active
+      ? focusProgress(focusTargetFor(parseFocusGoal(readKey(FOCUS_GOAL_KEY)), save.active), save.active.startedAt, now)
+      : null,
   })
   skills.refresh()
   homeScene()?.showHomeMonster(homeMonster(save.stageProgress))

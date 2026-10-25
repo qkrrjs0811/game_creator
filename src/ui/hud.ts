@@ -1,5 +1,6 @@
-import { formatElapsed, goalText, missionChip, objectJosa, topicJosa, weekChip } from './format'
+import { focusChipLabel, focusText, formatElapsed, goalText, missionChip, objectJosa, topicJosa, weekChip } from './format'
 import { ACTIVITIES } from '../core/activities'
+import { FOCUS_TARGETS, type FocusProgress } from '../core/focus'
 import type { TodayGoal } from '../core/goal'
 import type { TodayMission } from '../core/mission'
 import type { WeekGoal } from '../core/week'
@@ -30,6 +31,10 @@ export interface HudView {
   mission: TodayMission
   /** 이름 옆에 단 칭호 이름. 없으면 null */
   title: string | null
+  /** 다음에 켤 때 쓸 집중 목표 분(고른 칩). 0 = 없음 */
+  focusTarget: number
+  /** 켜 둔 타이머의 집중 목표 진행. 목표 없이 켰거나 꺼져 있으면 null */
+  focus: FocusProgress | null
 }
 
 /** 활동마다 타이머 카드에 쓰는 안내 */
@@ -60,6 +65,8 @@ export function createHud(
   onAutoRun: () => void,
   /** 업적 알림이 뜨고 질 때(장면 말풍선이 비켜 주게) */
   onAchievementShown: (shown: boolean) => void = () => {},
+  /** 켜기 전 집중 목표 칩을 골랐을 때(분, 0 = 없음) */
+  onFocus: (minutes: number) => void = () => {},
 ) {
   root.innerHTML = `
     <header class="top">
@@ -126,7 +133,17 @@ export function createHud(
         <span class="mission" data-testid="mission"></span>
       </div>
       <div class="timer-label" data-testid="timer-label"></div>
+      <div class="focus-live" data-testid="focus-live" hidden>
+        <span class="focus-text" data-testid="focus-text"></span>
+        <span class="focus-bar" data-testid="focus-track"><i data-testid="focus-bar"></i></span>
+      </div>
       <div class="timer" data-testid="timer">00:00</div>
+      <div class="focus-chips" data-testid="focus-chips" role="group" aria-label="집중 목표" hidden>
+        <span class="focus-head">🎯 목표</span>
+        ${FOCUS_TARGETS.map(
+          (m) => `<button type="button" class="focus-chip" data-testid="focus-${m}" data-minutes="${m}">${focusChipLabel(m)}</button>`,
+        ).join('')}
+      </div>
       <button class="toggle" data-testid="toggle" type="button">운동 시작</button>
     </section>
     <nav class="tabs">
@@ -176,6 +193,12 @@ export function createHud(
   q('open-stages').addEventListener('click', onAdventure)
   q('open-cosmetics').addEventListener('click', onDress)
   const skillBadge = q('skill-badge')
+  const focusChips = [...root.querySelectorAll<HTMLElement>('.focus-chip')]
+  for (const chip of focusChips) chip.addEventListener('click', () => onFocus(Number(chip.dataset.minutes)))
+  const focusChipRow = q('focus-chips')
+  const focusLive = q('focus-live')
+  const focusLabel = q('focus-text')
+  const focusBar = q('focus-bar')
   const activityTabs = [...root.querySelectorAll<HTMLElement>('[data-activity]')]
   for (const tab of activityTabs) tab.addEventListener('click', () => onSelect(tab.dataset.activity as ActivityId))
   const toastDetail = toast.querySelector('span')!
@@ -278,6 +301,22 @@ export function createHud(
       toggle.textContent = v.running ? '그만하기' : `${name} 시작`
       toggle.classList.toggle('running', v.running)
       ;(toggle as HTMLButtonElement).disabled = busy
+      // 켜기 전에는 00:00 자리에 목표 칩을, 켜 둔 동안에는 안내 글 자리에 목표까지의 진행을 보여 준다
+      // (카드 높이가 그대로라 장면이 줄지 않는다). 상한에 닿았으면 그 안내가 먼저다
+      timer.hidden = !v.running
+      focusChipRow.hidden = v.running
+      // 목표 없이 켰으면 평소 안내를 그대로 둔다
+      const showFocus = v.running && !v.capReached && v.focus !== null
+      focusLive.hidden = !showFocus
+      label.hidden = showFocus
+      for (const chip of focusChips) {
+        const on = Number(chip.dataset.minutes) === v.focusTarget
+        chip.classList.toggle('on', on)
+        chip.setAttribute('aria-pressed', String(on))
+      }
+      focusLabel.textContent = v.focus ? focusText(v.focus) : ''
+      focusBar.style.width = `${(v.focus?.ratio ?? 0) * 100}%`
+      focusLive.classList.toggle('done', v.focus?.reached ?? false)
       for (const tab of activityTabs) {
         const id = tab.dataset.activity as ActivityId
         tab.classList.toggle('on', id === v.activity)
