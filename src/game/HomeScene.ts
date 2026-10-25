@@ -27,7 +27,15 @@ const BAR_W = 78
 /** 이긴 쪽이 폴짝 뛰는 높이. 자기 HP 막대와 같이 뛰며, 막대가 위쪽 결과 카드(질 때 더 길다)에 닿지 않을 만큼만 뛴다 */
 const WIN_HOP = 18
 /** 자리(가운데)에서 머리끝(모자 포함)까지. 이긴 쪽 머리가 HP 막대에 닿는지 e2e가 보게 쓴다 */
-const HAT_TOP: Record<string, number> = { 'hat-sprout': -58, 'hat-mushroom': -58, 'hat-ribbon': -48, 'hat-crown': -58 }
+const HAT_TOP: Record<string, number> = {
+  'hat-sprout': -58,
+  'hat-mushroom': -58,
+  'hat-ribbon': -48,
+  'hat-crown': -58,
+  'hat-stamp7': -54,
+  'hat-stamp30': -45,
+  'hat-stamp100': -51,
+}
 /** 장 모자 모양마다 머리끝 */
 const CHAPTER_HAT_TOP: Record<HatShape, number> = { cone: -58, beret: -52, flower: -53, star: -53 }
 
@@ -380,6 +388,52 @@ export class HomeScene extends Phaser.Scene {
         g.fillTriangle(-16, -42, -8, -42, -14, -54).fillTriangle(-5, -42, 5, -42, 0, -58).fillTriangle(8, -42, 16, -42, 14, -54)
         g.fillStyle(0xff8fa8).fillCircle(0, -39, 3)
         break
+      // 도장 모자: 도장 7개 별 도장 핀, 30개 무지개 머리띠, 100개 꽃왕관
+      case 'hat-stamp7': {
+        const star = Array.from({ length: 10 }, (_, i) => {
+          const a = (i / 10) * Math.PI * 2 - Math.PI / 2
+          const r = i % 2 === 0 ? 8 : 3.6
+          return new Phaser.Math.Vector2(17 + Math.cos(a) * r, -40 + Math.sin(a) * r)
+        })
+        g.fillStyle(0xf2a93b).fillCircle(17, -40, 14)
+        g.fillStyle(0xffe07a).fillCircle(17, -40, 12)
+        g.fillStyle(0xffffff).fillPoints(star, true)
+        g.fillStyle(0xffa8c8).fillEllipse(3, -44, 12, 7).fillEllipse(31, -44, 12, 7)
+        break
+      }
+      case 'hat-stamp30':
+        for (const [w, r, col] of [
+          [5, 40, 0xffa3b8],
+          [5, 35.5, 0xffe07a],
+          [5, 31, 0x93dcc0],
+        ] as const) {
+          g.lineStyle(w, col).beginPath().arc(0, -2, r, Math.PI * 1.2, Math.PI * 1.8, false).strokePath()
+        }
+        // 띠 끝의 구름 방울
+        for (const side of [-1, 1]) {
+          const x = side * Math.cos(Math.PI * 0.2) * 35.5
+          const y = -2 - Math.sin(Math.PI * 0.2) * 35.5
+          g.fillStyle(0xffffff).fillCircle(x, y, 6).fillCircle(x + side * 5, y + 3, 5)
+        }
+        break
+      case 'hat-stamp100': {
+        const colors = [0xffa3b8, 0xffe07a, 0xc7b1f2, 0xffe07a, 0xffa3b8]
+        colors.forEach((col, i) => {
+          const a = Math.PI * (1.2 + (0.6 * i) / (colors.length - 1))
+          const x = Math.cos(a) * 36
+          const y = Math.sin(a) * 36
+          g.fillStyle(0x7cc576).fillEllipse(x + 6, y + 2, 9, 5)
+          g.fillStyle(col).fillCircle(x, y, 6.5)
+          g.fillStyle(0xffffff).fillCircle(x, y, 2.5)
+        })
+        // 가운데 큰 꽃
+        for (let i = 0; i < 5; i++) {
+          const a = (i / 5) * Math.PI * 2 - Math.PI / 2
+          g.fillStyle(0xff8fb4).fillCircle(Math.cos(a) * 5.5, -40 + Math.sin(a) * 5.5, 5)
+        }
+        g.fillStyle(0xffe07a).fillCircle(0, -40, 4)
+        break
+      }
       default:
         if (worn.hat?.hat) drawChapterHat(g, worn.hat.hat)
     }

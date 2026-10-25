@@ -1,6 +1,7 @@
 import { describe, test, expect } from 'vitest'
 import {
   COSMETICS,
+  STAMP_COSMETICS,
   chapterCosmetic,
   cosmeticById,
   cosmeticCatalog,
@@ -11,6 +12,16 @@ import {
 } from './cosmetics'
 import { STAGES } from './stages'
 import { newSave } from './session'
+import { stampCount } from './goal'
+import type { ActivityRecord } from './types'
+
+/** 2026-10-01부터 n일 동안 날마다 운동 30분(도장 n개) */
+function stampDays(n: number): ActivityRecord[] {
+  return Array.from({ length: n }, (_, i) => {
+    const start = new Date(2026, 9, 1 + i, 7).getTime()
+    return { id: `r${i}`, activity: 'exercise' as const, startedAt: start, endedAt: start + 30 * 60_000 }
+  })
+}
 
 describe('stageReward', () => {
   test('스테이지마다 다른 꾸미기 하나', () => {
@@ -58,7 +69,28 @@ describe('chapterCosmetic', () => {
   })
 })
 
+describe('STAMP_COSMETICS', () => {
+  test('도장 7·30·100개에 주는 모자 셋, 스테이지로는 얻지 않음', () => {
+    expect(STAMP_COSMETICS.map((c) => [c.id, c.kind, c.stamps])).toEqual([
+      ['hat-stamp7', 'hat', 7],
+      ['hat-stamp30', 'hat', 30],
+      ['hat-stamp100', 'hat', 100],
+    ])
+    for (const c of STAMP_COSMETICS) expect(c.stage).toBeUndefined()
+    for (const no of [7, 30, 100]) expect(stageReward(no)?.stamps).toBeUndefined()
+    expect(new Set(STAMP_COSMETICS.map((c) => c.name)).size).toBe(3)
+  })
+
+  test('도장 수는 하루 목표 도장과 같음', () => {
+    expect(stampCount(stampDays(7))).toBe(7)
+  })
+})
+
 describe('cosmeticById', () => {
+  test('도장 모자를 찾음', () => {
+    expect(cosmeticById('hat-stamp30')).toEqual(STAMP_COSMETICS[1])
+  })
+
   test('처음 꾸미기와 장 모자를 찾음', () => {
     expect(cosmeticById('hat-crown')!.stage).toBe(6)
     expect(cosmeticById('hat-ch12')).toEqual(chapterCosmetic(12))
@@ -71,7 +103,11 @@ describe('cosmeticById', () => {
 
 describe('cosmeticCatalog', () => {
   test('처음 꾸미기와 다음 장 모자 하나까지 보여 줌', () => {
-    expect(cosmeticCatalog(newSave()).map((c) => c.id)).toEqual([...COSMETICS.map((c) => c.id), 'hat-ch1'])
+    expect(cosmeticCatalog(newSave()).map((c) => c.id)).toEqual([
+      ...COSMETICS.map((c) => c.id),
+      ...STAMP_COSMETICS.map((c) => c.id),
+      'hat-ch1',
+    ])
     expect(cosmeticCatalog({ ...newSave(), stageProgress: 25 }).map((c) => c.id).slice(-3)).toEqual(['hat-ch1', 'hat-ch2', 'hat-ch3'])
   })
 })
@@ -80,6 +116,22 @@ describe('ownedCosmetics', () => {
   test('장 보스를 깬 저장은 그 장 모자를 가짐(예전 저장 포함)', () => {
     const ids = ownedCosmetics({ ...newSave(), stageProgress: 25 }).map((c) => c.id)
     expect(ids).toEqual([...COSMETICS.map((c) => c.id), 'hat-ch1', 'hat-ch2'])
+  })
+
+  test('도장 7·30·100개를 모으면 도장 모자를 하나씩 가짐', () => {
+    const owned = (n: number) =>
+      ownedCosmetics({ ...newSave(), records: stampDays(n) }).map((c) => c.id).filter((id) => id.startsWith('hat-stamp'))
+    expect(owned(0)).toEqual([])
+    expect(owned(6)).toEqual([])
+    expect(owned(7)).toEqual(['hat-stamp7'])
+    expect(owned(29)).toEqual(['hat-stamp7'])
+    expect(owned(30)).toEqual(['hat-stamp7', 'hat-stamp30'])
+    expect(owned(100)).toEqual(['hat-stamp7', 'hat-stamp30', 'hat-stamp100'])
+  })
+
+  test('도장 모자는 스테이지를 많이 깨거나 저장에 이름이 있어도 도장이 모자라면 없음', () => {
+    const save = { ...newSave(), stageProgress: 500, cosmetics: ['hat-stamp7'], records: stampDays(6) }
+    expect(ownedCosmetics(save).map((c) => c.id)).not.toContain('hat-stamp7')
   })
 
   test('저장에 있는 장 모자는 남김', () => {
@@ -153,6 +205,14 @@ describe('toggleWear', () => {
     const on = toggleWear({ ...newSave(), stageProgress: 10, worn: ['hat-crown', 'color-sky'] }, 'hat-ch1')
     expect(wornCosmetics(on)).toEqual({ hat: chapterCosmetic(1), color: byId('color-sky') })
     expect(toggleWear(on, 'hat-ch1').worn).toEqual(['color-sky'])
+  })
+
+  test('도장 모자는 도장을 모았을 때만 입음', () => {
+    const few = { ...newSave(), records: stampDays(6) }
+    expect(toggleWear(few, 'hat-stamp7')).toBe(few)
+    const on = toggleWear({ ...newSave(), records: stampDays(7), stageProgress: 6, worn: ['hat-crown'] }, 'hat-stamp7')
+    expect(on.worn).toEqual(['hat-stamp7'])
+    expect(wornCosmetics(on).hat?.id).toBe('hat-stamp7')
   })
 
   test('아직 못 깬 장 모자는 입을 수 없음', () => {

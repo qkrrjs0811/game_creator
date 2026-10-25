@@ -155,14 +155,21 @@ const skills = createSkills(app, {
   },
 })
 
+/** 꾸미기용: 도장 모자는 켜 둔 타이머로 오늘 찍은 도장도 센다 */
+const lookSave = () => ({ ...save, records: liveRecords(save, Date.now()) })
+
 // 꾸미기는 모습만 바꾼다(입은 꾸미기 저장만 바뀜)
 const cosmetics = createCosmetics(app, {
-  view: () => ({ catalog: cosmeticCatalog(save), owned: ownedCosmetics(save), worn: wornCosmetics(save) }),
+  view: () => {
+    const s = lookSave()
+    return { catalog: cosmeticCatalog(s), owned: ownedCosmetics(s), worn: wornCosmetics(s) }
+  },
   onWear(id) {
     pullSave()
-    const next = toggleWear(save, id)
-    if (next === save) return
-    save = next
+    const s = lookSave()
+    const next = toggleWear(s, id)
+    if (next === s) return
+    save = { ...save, worn: next.worn }
     persist()
     render()
   },
@@ -328,7 +335,7 @@ function render() {
   })
   skills.refresh()
   homeScene()?.showHomeMonster(homeMonster(save.stageProgress))
-  homeScene()?.dress(wornCosmetics(save))
+  homeScene()?.dress(wornCosmetics({ ...save, records }))
   // 상한을 채운 뒤에도 타이머가 켜져 있으면 말랑이가 그만 쉬자고 한다(모습만 바뀜)
   homeScene()?.setMood(live === null ? 'rest' : liveFull ? 'full' : live)
 }

@@ -14,9 +14,10 @@ const KINDS: { kind: CosmeticKind; name: string; icon: string }[] = [
   { kind: 'color', name: '색', icon: '🎨' },
 ]
 
-/** 아직 없는 꾸미기를 얻는 곳. 장 모자는 "1장 보스" */
+/** 아직 없는 꾸미기를 얻는 곳. 장 모자는 "1장 보스", 도장 모자는 "도장 7개" */
 function where(c: Cosmetic): string {
-  return c.chapter ? `${c.chapter}장 보스` : stageLabel(endlessStage(c.stage))
+  if (c.stamps !== undefined) return `도장 ${c.stamps}개`
+  return c.chapter ? `${c.chapter}장 보스` : stageLabel(endlessStage(c.stage ?? 1))
 }
 
 /** 장 모자는 같은 그림이 여러 색으로 나와서 아이콘 바탕을 모자 색으로 칠한다 */
@@ -55,7 +56,7 @@ export function createCosmetics(root: HTMLElement, h: { view(): CosmeticsView; o
     const v = h.view()
     const wornIds = [v.worn.hat?.id, v.worn.color?.id]
     q('cosmetics-desc').textContent =
-      v.owned.length > 0 ? `모자 하나, 색 하나를 골라 입혀요 · ${v.owned.length}개 모았어요` : '스테이지를 처음 깨면 꾸미기를 받아요.'
+      v.owned.length > 0 ? `모자 하나, 색 하나를 골라 입혀요 · ${v.owned.length}개 모았어요` : '스테이지를 처음 깨거나 도장을 모으면 꾸미기를 받아요.'
 
     // 지금 입은 것: 누르면 그 칸으로 가서 보여 준다
     wornBar.hidden = v.owned.length === 0
