@@ -47,11 +47,13 @@ export function createSkills(root: HTMLElement, h: { view(): SkillsView; onLearn
 
   /** 한 번 누른 스킬. 잘못 눌러 포인트를 쓰지 않게 한 번 더 눌러야 배운다 */
   let asking: SkillId | null = null
+  let lastStats = ''
 
   const draw = () => {
     const v = h.view()
     if (v.points < 1) asking = null
-    q('stats').innerHTML = v.stats
+    // 매초 다시 그리므로 바뀐 게 있을 때만 칸을 새로 만든다(칸이 깜빡이거나 사라졌다 생기지 않게)
+    const stats = v.stats
       .map(
         (s) => `
         <li class="stat${s.source ? '' : ' soon'}" data-testid="stat-${s.id}">
@@ -62,6 +64,10 @@ export function createSkills(root: HTMLElement, h: { view(): SkillsView; onLearn
         </li>`,
       )
       .join('')
+    if (stats !== lastStats) {
+      lastStats = stats
+      q('stats').innerHTML = stats
+    }
     q('skill-points').innerHTML = `남은 포인트 <b>${v.points}</b>`
     const asked = SKILLS.find((s) => s.id === asking)
     q('skill-hint').textContent = asked

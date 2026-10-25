@@ -79,7 +79,7 @@ test('나 창에서 운동으로 오른 힘·체력과 다음까지 남은 분�
   await page.getByTestId('tab-me').click()
   await expect(page.getByTestId('stat-value-str')).toHaveText('5')
   await expect(page.getByTestId('stat-next-str')).toHaveText('운동 10분 더')
-  await expect(page.getByTestId('stat-next-int')).toHaveText('준비 중')
+  await expect(page.getByTestId('stat-next-int')).toHaveText('공부 5분 더')
   await page.getByTestId('skills-close').click()
 
   // 37분 운동 → 힘·체력 5+3, 다음까지 3분. 열어 둔 채로 운동하면 바로 바뀐다
@@ -100,7 +100,7 @@ test('나 창 능력치 칸에 전투에서 하는 일이 보이고 칸 안에 �
   await page.getByTestId('tab-me').click()
   await expect(page.getByTestId('stat-role-str')).toHaveText('공격')
   await expect(page.getByTestId('stat-role-vit')).toHaveText('HP·방어')
-  await expect(page.getByTestId('stat-role-int')).toHaveText('치명타·스킬')
+  await expect(page.getByTestId('stat-role-int')).toHaveText('치명타·두루')
   for (const id of ['str', 'vit', 'int']) {
     const role = (await page.getByTestId(`stat-role-${id}`).boundingBox())!
     const card = (await page.getByTestId(`stat-${id}`).boundingBox())!
