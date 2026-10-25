@@ -3,7 +3,6 @@ import { winnableStages } from './coach'
 import { goalStreak, todayGoal } from './goal'
 import { todayMission } from './mission'
 import { computeProgress } from './progression'
-import { upcomingRewards, type RewardKind, type UpcomingReward } from './rewards'
 import type { ActivityRecord } from './types'
 import { weekGoal } from './week'
 
@@ -18,7 +17,7 @@ export const CHAT_MAX_CHARS = 18
 /** 마지막으로 본 뒤 이만큼 지났으면 "보고 싶었어" */
 export const MISSED_MS = 24 * 60 * 60_000
 
-export type ChatKind = 'welcome' | 'missed' | 'goal' | 'mission' | 'allDone' | 'reward' | 'winnable' | 'streak' | 'week' | 'cheer'
+export type ChatKind = 'welcome' | 'missed' | 'goal' | 'mission' | 'allDone' | 'winnable' | 'streak' | 'week' | 'cheer'
 
 export interface ChatLine {
   kind: ChatKind
@@ -32,36 +31,6 @@ export interface ChatInput {
   now: number
   /** 마지막으로 본 시각(보조 키 last-seen). 모르면 null */
   lastSeen: number | null
-}
-
-/** 곧 받을 보상은 진척이 이보다 클 때만 한마디로 말한다 */
-export const REWARD_CHAT_RATIO = 0.5
-
-const REWARD_TAIL: Record<RewardKind, string> = {
-  stamp: '새 모자!',
-  mission: '새 모자!',
-  week: '새 색!',
-  chapter: '새 모자!',
-  achievement: '새 칭호!',
-  growth: '쑥 자라!',
-}
-
-/** 받침이 있으면 "이면", 없으면 "면" */
-const ifJosa = (word: string) => {
-  const code = word.charCodeAt(word.length - 1) - 0xac00
-  return code >= 0 && code < 11172 && code % 28 !== 0 ? '이면' : '면'
-}
-
-/** 곧 받을 보상을 말풍선 한 줄로("🎁 도장 2개면 새 모자!"). 현실 활동으로 안내할 수 없거나 너무 길면 null */
-export function rewardChatText(r: UpcomingReward): string | null {
-  const tail = REWARD_TAIL[r.kind]
-  let m: RegExpExecArray | null
-  let text: string | null = null
-  if ((m = /^(\d+)일 더 이어 하기$/.exec(r.need))) text = `🎁 ${m[1]}일 더 이어 가면 ${tail}`
-  else if ((m = /^활동 (\d+)가지 더 해 보기$/.exec(r.need))) text = `🎁 ${m[1]}가지 더 해 보면 ${tail}`
-  else if ((m = /^스테이지 (\d+)개 더 깨기$/.exec(r.need))) text = `🎁 ${m[1]}곳 더 깨면 ${tail}`
-  else if ((m = /^(.+) 더$/.exec(r.need))) text = `🎁 ${m[1]}${ifJosa(m[1])} ${tail}`
-  return text !== null && Array.from(text).length <= CHAT_MAX_CHARS ? text : null
 }
 
 /** 늘 마지막에 오는 기본 한마디 */
@@ -89,12 +58,6 @@ export function chatLines({ records, stageProgress, skills, now, lastSeen }: Cha
     })
   }
   if (goal.done) lines.push({ kind: 'allDone', text: '🌟 오늘 도장 고마워!' })
-
-  const reward = upcomingRewards({ records, stageProgress, skills, now })
-    .filter((r) => r.ratio > REWARD_CHAT_RATIO)
-    .map(rewardChatText)
-    .find((t): t is string => t !== null)
-  if (reward) lines.push({ kind: 'reward', text: reward })
 
   const minutes = computeProgress(records).creditedMinutes
   if (winnableStages(minutes, skills, stageProgress, 1) > 0) lines.push({ kind: 'winnable', text: '🍀 이길 만한 곳이 있어!' })
