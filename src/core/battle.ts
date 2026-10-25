@@ -1,5 +1,6 @@
 import { BASE_STAT } from './progression'
 import { skillRanks } from './skills'
+import type { MonsterTrait } from './traits'
 import type { StatId } from './types'
 
 /** 전투에 나서는 한 쪽. 몬스터 능력치는 `monsters.ts`에 있다 */
@@ -13,6 +14,10 @@ export interface Fighter {
   dodge: number
   /** 치명타 확률(0~1). 몬스터는 없다 */
   crit?: number
+  /** 날쌘(swift) 상대의 회피를 이만큼 깎는다. 말랑이의 집중에서 나온다 */
+  accuracy?: number
+  /** 몬스터 성격(`traits.ts`). 말랑이는 없다 */
+  trait?: MonsterTrait
 }
 
 export interface BattleEvent {
@@ -21,6 +26,8 @@ export interface BattleEvent {
   damage: number
   /** 치명타였는지. 치명타일 때만 붙는다 */
   crit?: boolean
+  /** 단단한 상대의 방어를 치명타가 뚫었는지. 그럴 때만 붙는다 */
+  pierce?: boolean
   /** 맞은 쪽의 남은 HP */
   targetHp: number
 }
@@ -66,6 +73,8 @@ export function playerFighter(stats: Record<StatId, number>, skills: string[]): 
     spd: 5 + r.quick * 2,
     dodge: Math.min(MAX_DODGE, r.quick * QUICK_DODGE + Math.min(MAX_FOCUS_DODGE, calm * 0.01)),
     crit: Math.min(MAX_CRIT, smart * 0.01),
+    // 집중이 없으면 붙이지 않아 운동만 한 말랑이의 값은 예전 그대로다
+    ...(calm > 0 ? { accuracy: Math.min(MAX_FOCUS_DODGE, calm * 0.01) } : {}),
   }
 }
 
@@ -94,18 +103,27 @@ export function simulateBattle(player: Fighter, enemy: Fighter, seed: number): B
     rounds++
     for (const actor of order) {
       const target = actor === 'player' ? 'enemy' : 'player'
-      if (rand() < side[target].dodge) {
+      // 날쌘 상대는 집중으로 덜 피한다(주사위 수는 그대로)
+      const dodge = side[target].trait === 'swift' ? Math.max(0, side[target].dodge - (side[actor].accuracy ?? 0)) : side[target].dodge
+      if (rand() < dodge) {
         log.push({ actor, kind: 'miss', damage: 0, targetHp: hp[target] })
         continue
       }
-      const baseDamage = Math.max(1, side[actor].atk - side[target].def)
-      let damage = baseDamage + Math.floor(rand() * (Math.ceil(baseDamage * 0.2) + 1))
+      const spread = rand()
+      const roll = (def: number) => {
+        const baseDamage = Math.max(1, side[actor].atk - def)
+        return baseDamage + Math.floor(spread * (Math.ceil(baseDamage * 0.2) + 1))
+      }
+      let damage = roll(side[target].def)
       // 치명타가 없는 쪽은 주사위를 굴리지 않아 같은 씨앗이면 예전과 같은 전투가 된다
       const critChance = side[actor].crit ?? 0
       const crit = critChance > 0 && rand() < critChance
+      // 단단한 상대에게 치명타는 방어를 반만 받는다
+      const pierce = crit && side[target].trait === 'sturdy' && side[target].def > 0
+      if (pierce) damage = roll(Math.floor(side[target].def / 2))
       if (crit) damage = Math.floor(damage * CRIT_MULTIPLIER)
       hp[target] = Math.max(0, hp[target] - damage)
-      log.push({ actor, kind: 'hit', damage, ...(crit ? { crit } : {}), targetHp: hp[target] })
+      log.push({ actor, kind: 'hit', damage, ...(crit ? { crit } : {}), ...(pierce ? { pierce } : {}), targetHp: hp[target] })
       if (hp[target] === 0) break
     }
   }

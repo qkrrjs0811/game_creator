@@ -3,6 +3,7 @@ import { freshFighter } from './difficulty'
 import { MONSTERS, type Monster, type MonsterShape } from './monsters'
 import { EXP_PER_MINUTE, MINUTES_PER_STAT, expToNext } from './progression'
 import { STAGES } from './stages'
+import { shapeTrait } from './traits'
 
 /** 한 장 = 스테이지 10개, 10번째가 보스. 장은 끝없이 이어진다 */
 export const STAGES_PER_CHAPTER = 10
@@ -113,7 +114,7 @@ function wins(me: Fighter, enemy: Fighter): number {
   return w
 }
 
-function scaledEnemy(me: Fighter, shape: MonsterShape, name: string, k: number): Fighter {
+function scaledEnemy(me: Fighter, shape: MonsterShape, chapter: number, name: string, k: number): Fighter {
   const p = PERSONALITY[shape]
   return {
     name,
@@ -122,20 +123,23 @@ function scaledEnemy(me: Fighter, shape: MonsterShape, name: string, k: number):
     def: Math.max(0, Math.round(me.atk * 0.35 * p.def * k)),
     spd: Math.max(1, me.spd + p.spd),
     dodge: p.dodge,
+    // 성격은 맞추는 말랑이(운동만 함)에게 효과가 없어 세기를 바꾸지 않는다
+    trait: shapeTrait(shape, chapter),
   }
 }
 
 /** 목표 시간의 말랑이가 넉넉히 이기는 가장 센 상대 */
 function calibratedEnemy(no: number, shape: MonsterShape, name: string): Fighter {
   const me = freshFighter(nearestStep(targetMinutes(no)))
+  const chapter = chapterOf(no)
   let lo = 0.05
   let hi = 4
   for (let i = 0; i < 30; i++) {
     const mid = (lo + hi) / 2
-    if (wins(me, scaledEnemy(me, shape, name, mid)) >= COMFORT_WINS) lo = mid
+    if (wins(me, scaledEnemy(me, shape, chapter, name, mid)) >= COMFORT_WINS) lo = mid
     else hi = mid
   }
-  return scaledEnemy(me, shape, name, lo)
+  return scaledEnemy(me, shape, chapter, name, lo)
 }
 
 function chapterWord(chapter: number): string {
