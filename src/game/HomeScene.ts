@@ -9,7 +9,8 @@ import { stepSound } from '../core/sound'
 import { playSound } from '../ui/sound'
 import { contactAt, finishDelay, hitImpact, hpTrail, isFinalBlow, type Impact } from '../core/impact'
 import { skillFxSize, skillFxTiming, stepSkillFx, type SkillFxKind, type SkillStyle } from '../core/skillfx'
-import { MONSTER_TOP, drawMonsterBody, drawMonsterFace } from './monsterArt'
+import { drawMonsterBody, drawMonsterFace } from './monsterArt'
+import { BOSS_BAR_RAISE, bossLook, monsterScale, monsterTop } from '../core/bossLook'
 import { monsterChapter, monsterDecor } from '../core/monsterDecor'
 import { monsterEndFace, monsterStepFace, type MonsterFace } from '../core/monsterLook'
 import { MONSTER_ATTACK, MONSTER_BOTTOM, MONSTER_IDLE, REST_POSE, attackPlan, poseY, type Pose } from '../core/monsterMotion'
@@ -499,6 +500,8 @@ export class HomeScene extends Phaser.Scene {
   private shownMonsterFace?: MonsterFace
   private monsterFace: MonsterFace = 'idle'
   private monsterShape: Monster['shape'] = 'slime'
+  /** 지금 나온 몬스터가 보스인지. 보스는 크게 그리고 HP 막대를 올린다 */
+  private monsterBoss = false
   /** 입은 꾸미기와 지금 그려진 모습 */
   private look: Worn = { hat: null, color: null, prop: null }
   private shownLook?: string
@@ -1022,6 +1025,7 @@ export class HomeScene extends Phaser.Scene {
     if (this.shownMonster === m.id) return
     this.shownMonster = m.id
     this.monsterShape = m.shape
+    this.monsterBoss = m.boss
     this.monsterBody.removeAll(true)
     this.monsterBody.add(this.monsterParts(m))
     // 홈에서 몬스터가 바뀌면 그 종의 움직임으로 바꾼다
@@ -1029,6 +1033,7 @@ export class HomeScene extends Phaser.Scene {
     // e2e가 지금 어떤 몬스터가 나와 있는지 볼 수 있게 남긴다
     this.game.canvas.parentElement?.setAttribute('data-monster', m.id)
     this.game.canvas.parentElement?.setAttribute('data-monster-decor', monsterDecor(monsterChapter(m)).join(' '))
+    this.game.canvas.parentElement?.setAttribute('data-monster-boss', bossLook(m).join(' '))
   }
 
   /** 몬스터 모양. 모두 아래쪽(y≈26)이 땅에 닿는 둥근 도형이다. 얼굴은 표정이 바뀔 때만 다시 그린다 */
@@ -1036,6 +1041,9 @@ export class HomeScene extends Phaser.Scene {
     const g = this.add.graphics()
     drawMonsterBody(g, m)
     this.monsterFaceG = this.add.graphics()
+    // 보스는 발끝을 땅에 둔 채 크게 그린다
+    const s = monsterScale(m)
+    for (const part of [g, this.monsterFaceG]) part.setScale(s).setY(MONSTER_BOTTOM * (1 - s))
     this.shownMonsterFace = undefined
     // 다음 프레임에 새 몬스터의 표정을 그린다
     return [g, this.monsterFaceG]
@@ -1149,7 +1157,7 @@ export class HomeScene extends Phaser.Scene {
       this.tweens.add({ targets: attacker, x: home.attacker + fx.reach * dir, scaleX: 1.06, scaleY: 0.95, duration: fx.lunge, ease: 'Quad.easeIn' })
     })
     // 맞은 쪽 HP 막대 위쪽 y
-    const bar = s.actor === 'player' ? barY(this.scale.height) : this.mascotBarY(this.scale.height)
+    const bar = s.actor === 'player' ? this.monsterBarY(this.scale.height) : this.mascotBarY(this.scale.height)
     const recover = () => {
       this.tweens.add({ targets: attacker, x: home.attacker, scaleX: 1, scaleY: 1, duration: fx.back, ease: 'Quad.easeOut' })
       if (monsterPlan.length) this.poseMonster(REST_POSE, fx.back, 'Quad.easeOut')
@@ -1256,9 +1264,9 @@ export class HomeScene extends Phaser.Scene {
   /** 말랑이(enemy=false) 또는 몬스터(true)의 몸 가운데와 반지름(장면 좌표) */
   private bodyOf(enemy: boolean) {
     const s = this.growth.scale
-    const top = MONSTER_TOP[this.monsterShape]
+    const top = this.monsterTop()
     return enemy
-      ? { x: this.monster.x, y: this.monster.y + (top + 26) / 2, rx: 42, ry: (26 - top) / 2 + 3 }
+      ? { x: this.monster.x, y: this.monster.y + (top + 26) / 2, rx: 42 * monsterScale({ boss: this.monsterBoss }), ry: (26 - top) / 2 + 3 }
       : { x: this.mascot.x, y: this.mascot.y + FEET * (1 - s), rx: 41 * s, ry: 41 * s }
   }
 
@@ -1338,7 +1346,7 @@ export class HomeScene extends Phaser.Scene {
       case 'bolt': {
         // 노란 번개가 몬스터에게 내리꽂힌다. HP 막대·치명타 글자를 가리지 않게 막대 바로 아래에서 시작한다
         const t = this.bodyOf(true)
-        const top = barY(this.scale.height) + 18
+        const top = this.monsterBarY(this.scale.height) + 18
         const k = Math.min(1, Math.max(0.4, (t.y - t.ry + 18 - top) / 96))
         const g = this.add.graphics({ x: t.x + 6, y: top })
         const pts = [[-8, 0], [12, 0], [4, 36], [18, 36], [-10, 96], [-2, 52], [-16, 52]].map(([x, y]) => new Phaser.Math.Vector2(x, y))
@@ -1529,7 +1537,7 @@ export class HomeScene extends Phaser.Scene {
     }
     const { width: w, height: h } = this.scale
     bar(b.bars[0], w * 0.3, this.mascotBarY(h), b.hp[0], b.trail[0], HP_PLAYER, HP_PLAYER_TRAIL)
-    bar(b.bars[1], w * 0.72, barY(h), b.hp[1], b.trail[1], HP_ENEMY, HP_ENEMY_TRAIL)
+    bar(b.bars[1], w * 0.72, this.monsterBarY(h), b.hp[1], b.trail[1], HP_ENEMY, HP_ENEMY_TRAIL)
     // e2e가 앞 막대와 옅은 막대가 어디까지 왔는지 볼 수 있게 남긴다
     const host = this.game.canvas.parentElement
     host?.setAttribute('data-hp', b.hp.map((v) => v.toFixed(2)).join(' '))
@@ -1542,6 +1550,16 @@ export class HomeScene extends Phaser.Scene {
    */
   private mascotBarY(h: number): number {
     return Math.min(barY(h), groundY(h) + Math.floor(grownTop(this.look.hat, this.growth.scale)) - 14)
+  }
+
+  /** 몬스터 HP 막대 위쪽 y. 커진 보스는 머리가 닿지 않게 올린다 */
+  private monsterBarY(h: number): number {
+    return barY(h) - (this.monsterBoss ? BOSS_BAR_RAISE : 0)
+  }
+
+  /** 지금 몬스터의 머리끝(보스는 커진 만큼) */
+  private monsterTop(): number {
+    return monsterTop({ shape: this.monsterShape, boss: this.monsterBoss })
   }
 
   private layout(w: number, h: number) {
@@ -1607,11 +1625,11 @@ export class HomeScene extends Phaser.Scene {
     if (!b?.ended) return
     const winner = b.win ? this.mascot : this.monster
     const bar = b.bars[b.win ? 0 : 1]
-    const headTop = b.win ? grownTop(this.look.hat, this.growth.scale) : MONSTER_TOP[this.monsterShape]
+    const headTop = b.win ? grownTop(this.look.hat, this.growth.scale) : this.monsterTop()
     const rest = groundY(this.scale.height) + (b.win ? 0 : 6) + headTop
     const top = winner.y + winner.scaleY * headTop
     // 막대 바깥 흰 테두리 위끝과 아래끝
-    const barTop = (b.win ? this.mascotBarY(this.scale.height) : barY(this.scale.height)) - 3 + bar.y
+    const barTop = (b.win ? this.mascotBarY(this.scale.height) : this.monsterBarY(this.scale.height)) - 3 + bar.y
     b.lift = Math.min(b.lift ?? top - rest, top - rest)
     b.gap = Math.min(b.gap ?? Infinity, top - (barTop + 16))
     b.barPeak = Math.min(b.barPeak ?? barTop, barTop)

@@ -2,6 +2,7 @@ import Phaser from 'phaser'
 import type { Monster, MonsterShape } from '../core/monsters'
 import { MONSTER_FEATURES, MONSTER_TOP, type MonsterFace } from '../core/monsterLook'
 import { MONSTER_DECOR_SPOTS, monsterChapter, monsterDecor } from '../core/monsterDecor'
+import { BOSS_CAPE, BOSS_HALO, bossLook } from '../core/bossLook'
 
 const MONSTER_INK = 0x3d2a63
 const CROWN = 0xffd36b
@@ -175,6 +176,9 @@ const CHEEKS: Record<MonsterShape, [number, number]> = {
  * 얼굴은 표정마다 따로 그린다(drawMonsterFace)
  */
 export function drawMonsterBody(g: Phaser.GameObjects.Graphics, m: Monster) {
+  const boss = bossLook(m)
+  if (boss.includes('halo')) drawHalo(g)
+  if (boss.includes('cape')) drawCape(g)
   const ps = parts(m)
   // 테두리: 모든 덩어리를 조금 부풀려 진한 색으로 먼저 칠한다(겹친 곳 안쪽엔 선이 안 생긴다)
   for (const p of ps) {
@@ -222,6 +226,43 @@ export function drawMonsterBody(g: Phaser.GameObjects.Graphics, m: Monster) {
   const [cx, cy] = CHEEKS[m.shape]
   g.fillStyle(0xff8fa8, 0.55).fillEllipse(-cx, cy, 9, 5).fillEllipse(cx, cy, 9, 5)
   drawMonsterDecor(g, m)
+}
+
+const CAPE = 0xf2667f
+const CAPE_SHADE = 0xd24d68
+
+/** 보스 몸 뒤의 후광: 겹친 연노랑 빛 둥근 판과 둘레의 작은 빛 방울 */
+function drawHalo(g: Phaser.GameObjects.Graphics) {
+  const { y, rx, ry } = BOSS_HALO
+  g.fillStyle(0xfff3b0, 0.45).fillEllipse(0, y, rx * 2, ry * 2)
+  g.fillStyle(0xffe58a, 0.4).fillEllipse(0, y, rx * 1.6, ry * 1.6)
+  g.lineStyle(2, 0xffd36b, 0.7).strokeEllipse(0, y, rx * 2, ry * 2)
+  for (let i = 0; i < 10; i++) {
+    const a = (i / 10) * Math.PI * 2
+    g.fillStyle(0xffffff, 0.75).fillCircle(Math.cos(a) * rx * 0.92, y + Math.sin(a) * ry * 0.92, i % 2 ? 1.6 : 2.4)
+  }
+}
+
+/** 보스 몸 뒤의 망토: 어깨에서 땅 쪽으로 넓게 퍼지고 아래끝이 물결진다. 금색 단을 두른다 */
+function drawCape(g: Phaser.GameObjects.Graphics) {
+  const { top, bottom, halfWidth: w } = BOSS_CAPE
+  const v = (x: number, y: number) => new Phaser.Math.Vector2(x, y)
+  const shape = (grow: number) => {
+    const pts = [v(-24 - grow, top - grow), v(24 + grow, top - grow), v(w + grow, bottom - 6 + grow)]
+    // 아래끝 물결(오른쪽 → 왼쪽)
+    for (let i = 1; i < 6; i++) {
+      const x = w - (w * 2 * i) / 6
+      pts.push(v(x + grow * Math.sign(x), bottom + (i % 2 ? grow : -4)))
+    }
+    pts.push(v(-w - grow, bottom - 6 + grow))
+    return pts
+  }
+  g.fillStyle(mix(CAPE_SHADE, MONSTER_INK, 0.45)).fillPoints(shape(2.4), true)
+  g.fillStyle(CAPE_SHADE).fillPoints(shape(0), true)
+  g.fillStyle(CAPE).fillPoints(shape(-3), true)
+  // 금색 단
+  g.lineStyle(2.4, CROWN, 0.95)
+  g.strokePoints(shape(-1.5).slice(2), false)
 }
 
 const BOW = 0xff8fb1
