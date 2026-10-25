@@ -659,6 +659,64 @@ body {
   cursor: pointer;
 }
 .auto-run[hidden] { display: none; }
+/* 모험 지도 아래 줄: 도감 버튼과 닫기 */
+.sheet-foot { display: flex; justify-content: center; gap: 10px; }
+.dex-open {
+  margin-top: 12px;
+  min-height: 44px;
+  padding: 0 22px;
+  border: 0;
+  border-radius: 999px;
+  background: #fff;
+  color: var(--accent);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  box-shadow: 0 3px 0 var(--track);
+  cursor: pointer;
+}
+
+/* 몬스터 도감: 둥근 칸 세 줄 격자. 많아져도 닫기 버튼은 화면 안에 두고 격자만 넘긴다 */
+.dex-count {
+  display: inline-block;
+  margin: 0 0 8px;
+  padding: 4px 14px;
+  border-radius: 999px;
+  background: #fff1e6;
+  color: var(--accent);
+  font-size: 15px;
+  font-weight: 700;
+}
+.dex-grid {
+  list-style: none;
+  margin: 10px -6px 0;
+  padding: 2px 6px 6px;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  max-height: calc(92dvh - 250px);
+  overflow-y: auto;
+}
+.dex-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 8px 4px 10px;
+  border-radius: 22px;
+  background: #fff;
+  box-shadow: 0 4px 0 var(--track);
+}
+.dex-cell.boss { background: #fff0f5; box-shadow: 0 4px 0 #f6cfdc; }
+.dex-cell.shadow { background: #f9efe4; box-shadow: none; border: 2px dashed var(--track); }
+.dex-pic { width: 64px; height: 58px; }
+.dex-cell .dex-pic-wrap { position: relative; display: block; height: 58px; }
+.dex-pic-wrap i { position: absolute; left: 50%; top: 58%; transform: translate(-50%, -50%); font-size: 20px; font-style: normal; }
+.dex-cell b { font-size: 13px; line-height: 1.3; }
+.dex-cell span { font-size: 11px; line-height: 1.3; color: var(--ink-soft); }
+.dex-cell.shadow span { color: var(--ink); font-weight: 700; }
+.dex-empty { margin: 10px 0 0; font-size: 13px; line-height: 1.5; color: var(--ink-soft); }
+.dex-empty[hidden] { display: none; }
 /* 버튼이 들어선 만큼 목록을 줄여 닫기 버튼이 화면 안에 남게 한다 */
 .auto-run:not([hidden]) + .stage-list { max-height: calc(92dvh - 318px); }
 

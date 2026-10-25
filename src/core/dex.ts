@@ -1,5 +1,5 @@
 import { stageMinutesToWin } from './coach'
-import { stageMonsterLook } from './endless'
+import { chapterOf, stageMonsterLook } from './endless'
 import type { Monster } from './monsters'
 import type { ActivityId } from './types'
 
@@ -62,6 +62,26 @@ export function upcomingMonsters(stageProgress: number, count: number): DexEntry
     found.push(entry)
   }
   return found
+}
+
+export interface DexPage {
+  /** 보고 있는 장 */
+  chapter: number
+  /** 다음에 깰 스테이지가 있는 장. 도감은 여기까지 넘겨 본다 */
+  current: number
+  prev: boolean
+  next: boolean
+  /** 이 장에서 처음 만난 몬스터 */
+  entries: DexEntry[]
+}
+
+/** 도감을 장별로 나눈 한 쪽. 장을 고르지 않으면 지금 장, 1장~지금 장 밖은 끝으로 맞춘다 */
+export function dexPage(stageProgress: number, chapter?: number): DexPage {
+  const current = chapterOf(cleared(stageProgress) + 1)
+  const want = chapter === undefined || !Number.isFinite(chapter) ? current : Math.floor(chapter)
+  const c = Math.min(current, Math.max(1, want))
+  const entries = monsterDex(stageProgress).entries.filter((e) => chapterOf(e.firstStage) === c)
+  return { chapter: c, current, prev: c > 1, next: c < current, entries }
 }
 
 /**

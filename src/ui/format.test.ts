@@ -1,6 +1,6 @@
 import { test, expect } from 'vitest'
 import { WINNABLE_MAX } from '../core/coach'
-import { autoRunCard, awayAdventure, awayCard, formatElapsed, formatMinutes, goalText, objectJosa, weekChip, weekDoneText, weekGoalText, sessionSummary, topicJosa, weekTotalText, bestDayText, dayDetail, pageRangeText } from './format'
+import { autoRunCard, awayAdventure, awayCard, formatElapsed, formatMinutes, goalText, objectJosa, weekChip, weekDoneText, weekGoalText, sessionSummary, topicJosa, weekTotalText, bestDayText, dayDetail, pageRangeText, dexShadowText } from './format'
 import { AUTO_RUN_MAX } from '../core/autorun'
 import type { Cosmetic } from '../core/cosmetics'
 import type { AwaySummary } from '../core/away'
@@ -190,4 +190,11 @@ test('넘겨 보는 7일 쪽 이름', () => {
   expect(pageRangeText(['2026-10-19', '2026-10-25'], 0)).toBe('최근 7일')
   expect(pageRangeText(['2026-10-12', '2026-10-18'], 1)).toBe('10월 12일 ~ 18일')
   expect(pageRangeText(['2026-09-28', '2026-10-04'], 4)).toBe('9월 28일 ~ 10월 4일')
+})
+
+test('도감 그림자 칸 글자', () => {
+  expect(dexShadowText(0)).toBe('🍀 지금 만나요')
+  expect(dexShadowText(45)).toBe('운동 45분 더')
+  expect(dexShadowText(130)).toBe('운동 2시간 10분 더')
+  expect(dexShadowText(null)).toBe('더 키워서 만나요')
 })

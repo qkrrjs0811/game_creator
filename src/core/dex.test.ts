@@ -1,5 +1,5 @@
 import { describe, test, expect } from 'vitest'
-import { DEX_LOOKAHEAD, dexKey, dexShadows, monsterDex, upcomingMonsters } from './dex'
+import { DEX_LOOKAHEAD, dexKey, dexPage, dexShadows, monsterDex, upcomingMonsters } from './dex'
 import { stageMinutesToWin } from './coach'
 import { stageMonster, stageMonsterLook } from './endless'
 import { MONSTERS } from './monsters'
@@ -94,5 +94,38 @@ describe('dexShadows 그림자 칸', () => {
 
   test('지금도 이길 만하면 0', () => {
     expect(dexShadows({ exercise: 0 }, [], 0, 1)[0]).toMatchObject({ firstStage: 1, toWin: 0 })
+  })
+})
+
+describe('dexPage 장별로 나눠 보기', () => {
+  test('고르지 않으면 지금 장, 그 장에서 처음 만난 몬스터만', () => {
+    const page = dexPage(13)
+    expect(page.chapter).toBe(2)
+    expect(page.current).toBe(2)
+    expect(page.prev).toBe(true)
+    expect(page.next).toBe(false)
+    expect(page.entries.length).toBeGreaterThan(0)
+    expect(page.entries.every((e) => e.firstStage > 10 && e.firstStage <= 13)).toBe(true)
+  })
+
+  test('1장은 1~10스테이지에서 처음 만난 몬스터, 앞 장은 없다', () => {
+    const page = dexPage(13, 1)
+    expect(page.chapter).toBe(1)
+    expect(page.prev).toBe(false)
+    expect(page.next).toBe(true)
+    expect(page.entries.map((e) => e.firstStage)).toEqual(monsterDex(10).entries.map((e) => e.firstStage))
+  })
+
+  test('장들을 모두 모으면 도감 전체와 같다', () => {
+    const all = [1, 2, 3, 4, 5].flatMap((c) => dexPage(47, c).entries)
+    expect(all).toEqual(monsterDex(47).entries)
+  })
+
+  test('지금 장 너머나 1보다 앞은 끝으로 맞춘다', () => {
+    expect(dexPage(13, 9).chapter).toBe(2)
+    expect(dexPage(13, 0).chapter).toBe(1)
+    expect(dexPage(0).chapter).toBe(1)
+    expect(dexPage(0).entries).toEqual([])
+    expect(dexPage(10).chapter).toBe(2)
   })
 })

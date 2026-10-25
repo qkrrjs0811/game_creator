@@ -28,6 +28,16 @@ export function formatMinutes(minutes: number): string {
   return m === 0 ? `${h}시간` : `${h}시간 ${m}분`
 }
 
+/**
+ * 도감 그림자 칸: 그 몬스터를 운동 몇 분 더 하면 이길 만한지(0이면 지금도, null이면 찾는 범위 밖).
+ * 칸이 좁아 ❔ 는 그림자 그림 위에 따로 얹는다
+ */
+export function dexShadowText(toWin: number | null): string {
+  if (toWin === null) return '더 키워서 만나요'
+  if (toWin === 0) return '🍀 지금 만나요'
+  return `운동 ${formatMinutes(toWin)} 더`
+}
+
 function hasBatchim(word: string): boolean {
   const code = word.charCodeAt(word.length - 1) - 0xac00
   return code >= 0 && code < 11172 && code % 28 !== 0

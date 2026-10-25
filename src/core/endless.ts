@@ -144,7 +144,7 @@ function chapterWord(chapter: number): string {
   return round === 0 ? word : `${word}${round + 1}`
 }
 
-function chapterName(chapter: number): string {
+export function chapterName(chapter: number): string {
   return `${chapterWord(chapter)} 나라`
 }
 
