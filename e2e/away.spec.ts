@@ -27,11 +27,16 @@ test('운동하러 닫아 뒀다가 다시 열면 자리 비운 동안 카드를
   await expect(page.getByTestId('away-did')).toHaveText('운동 40분 했어요')
   await expect(page.getByTestId('away-gain')).toHaveText('EXP +400 · 💪 힘 +4 · ❤️ 체력 +4')
   await expect(page.getByTestId('away-chips').locator('em')).toHaveText(['⬆️ Lv.1 → Lv.3', '✨ 스킬 포인트 +2', '🌟 도장 +1'])
+  // 운동 40분이면 1스테이지부터 이길 만해서 모험 가기 버튼을 보여 준다(한 줄에 들어간다)
+  const adventure = page.getByTestId('away-adventure')
+  await expect(adventure).toHaveText(/^🍀 이길 만한 스테이지 \d+개/)
+  expect((await adventure.boundingBox())!.height).toBeLessThan(26)
   // 레벨업은 카드가 함께 알려 주니 같은 자리 배지는 띄우지 않고, 말랑이는 폴짝 뛴다
   await expect(page.getByTestId('levelup')).toBeHidden()
   await expect(page.getByTestId('scene')).toHaveAttribute('data-celebrations', '1')
 
-  // 카드는 장면 안에 들어가고, 말랑이(말풍선 포함)·모험·꾸미기 버튼을 가리지 않는다
+  // 카드는 장면 안에 들어가고, 말랑이(말풍선 포함)·모험·꾸미기 버튼을 가리지 않는다(톡 커지는 연출이 끝난 뒤 잰다)
+  await away.evaluate((el) => Promise.all(el.getAnimations().map((a) => a.finished)))
   const box = (await away.boundingBox())!
   const scene = (await page.getByTestId('scene').boundingBox())!
   const feet = Number(await page.locator('[data-feet]').getAttribute('data-feet'))
@@ -45,6 +50,12 @@ test('운동하러 닫아 뒀다가 다시 열면 자리 비운 동안 카드를
   const close = (await page.getByTestId('away-close').boundingBox())!
   expect(close.width).toBeGreaterThanOrEqual(44)
   expect(close.height).toBeGreaterThanOrEqual(44)
+  // 모험 가기 버튼은 카드 안, 닫기 버튼 아래에 손가락 크기로 있다
+  const go = (await page.getByTestId('away-go').boundingBox())!
+  expect(go.height).toBeGreaterThanOrEqual(44)
+  expect(go.y).toBeGreaterThanOrEqual(close.y + close.height)
+  expect(go.x + go.width).toBeLessThanOrEqual(box.x + box.width)
+  expect(go.y + go.height).toBeLessThanOrEqual(box.y + box.height)
   await page.clock.runFor(400)
   await page.waitForTimeout(700)
   await page.screenshot({ path: 'test-results/screens/away.png' })
@@ -115,8 +126,35 @@ test('앱을 뒤로 보냈다가 돌아와도 자리 비운 동안을 보여 주
   await page.waitForTimeout(500)
   await page.screenshot({ path: 'test-results/screens/away-resume.png' })
 
-  // 도전하면 카드를 닫는다(전투 띠·결과 카드와 겹치지 않게)
-  await page.getByTestId('open-stages').click()
+  // 카드의 모험 가기를 누르면 카드를 닫고 모험 지도를 연다
+  await expect(page.getByTestId('away-adventure')).toHaveText(/^🍀 이길 만한 스테이지 \d+개/)
+  await page.getByTestId('away-go').click()
+  await expect(page.getByTestId('away')).toBeHidden()
+  await expect(page.getByTestId('stages')).toBeVisible()
   await page.locator('[data-testid^=stage-go-]').first().click()
   await expect(page.getByTestId('away')).toBeHidden()
+})
+
+test('이길 만한 스테이지가 없으면 다음 스테이지까지 운동 몇 분 더인지 알려 주고 모험 가기 버튼은 없음', async ({ page }) => {
+  await page.clock.install({ time: new Date('2026-10-25T08:00:00+09:00') })
+  await page.goto('./')
+  await page.evaluate(() =>
+    localStorage.setItem(
+      'growth-game:save',
+      JSON.stringify({ version: 1, records: [], active: null, skills: [], stageProgress: 20, cosmetics: [] }),
+    ),
+  )
+  await page.reload()
+  await page.getByTestId('toggle').click()
+  await page.clock.fastForward('00:02')
+
+  await setVisibility(page, 'hidden')
+  await page.clock.fastForward('20:00')
+  await setVisibility(page, 'visible')
+
+  await expect(page.getByTestId('away')).toBeVisible()
+  await expect(page.getByTestId('away-adventure')).toHaveText(/^💪 다음 스테이지까지 운동 \d+(시간|분).* 더$/)
+  await expect(page.getByTestId('away-go')).toBeHidden()
+  await page.waitForTimeout(500)
+  await page.screenshot({ path: 'test-results/screens/away-not-yet.png' })
 })

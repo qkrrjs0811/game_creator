@@ -58,3 +58,23 @@ export function nextStageAdvice(
   const no = Math.max(0, Math.floor(stageProgress) || 0) + 1
   return { no, toWin: stageMinutesToWin(minutes, skills, no) }
 }
+
+/** 이길 만한 스테이지를 이만큼까지만 센다(화면에는 "N개 이상"으로 보여 준다) */
+export const WINNABLE_MAX = 10
+
+/**
+ * 다음에 깰 스테이지부터 줄줄이 이길 만한 스테이지 수. 스테이지는 차례로 열리니
+ * 처음 못 이길 만한 곳에서 멈춘다. 화면에 보여 줄 값일 뿐이다
+ */
+export function winnableStages(
+  minutes: Partial<Record<ActivityId, number>>,
+  skills: string[],
+  stageProgress: number,
+  max = WINNABLE_MAX,
+): number {
+  const me = playerFighter(statsFromMinutes(minutes), skills)
+  const first = Math.max(0, Math.floor(stageProgress) || 0) + 1
+  let n = 0
+  while (n < max && likelyWin(me, stageEnemy(first + n))) n++
+  return n
+}

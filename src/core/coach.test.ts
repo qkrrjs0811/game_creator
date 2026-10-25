@@ -1,5 +1,5 @@
 import { describe, test, expect } from 'vitest'
-import { likelyWin, minutesToWin, nextStageAdvice, stageMinutesToWin } from './coach'
+import { WINNABLE_MAX, likelyWin, minutesToWin, nextStageAdvice, stageMinutesToWin, winnableStages } from './coach'
 import { playerFighter } from './battle'
 import { stageEnemy, targetMinutes } from './endless'
 import { statsFromMinutes } from './progression'
@@ -69,5 +69,27 @@ describe('nextStageAdvice', () => {
 
   test('스테이지는 끝이 없어 보스를 깨도 다음 장 스테이지를 알려 준다', () => {
     expect(nextStageAdvice({ exercise: 0 }, [], 10)!.no).toBe(11)
+  })
+})
+
+describe('winnableStages', () => {
+  const wins = (minutes: number, no: number) => likelyWin(me(minutes), stageEnemy(no))
+
+  test('다음 스테이지부터 줄줄이 이길 만한 스테이지 수를 센다', () => {
+    for (const [minutes, progress] of [[0, 0], [40, 0], [300, 2], [900, 5]]) {
+      const n = winnableStages({ exercise: minutes }, [], progress)
+      for (let no = progress + 1; no <= progress + n; no++) expect(wins(minutes, no)).toBe(true)
+      if (n < WINNABLE_MAX) expect(wins(minutes, progress + n + 1)).toBe(false)
+    }
+    expect(winnableStages({ exercise: 0 }, [], 0)).toBeGreaterThanOrEqual(1)
+  })
+
+  test('다음 스테이지를 아직 못 이기면 0', () => {
+    expect(minutesToWin({ exercise: 0 }, [], stageEnemy(5))).toBeGreaterThan(0)
+    expect(winnableStages({ exercise: 0 }, [], 4)).toBe(0)
+  })
+
+  test('아주 많이 키웠어도 WINNABLE_MAX까지만 센다', () => {
+    expect(winnableStages({ exercise: 200_000 }, [], 0)).toBe(WINNABLE_MAX)
   })
 })

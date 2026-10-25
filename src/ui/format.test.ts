@@ -1,5 +1,6 @@
 import { test, expect } from 'vitest'
-import { awayCard, formatElapsed, formatMinutes, goalText, objectJosa, sessionSummary, topicJosa } from './format'
+import { WINNABLE_MAX } from '../core/coach'
+import { awayAdventure, awayCard, formatElapsed, formatMinutes, goalText, objectJosa, sessionSummary, topicJosa } from './format'
 import type { AwaySummary } from '../core/away'
 
 test('한 시간 미만은 MM:SS', () => {
@@ -97,4 +98,12 @@ test('자리 비운 동안 카드: 레벨·도장이 그대로면 칩 없음, �
   expect(c.chips).toEqual([])
   expect(awayCard(away({ awayMs: 1440 * 60_000 })).title).toBe('🌙 자리 비운 동안 · 1일')
   expect(awayCard(away({ awayMs: 11 * 60_000 + 59_000 })).title).toBe('🌙 자리 비운 동안 · 11분')
+})
+
+test('자리 비운 동안 카드의 모험 안내: 이길 만한 스테이지 수, 없으면 다음 스테이지까지 운동 N분', () => {
+  expect(awayAdventure(1, 0)).toBe('🍀 이길 만한 스테이지 1개')
+  expect(awayAdventure(3, 0)).toBe('🍀 이길 만한 스테이지 3개')
+  expect(awayAdventure(WINNABLE_MAX, 0)).toBe(`🍀 이길 만한 스테이지 ${WINNABLE_MAX}개 이상`)
+  expect(awayAdventure(0, 70)).toBe('💪 다음 스테이지까지 운동 1시간 10분 더')
+  expect(awayAdventure(0, null)).toBe('💪 운동으로 더 키워서 와요')
 })

@@ -4,6 +4,7 @@ import { ACTIVITIES } from '../core/activities'
 import type { ActivityId } from '../core/types'
 import type { TodayGoal } from '../core/goal'
 import type { AwaySummary } from '../core/away'
+import { WINNABLE_MAX } from '../core/coach'
 
 const pad =(n: number) => String(n).padStart(2, '0')
 
@@ -60,6 +61,17 @@ function formatAway(ms: number): string {
   if (d === 0) return formatMinutes(minutes)
   const h = Math.floor((minutes % 1440) / 60)
   return h === 0 ? `${d}일` : `${d}일 ${h}시간`
+}
+
+/**
+ * 자리 비운 동안 카드 맨 아래 모험 안내. winnable = 지금 줄줄이 이길 만한 스테이지 수(winnableStages),
+ * toWin = 그게 없을 때 다음 스테이지까지 운동 몇 분 더(null이면 찾는 범위 밖)
+ */
+export function awayAdventure(winnable: number, toWin: number | null): string {
+  if (winnable >= WINNABLE_MAX) return `🍀 이길 만한 스테이지 ${WINNABLE_MAX}개 이상`
+  if (winnable > 0) return `🍀 이길 만한 스테이지 ${winnable}개`
+  if (toWin === null) return '💪 운동으로 더 키워서 와요'
+  return `💪 다음 스테이지까지 운동 ${formatMinutes(toWin)} 더`
 }
 
 /** 다시 열 때 띄우는 "자리 비운 동안" 카드 글자 */

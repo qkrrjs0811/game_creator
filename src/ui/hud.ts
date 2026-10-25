@@ -77,6 +77,10 @@ export function createHud(
         <span data-testid="away-did"></span>
         <span class="away-gain" data-testid="away-gain"></span>
         <div class="away-chips" data-testid="away-chips"></div>
+        <div class="away-adventure">
+          <span data-testid="away-adventure"></span>
+          <button type="button" data-testid="away-go">⚔️ 모험 가기</button>
+        </div>
         <button type="button" class="toast-close" data-testid="away-close" aria-label="닫기">✕</button>
       </div>
       <div class="toast" data-testid="cap-toast" role="status" hidden>
@@ -160,6 +164,12 @@ export function createHud(
   const away = q('away')
   const hideAway = () => (away.hidden = true)
   q('away-close').addEventListener('click', hideAway)
+  // 이길 만한 스테이지가 있으면 카드에서 바로 모험 지도를 연다(카드는 닫는다)
+  const awayGo = q('away-go')
+  awayGo.addEventListener('click', () => {
+    hideAway()
+    onAdventure()
+  })
 
   return {
     sceneHost: q('scene'),
@@ -234,8 +244,10 @@ export function createHud(
       hideAway()
     },
     /** 다시 열 때 자리 비운 동안 늘어난 것을 장면 위쪽에 띄운다. 닫기 전까지 남는다(레벨업 배지 자리를 대신 쓴다) */
-    showAway(c: { title: string; did: string; gain: string; chips: string[] }) {
+    showAway(c: { title: string; did: string; gain: string; chips: string[]; adventure: string; canGo: boolean }) {
       levelUp.hidden = true
+      q('away-adventure').textContent = c.adventure
+      awayGo.hidden = !c.canGo
       q('away-title').textContent = c.title
       const did = q('away-did')
       did.textContent = c.did

@@ -22,8 +22,8 @@ import { applyBattleResult, type BattleOutcome } from './core/result'
 import { cosmeticCatalog, ownedCosmetics, toggleWear, wornCosmetics } from './core/cosmetics'
 import { createCosmetics } from './ui/cosmetics'
 import { statRows } from './core/stats'
-import { nextStageAdvice, stageMinutesToWin } from './core/coach'
-import { awayCard, formatMinutes, sessionSummary } from './ui/format'
+import { nextStageAdvice, stageMinutesToWin, winnableStages } from './core/coach'
+import { awayAdventure, awayCard, formatMinutes, sessionSummary } from './ui/format'
 import { awaySummary, shouldShowAway } from './core/away'
 import { sessionGain } from './core/gain'
 
@@ -300,7 +300,11 @@ function checkAway(now: number) {
   if (lastSeen === null) return
   const a = awaySummary(save, lastSeen, now)
   if (!shouldShowAway(a)) return
-  hud.showAway(awayCard(a))
+  // 지금 이길 만한 스테이지가 있으면 바로 모험 가자고, 없으면 다음 스테이지까지 운동 몇 분 더인지 알려 준다
+  const minutes = computeProgress(liveRecords(save, now)).creditedMinutes
+  const winnable = winnableStages(minutes, save.skills, save.stageProgress)
+  const toWin = winnable > 0 ? 0 : nextStageAdvice(minutes, save.skills, save.stageProgress)!.toWin
+  hud.showAway({ ...awayCard(a), adventure: awayAdventure(winnable, toWin), canGo: winnable > 0 })
   if (a.levelAfter > a.levelBefore) awayLevel = a.levelAfter
 }
 

@@ -124,13 +124,13 @@ body {
   left: 12px;
   right: 12px;
   z-index: 5;
-  padding: 12px 58px 12px 18px;
+  padding: 8px 58px 8px 18px;
   border-radius: 22px;
   background: #fff;
   box-shadow: 0 4px 0 var(--track);
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  gap: 2px;
   word-break: keep-all;
   animation: toast-pop 0.35s ease-out;
 }
@@ -139,8 +139,39 @@ body {
 .away span { font-size: 13px; line-height: 1.4; color: var(--ink-soft); }
 .away span[hidden] { display: none; }
 .away .away-gain { color: var(--ink); font-weight: 700; }
-.away-chips { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 3px; }
+.away-chips { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 1px; }
 .away-chips[hidden] { display: none; }
+/* 닫기 버튼은 위에 붙여, 맨 아래 모험 줄이 카드 폭을 다 쓰게 한다 */
+.away .toast-close { top: 8px; margin-top: 0; }
+.away-adventure {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  margin: 0 -46px 0 0;
+}
+.away .away-adventure span {
+  flex: 1;
+  color: #4f9a5c;
+  font-weight: 700;
+  /* 두 줄이 되면 "N개"만 떨어지지 않게 고르게 나눈다 */
+  text-wrap: balance;
+}
+.away-adventure button {
+  flex: none;
+  min-height: 44px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--accent);
+  color: #fff;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  box-shadow: 0 3px 0 #e9764a;
+  cursor: pointer;
+}
+.away-adventure button[hidden] { display: none; }
 .away-chips em {
   padding: 2px 10px;
   border-radius: 999px;
