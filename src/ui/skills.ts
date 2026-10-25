@@ -11,7 +11,8 @@ export interface SkillsView {
   points: number
   ranks: Record<SkillId, number>
   stats: StatRow[]
-  board: { calendar: StampCalendar; stamps: number; streak: number; week: WeekGoal }
+  /** missions: 모은 미션 별(오늘의 미션을 채운 날) 수 */
+  board: { calendar: StampCalendar; stamps: number; streak: number; week: WeekGoal; missions: number }
   history: RecordSummary
   /** 내 기록 막대를 앞뒤 주로 넘겨 볼 때의 7일 쪽(0 = 최근 7일) */
   historyPage(page: number): HistoryPage
@@ -119,6 +120,7 @@ export function createSkills(root: HTMLElement, h: { view(): SkillsView; onLearn
       <div class="board-summary">
         <span class="board-chip" data-testid="board-stamps"></span>
         <span class="board-chip" data-testid="board-streak"></span>
+        <span class="board-chip board-mission" data-testid="board-missions"></span>
       </div>
       <div class="week-goal" data-testid="week-goal">
         <div class="week-goal-head">
@@ -188,6 +190,7 @@ export function createSkills(root: HTMLElement, h: { view(): SkillsView; onLearn
     q('board-title').textContent = `🗓️ ${cal.month}월 도장판`
     q('board-stamps').textContent = `🌟 모은 도장 ${v.board.stamps}개`
     q('board-streak').textContent = `🔥 ${v.board.streak}일 이어 왔어요`
+    q('board-missions').textContent = `📜 모은 미션 별 ${v.board.missions}개`
     const board = boardHtml(cal)
     if (board !== lastBoard) {
       lastBoard = board

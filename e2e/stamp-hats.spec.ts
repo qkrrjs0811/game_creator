@@ -61,7 +61,8 @@ test('도장 100개면 세 도장 모자를 모두 쓸 수 있음', async ({ pag
   await page.evaluate((s) => localStorage.setItem('growth-game:save', JSON.stringify(s)), { ...base, records })
   await page.reload()
   await page.getByTestId('open-cosmetics').click()
-  await expect(page.getByTestId('cosmetic-tab-hat')).toContainText('모자 3')
+  // 도장 모자 3 + 날마다 운동한 날 중 운동 미션 날(25일)로 미션 모자 2
+  await expect(page.getByTestId('cosmetic-tab-hat')).toContainText('모자 5')
   for (const n of [30, 100]) {
     await page.getByTestId(`wear-hat-stamp${n}`).click()
     await page.getByTestId('cosmetics-close').click()

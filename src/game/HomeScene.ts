@@ -35,6 +35,9 @@ const HAT_TOP: Record<string, number> = {
   'hat-stamp7': -54,
   'hat-stamp30': -45,
   'hat-stamp100': -51,
+  'hat-mission5': -52,
+  'hat-mission20': -58,
+  'hat-mission50': -56,
 }
 /** 장 모자 모양마다 머리끝 */
 const CHAPTER_HAT_TOP: Record<HatShape, number> = { cone: -58, beret: -52, flower: -53, star: -53 }
@@ -435,6 +438,47 @@ export class HomeScene extends Phaser.Scene {
           g.fillStyle(0xff8fb4).fillCircle(Math.cos(a) * 5.5, -40 + Math.sin(a) * 5.5, 5)
         }
         g.fillStyle(0xffe07a).fillCircle(0, -40, 4)
+        break
+      }
+      // 미션 모자: 미션 별 5개 네잎클로버 핀, 20개 네 활동 빛깔 방울모자, 50개 별똥별 머리띠
+      case 'hat-mission5':
+        g.fillStyle(0x6fbf73).fillRoundedRect(17, -38, 3, 12, 1.5)
+        for (const [dx, dy] of [
+          [-5, -5],
+          [5, -5],
+          [-5, 5],
+          [5, 5],
+        ] as const) {
+          g.fillStyle(0x93dcc0).fillCircle(17 + dx, -40 + dy, 6.5)
+        }
+        g.fillStyle(0xffffff, 0.8).fillCircle(12, -45, 2).fillCircle(22, -45, 2)
+        g.fillStyle(0x6fbf73).fillCircle(17, -40, 2.5)
+        break
+      case 'hat-mission20':
+        g.fillStyle(0xffa3b8).fillRoundedRect(-30, -52, 60, 24, { tl: 26, tr: 26, bl: 4, br: 4 })
+        g.fillStyle(0x9fd0f7).fillRect(-27, -44, 54, 4)
+        g.fillStyle(0x93dcc0).fillRect(-29, -38, 58, 4)
+        g.fillStyle(0xc7b1f2).fillRoundedRect(-32, -32, 64, 7, 3.5)
+        g.fillStyle(0xffffff).fillCircle(0, -52, 6)
+        g.fillStyle(0xffe07a).fillCircle(0, -52, 3)
+        break
+      case 'hat-mission50': {
+        g.lineStyle(6, 0xc7b1f2).beginPath().arc(0, -2, 37, Math.PI * 1.2, Math.PI * 1.8, false).strokePath()
+        // 별 뒤로 꼬리 세 줄
+        for (const [dy, col] of [
+          [-4, 0xffa3b8],
+          [0, 0x9fd0f7],
+          [4, 0x93dcc0],
+        ] as const) {
+          g.lineStyle(3, col).lineBetween(-2, -40 + dy * 1.5, 12, -44 + dy)
+        }
+        const star = Array.from({ length: 10 }, (_, i) => {
+          const a = (i / 10) * Math.PI * 2 - Math.PI / 2
+          const r = i % 2 === 0 ? 10 : 4.5
+          return new Phaser.Math.Vector2(18 + Math.cos(a) * r, -45 + Math.sin(a) * r)
+        })
+        g.fillStyle(0xffe07a).fillPoints(star, true)
+        g.fillStyle(0xffffff).fillCircle(16, -46, 2)
         break
       }
       default:

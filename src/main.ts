@@ -4,7 +4,7 @@ import { HomeScene, HOME_READY } from './game/HomeScene'
 import { computeProgress, dayKey, todayStatus } from './core/progression'
 import { goalStreak, stampCalendar, stampCount, todayGoal } from './core/goal'
 import { weekGoal } from './core/week'
-import { todayMission } from './core/mission'
+import { missionStars, todayMission } from './core/mission'
 import { historyPage, recordSummary } from './core/history'
 import { levelUpPoints, levelUpTo, restoreShownLevel } from './core/levelup'
 import { liveRecords, startSession, stopSession } from './core/session'
@@ -155,6 +155,7 @@ const skills = createSkills(app, {
       stamps: stampCount(records),
       streak: goalStreak(records, now),
       week: weekGoal(records, now),
+      missions: missionStars(records),
     }
     return {
       points: remainingSkillPoints(p.level, save.skills),

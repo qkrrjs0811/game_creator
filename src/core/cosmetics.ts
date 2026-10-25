@@ -1,4 +1,5 @@
 import { stampCount } from './goal'
+import { missionStars } from './mission'
 import type { SaveData } from './types'
 import { doneWeeks } from './week'
 
@@ -26,6 +27,8 @@ export interface Cosmetic {
   stamps?: number
   /** 주간 목표(한 주에 도장 5일)를 이만큼 채우면 얻는 꾸미기 */
   weeks?: number
+  /** 오늘의 미션을 채운 날(미션 별)이 이만큼 모이면 얻는 꾸미기 */
+  missions?: number
   /** 장 보스가 주는 모자면 그 장 번호와 모습 */
   chapter?: number
   hat?: HatLook
@@ -53,6 +56,13 @@ export const WEEK_COSMETICS: Cosmetic[] = [
   { id: 'color-week1', name: '레몬 말랑', icon: '🍋', kind: 'color', weeks: 1 },
   { id: 'color-week4', name: '민트 말랑', icon: '🌿', kind: 'color', weeks: 4 },
   { id: 'color-week12', name: '라벤더 말랑', icon: '🔮', kind: 'color', weeks: 12 },
+]
+
+/** 미션 별을 모으면 주는 모자. 활동 기록에서 센 미션 별 수로 정해져 저장에는 남기지 않는다 */
+export const MISSION_COSMETICS: Cosmetic[] = [
+  { id: 'hat-mission5', name: '네잎클로버 핀', icon: '🍀', kind: 'hat', missions: 5 },
+  { id: 'hat-mission20', name: '네 빛깔 방울모자', icon: '🧶', kind: 'hat', missions: 20 },
+  { id: 'hat-mission50', name: '별똥별 머리띠', icon: '🌠', kind: 'hat', missions: 50 },
 ]
 
 const HAT_SHAPES: { shape: HatShape; name: string; icon: string }[] = [
@@ -104,7 +114,7 @@ export function stageReward(no: number): Cosmetic | null {
 
 /** 이름으로 꾸미기를 찾는다. 장 모자는 "hat-ch<장>"이다 */
 export function cosmeticById(id: string): Cosmetic | null {
-  const first = [...COSMETICS, ...STAMP_COSMETICS, ...WEEK_COSMETICS].find((c) => c.id === id)
+  const first = [...COSMETICS, ...STAMP_COSMETICS, ...WEEK_COSMETICS, ...MISSION_COSMETICS].find((c) => c.id === id)
   if (first) return first
   const m = /^hat-ch([1-9]\d*)$/.exec(id)
   return m ? chapterCosmetic(Number(m[1])) : null
@@ -112,22 +122,25 @@ export function cosmeticById(id: string): Cosmetic | null {
 
 /**
  * 가진 꾸미기. 저장된 이름에 더해, 보상이 생기기 전에 깬 스테이지의 꾸미기도 가진 것으로 본다.
- * 도장 모자·주간 색은 기록에서 센 도장 수·채운 주 수로만 정한다. 모르는 이름은 건너뛰고(지우지는 않음) 목록 순서로 돌려준다.
+ * 도장 모자·주간 색·미션 모자는 기록에서 센 도장 수·채운 주 수·미션 별 수로만 정한다. 모르는 이름은 건너뛰고(지우지는 않음) 목록 순서로 돌려준다.
  */
 export function ownedCosmetics(save: SaveData): Cosmetic[] {
   const stamps = stampCount(save.records)
   const weeks = doneWeeks(save.records)
+  const missions = missionStars(save.records)
   const owns = (c: Cosmetic) =>
     c.stamps !== undefined
       ? stamps >= c.stamps
       : c.weeks !== undefined
         ? weeks >= c.weeks
-        : save.cosmetics.includes(c.id) || (c.stage ?? Infinity) <= save.stageProgress
+        : c.missions !== undefined
+          ? missions >= c.missions
+          : save.cosmetics.includes(c.id) || (c.stage ?? Infinity) <= save.stageProgress
   return cosmeticCatalog(save).filter(owns)
 }
 
 /**
- * 꾸미기 창에 보여 줄 목록: 처음 꾸미기, 도장 모자, 주간 색, 깬 장 보스의 모자와 다음 장 모자 하나,
+ * 꾸미기 창에 보여 줄 목록: 처음 꾸미기, 도장 모자, 주간 색, 미션 모자, 깬 장 보스의 모자와 다음 장 모자 하나,
  * 그리고 저장에만 있는 더 뒤 장 모자(백업에서 왔을 때)를 장 순서로.
  */
 export function cosmeticCatalog(save: SaveData): Cosmetic[] {
@@ -137,7 +150,7 @@ export function cosmeticCatalog(save: SaveData): Cosmetic[] {
     const ch = cosmeticById(id)?.chapter
     if (ch) chapters.add(ch)
   }
-  return [...COSMETICS, ...STAMP_COSMETICS, ...WEEK_COSMETICS, ...[...chapters].sort((a, b) => a - b).map((ch) => chapterCosmetic(ch)!)]
+  return [...COSMETICS, ...STAMP_COSMETICS, ...WEEK_COSMETICS, ...MISSION_COSMETICS, ...[...chapters].sort((a, b) => a - b).map((ch) => chapterCosmetic(ch)!)]
 }
 
 export type Worn = Record<CosmeticKind, Cosmetic | null>

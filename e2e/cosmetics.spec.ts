@@ -18,7 +18,7 @@ test('처음에는 꾸미기가 모두 잠겨 있고 얻는 곳을 알려 줌', 
   await useSave(page, 0)
   await page.getByTestId('open-cosmetics').click()
   await expect(page.getByTestId('cosmetics')).toBeVisible()
-  await expect(page.getByTestId('cosmetics-desc')).toContainText('스테이지를 처음 깨거나 도장을 모으면')
+  await expect(page.getByTestId('cosmetics-desc')).toContainText('스테이지를 처음 깨거나 도장·미션 별을 모으면')
   await expect(page.getByTestId('cosmetic-hat-sprout')).toHaveAttribute('data-state', 'locked')
   await expect(page.getByTestId('cosmetic-hat-crown')).toContainText('6스테이지')
   await expect(page.locator('.cosmetic-wear')).toHaveCount(0)
@@ -139,7 +139,7 @@ test('장 보스를 깬 저장은 장 모자를 가지고, 다음 장 모자는 
 })
 
 test('꾸미기가 많아도 모자·색으로 나눠 보고, 열면 입은 모자가 보이는 자리로', async ({ page }) => {
-  // 20장까지 깸: 처음 모자 4 + 도장 모자(잠김) 3 + 장 모자 20 + 다음 장 모자(잠김) 1, 색 2
+  // 20장까지 깸: 처음 모자 4 + 도장 모자(잠김) 3 + 미션 모자(잠김) 3 + 장 모자 20 + 다음 장 모자(잠김) 1, 색 2
   await useSave(page, 200)
   await page.evaluate(() => {
     const s = JSON.parse(localStorage.getItem('growth-game:save')!)
@@ -150,7 +150,7 @@ test('꾸미기가 많아도 모자·색으로 나눠 보고, 열면 입은 모�
   await page.getByTestId('open-cosmetics').click()
   await expect(page.getByTestId('cosmetics-desc')).toContainText('26개 모았어요')
   await expect(page.getByTestId('cosmetic-tab-hat')).toContainText('모자 24')
-  await expect(page.getByTestId('cosmetic-grid').locator('.cosmetic')).toHaveCount(28)
+  await expect(page.getByTestId('cosmetic-grid').locator('.cosmetic')).toHaveCount(31)
   await expect(page.getByTestId('worn-hat')).toContainText('고깔모자')
   await expect(page.getByTestId('worn-color')).toContainText('솜사탕 분홍')
 

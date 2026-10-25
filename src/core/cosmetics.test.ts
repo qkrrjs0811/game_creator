@@ -1,6 +1,7 @@
 import { describe, test, expect } from 'vitest'
 import {
   COSMETICS,
+  MISSION_COSMETICS,
   STAMP_COSMETICS,
   WEEK_COSMETICS,
   chapterCosmetic,
@@ -14,6 +15,7 @@ import {
 import { STAGES } from './stages'
 import { newSave } from './session'
 import { stampCount } from './goal'
+import { missionStars } from './mission'
 import type { ActivityRecord } from './types'
 
 /** 2026-10-01부터 n일 동안 날마다 운동 30분(도장 n개) */
@@ -138,6 +140,69 @@ describe('WEEK_COSMETICS', () => {
   })
 })
 
+/** 2026-10-01부터 n일 동안 날마다 네 활동을 미션 분만큼(미션 별 n개) */
+function missionDaysOf(n: number): ActivityRecord[] {
+  const mins = { exercise: 20, study: 15, reading: 15, relax: 10 } as const
+  return Array.from({ length: n }, (_, i) =>
+    (Object.keys(mins) as (keyof typeof mins)[]).map((activity, j) => {
+      const start = new Date(2026, 9, 1 + i, 8 + j * 2).getTime()
+      return { id: `m${i}-${j}`, activity, startedAt: start, endedAt: start + mins[activity] * 60_000 }
+    }),
+  ).flat()
+}
+
+describe('MISSION_COSMETICS', () => {
+  test('미션 별 5·20·50개에 주는 모자 셋, 스테이지·도장·주간 목표로는 얻지 않음', () => {
+    expect(MISSION_COSMETICS.map((c) => [c.id, c.kind, c.missions])).toEqual([
+      ['hat-mission5', 'hat', 5],
+      ['hat-mission20', 'hat', 20],
+      ['hat-mission50', 'hat', 50],
+    ])
+    for (const c of MISSION_COSMETICS) {
+      expect(c.stage).toBeUndefined()
+      expect(c.stamps).toBeUndefined()
+      expect(c.weeks).toBeUndefined()
+    }
+    expect(new Set(MISSION_COSMETICS.map((c) => c.name)).size).toBe(3)
+    expect(missionStars(missionDaysOf(5))).toBe(5)
+  })
+
+  test('이름으로 찾음', () => {
+    expect(cosmeticById('hat-mission20')).toEqual(MISSION_COSMETICS[1])
+  })
+
+  test('미션 별 5·20·50개마다 하나씩 가짐', () => {
+    const owned = (n: number) =>
+      ownedCosmetics({ ...newSave(), records: missionDaysOf(n) }).map((c) => c.id).filter((id) => id.startsWith('hat-mission'))
+    expect(owned(0)).toEqual([])
+    expect(owned(4)).toEqual([])
+    expect(owned(5)).toEqual(['hat-mission5'])
+    expect(owned(19)).toEqual(['hat-mission5'])
+    expect(owned(20)).toEqual(['hat-mission5', 'hat-mission20'])
+    expect(owned(49)).toEqual(['hat-mission5', 'hat-mission20'])
+    expect(owned(50)).toEqual(['hat-mission5', 'hat-mission20', 'hat-mission50'])
+  })
+
+  test('미션 활동이 아닌 날은 도장이 있어도 세지 않고, 저장에 이름이 있거나 스테이지를 많이 깨도 별이 모자라면 없음', () => {
+    // 2026-10-01부터 40일 날마다 독서 60분: 도장 40개지만 미션 별은 독서 미션 날(나흘에 하루)만
+    const reading = Array.from({ length: 40 }, (_, i) => {
+      const start = new Date(2026, 9, 1 + i, 9).getTime()
+      return { id: `b${i}`, activity: 'reading' as const, startedAt: start, endedAt: start + 60 * 60_000 }
+    })
+    expect(missionStars(reading)).toBe(10)
+    const ids = ownedCosmetics({ ...newSave(), stageProgress: 500, cosmetics: ['hat-mission20'], records: reading }).map((c) => c.id)
+    expect(ids).toContain('hat-mission5')
+    expect(ids).not.toContain('hat-mission20')
+  })
+
+  test('입을 수 있고, 다른 모자와 바꿔 입음', () => {
+    const save = { ...newSave(), stageProgress: 1, records: missionDaysOf(5) }
+    const on = toggleWear(toggleWear(save, 'hat-sprout'), 'hat-mission5')
+    expect(wornCosmetics(on).hat).toEqual(MISSION_COSMETICS[0])
+    expect(on.worn).toEqual(['hat-mission5'])
+  })
+})
+
 describe('cosmeticById', () => {
   test('도장 모자를 찾음', () => {
     expect(cosmeticById('hat-stamp30')).toEqual(STAMP_COSMETICS[1])
@@ -159,6 +224,7 @@ describe('cosmeticCatalog', () => {
       ...COSMETICS.map((c) => c.id),
       ...STAMP_COSMETICS.map((c) => c.id),
       ...WEEK_COSMETICS.map((c) => c.id),
+      ...MISSION_COSMETICS.map((c) => c.id),
       'hat-ch1',
     ])
     expect(cosmeticCatalog({ ...newSave(), stageProgress: 25 }).map((c) => c.id).slice(-3)).toEqual(['hat-ch1', 'hat-ch2', 'hat-ch3'])
