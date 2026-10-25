@@ -1,6 +1,6 @@
 import { test, expect } from 'vitest'
 import { WINNABLE_MAX } from '../core/coach'
-import { autoRunCard, awayAdventure, awayCard, formatElapsed, formatMinutes, goalText, objectJosa, weekChip, weekDoneText, weekGoalText, sessionSummary, topicJosa, weekTotalText, bestDayText, dayDetail, pageRangeText, dexShadowText, dexNewText } from './format'
+import { autoRunCard, awayAdventure, awayCard, formatElapsed, formatMinutes, goalText, objectJosa, weekChip, weekDoneText, weekGoalText, sessionSummary, topicJosa, weekTotalText, bestDayText, dayDetail, pageRangeText, dexShadowText, dexNewText, missionChip } from './format'
 import { AUTO_RUN_MAX } from '../core/autorun'
 import type { Cosmetic } from '../core/cosmetics'
 import type { AwaySummary } from '../core/away'
@@ -203,4 +203,9 @@ test('결과 카드 새 몬스터 알림 글자', () => {
   expect(dexNewText(0)).toBeNull()
   expect(dexNewText(1)).toBe('📚 도감에 새 몬스터 +1')
   expect(dexNewText(3)).toBe('📚 도감에 새 몬스터 +3')
+})
+
+test('홈의 오늘의 미션 칩은 활동과 분, 채우면 완료', () => {
+  expect(missionChip({ activity: 'reading', goal: 15, minutes: 5, done: false })).toBe('📜 독서 5 / 15분')
+  expect(missionChip({ activity: 'relax', goal: 10, minutes: 12, done: true })).toBe('📜 휴식 완료!')
 })

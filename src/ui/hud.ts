@@ -1,6 +1,7 @@
-import { formatElapsed, goalText, objectJosa, topicJosa, weekChip } from './format'
+import { formatElapsed, goalText, missionChip, objectJosa, topicJosa, weekChip } from './format'
 import { ACTIVITIES } from '../core/activities'
 import type { TodayGoal } from '../core/goal'
+import type { TodayMission } from '../core/mission'
 import type { WeekGoal } from '../core/week'
 import type { ActivityId } from '../core/types'
 
@@ -25,6 +26,8 @@ export interface HudView {
   goal: TodayGoal
   /** 이번 주(월~일) 도장 찍은 날 */
   week: WeekGoal
+  /** 날마다 바뀌는 오늘의 미션 */
+  mission: TodayMission
 }
 
 /** 활동마다 타이머 카드에 쓰는 안내 */
@@ -109,7 +112,11 @@ export function createHud(
       </div>
       <div class="stamp" data-testid="stamp" role="status" hidden>🌟 오늘 도장 쾅!</div>
       <div class="stamp week-stamp" data-testid="week-stamp" role="status" hidden>🏅 이번 주 목표 달성!</div>
-      <div class="today" data-testid="today"></div>
+      <div class="stamp mission-stamp" data-testid="mission-stamp" role="status" hidden>📜 미션 완료!</div>
+      <div class="today-row">
+        <span class="today" data-testid="today"></span>
+        <span class="mission" data-testid="mission"></span>
+      </div>
       <div class="timer-label" data-testid="timer-label"></div>
       <div class="timer" data-testid="timer">00:00</div>
       <button class="toggle" data-testid="toggle" type="button">운동 시작</button>
@@ -169,15 +176,31 @@ export function createHud(
   const stamp = q('stamp')
   let stampTimer: ReturnType<typeof setTimeout> | undefined
   const weekStamp = q('week-stamp')
+  const mission = q('mission')
+  const missionStamp = q('mission-stamp')
   const goalWeek = q('goal-week')
   let weekTimer: ReturnType<typeof setTimeout> | undefined
   const popWeek = () => {
     stamp.hidden = true
+    missionStamp.hidden = true
     weekStamp.hidden = true
     void weekStamp.offsetWidth
     weekStamp.hidden = false
     clearTimeout(weekTimer)
     weekTimer = setTimeout(() => (weekStamp.hidden = true), 3500)
+  }
+  let missionTimer: ReturnType<typeof setTimeout> | undefined
+  const popMission = () => {
+    clearTimeout(missionTimer)
+    // 오늘·주간 도장이 떠 있으면 그게 사라진 뒤에 찍는다(겹치지 않게)
+    if (!stamp.hidden || !weekStamp.hidden) {
+      missionTimer = setTimeout(popMission, 600)
+      return
+    }
+    missionStamp.hidden = true
+    void missionStamp.offsetWidth
+    missionStamp.hidden = false
+    missionTimer = setTimeout(() => (missionStamp.hidden = true), 3500)
   }
   const away = q('away')
   const hideAway = () => (away.hidden = true)
@@ -231,10 +254,15 @@ export function createHud(
       goal.classList.toggle('done', v.goal.done)
       goalWeek.textContent = weekChip(v.week)
       goalWeek.classList.toggle('done', v.week.done)
+      mission.textContent = missionChip(v.mission)
+      mission.classList.toggle('done', v.mission.done)
     },
+    /** 오늘의 미션을 채운 순간 같은 자리에 미션 도장을 찍는다 */
+    showMissionDone: popMission,
     /** 오늘 목표를 채운 순간 타이머 카드에 도장을 쾅 찍는다 */
     showStamp() {
       weekStamp.hidden = true
+      missionStamp.hidden = true
       stamp.hidden = true
       void stamp.offsetWidth
       stamp.hidden = false

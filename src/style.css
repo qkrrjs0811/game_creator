@@ -244,6 +244,23 @@ body {
   font-variant-numeric: tabular-nums;
 }
 .today.full { background: #ffe2d4; color: var(--accent); }
+/* 오늘 분 칩과 오늘의 미션 칩이 한 줄로 나란히 */
+.today-row { display: flex; justify-content: center; gap: 6px; flex-wrap: nowrap; }
+.mission {
+  display: inline-block;
+  margin-bottom: 6px;
+  padding: 4px 12px;
+  border-radius: 999px;
+  background: #efe4ff;
+  color: #7a5aa8;
+  font-size: 13px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.mission.done { background: #e2d2ff; color: #6a3fb0; }
+/* 미션 도장은 연보라로, 오늘 도장과 같은 자리에 찍힌다 */
+.stamp.mission-stamp { background: #b996f0; box-shadow: 0 3px 0 #9372d0; }
 /* 모든 활동을 합친 오늘 목표. 카드 맨 위 한 줄 */
 .goal {
   display: flex;

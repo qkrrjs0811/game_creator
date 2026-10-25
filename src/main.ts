@@ -4,6 +4,7 @@ import { HomeScene, HOME_READY } from './game/HomeScene'
 import { computeProgress, dayKey, todayStatus } from './core/progression'
 import { goalStreak, stampCalendar, stampCount, todayGoal } from './core/goal'
 import { weekGoal } from './core/week'
+import { todayMission } from './core/mission'
 import { historyPage, recordSummary } from './core/history'
 import { levelUpPoints, levelUpTo, restoreShownLevel } from './core/levelup'
 import { liveRecords, startSession, stopSession } from './core/session'
@@ -392,6 +393,19 @@ function rememberWeekDone(week: string) {
   }
 }
 
+// 오늘의 미션 완료 연출도 하루 한 번만
+const MISSION_DAY_KEY = `${SAVE_KEY}:mission-day`
+let missionDay = readKey(MISSION_DAY_KEY)
+
+function rememberMissionDay(day: string) {
+  missionDay = day
+  try {
+    kv.setItem(MISSION_DAY_KEY, day)
+  } catch {
+    // 못 남기면 다시 열 때 한 번 더 찍을 뿐이다
+  }
+}
+
 // 마지막으로 화면을 본 시각. 한동안 닫아 뒀다가 다시 열면 그 사이 늘어난 것을 한 번 보여 준다
 const LAST_SEEN_KEY = `${SAVE_KEY}:last-seen`
 const storedSeen = Number(readKey(LAST_SEEN_KEY))
@@ -469,6 +483,11 @@ function render() {
     rememberWeekDone(week.week)
     hud.showWeekDone()
   }
+  const mission = todayMission(records, now)
+  if (mission.done && missionDay !== dayKey(now)) {
+    rememberMissionDay(dayKey(now))
+    hud.showMissionDone()
+  }
   hud.render({
     level: p.level,
     expIntoLevel: p.expIntoLevel,
@@ -484,6 +503,7 @@ function render() {
     saveFailed: !saveOk,
     goal,
     week,
+    mission,
   })
   skills.refresh()
   homeScene()?.showHomeMonster(homeMonster(save.stageProgress))

@@ -5,6 +5,7 @@ import type { ActivityId } from '../core/types'
 import { DAILY_GOAL_MINUTES, type TodayGoal } from '../core/goal'
 import type { AwaySummary } from '../core/away'
 import type { WeekGoal } from '../core/week'
+import type { TodayMission } from '../core/mission'
 import type { BestDay, HistoryDay, WeekTotals } from '../core/history'
 import { WINNABLE_MAX } from '../core/coach'
 import { AUTO_RUN_MAX, type AutoRun } from '../core/autorun'
@@ -68,6 +69,12 @@ export function weekGoalText(w: WeekCount): string {
 /** 홈 오늘 목표 줄 끝의 작은 이번 주 칩 */
 export function weekChip(w: WeekCount): string {
   return `${w.done ? '🏅' : '📅'} ${w.stamped}/${w.goal}`
+}
+
+/** 홈 오늘 분 칩 옆의 작은 오늘의 미션 칩 */
+export function missionChip(m: TodayMission): string {
+  const name = ACTIVITIES[m.activity].label
+  return m.done ? `📜 ${name} 완료!` : `📜 ${name} ${Math.min(m.minutes, m.goal)} / ${m.goal}분`
 }
 
 /** 지금까지 이번 주 목표를 채운 주 수 */
