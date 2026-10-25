@@ -189,6 +189,41 @@ describe('한마디에 가까운 보상', () => {
   })
 })
 
+describe('한마디에 최고까지 남은 분', () => {
+  /** 어제(토) 운동 40분이 하루 최고 */
+  const best40 = exerciseOn('2026-10-24', 40)
+  const study = (m: number) => rec('study', `${SUN}T11:00:00`, `${SUN}T11:${String(m).padStart(2, '0')}:00`)
+
+  test('오늘이 하루 최고의 절반을 넘었으면 넘기까지 남은 분을 알려 준다', () => {
+    const lines = chatLines(input({ records: [best40, study(33)] }))
+    const best = lines.find((l) => l.kind === 'best')
+    expect(best?.text).toBe('🥇 최고까지 8분 남았어!')
+    expect(Array.from(best!.text).length).toBeLessThanOrEqual(CHAT_MAX_CHARS)
+    const k = lines.map((l) => l.kind)
+    expect(k.indexOf('best')).toBeGreaterThan(k.indexOf('goal'))
+  })
+
+  test('최고와 같으면 1분만 더 하면 넘는다', () => {
+    expect(texts(input({ records: [best40, study(40)] }))).toContain('🥇 최고까지 1분 남았어!')
+  })
+
+  test('절반 이하거나 이미 넘었으면 말하지 않는다', () => {
+    expect(kinds(input({ records: [best40, study(20)] }))).not.toContain('best')
+    expect(kinds(input({ records: [best40, study(41)] }))).not.toContain('best')
+  })
+
+  test('지난 기록이 없으면(오늘이 첫날) 말하지 않는다', () => {
+    expect(kinds(input({ records: [study(30)] }))).not.toContain('best')
+    expect(kinds(input({}))).not.toContain('best')
+  })
+
+  test('하루 최고는 상한 안 인정 분으로 본다', () => {
+    // 어제 휴식 3시간이어도 상한 30분만 인정 → 오늘 공부 25분이면 6분 남음
+    const relax = rec('relax', '2026-10-24T09:00:00', '2026-10-24T12:00:00')
+    expect(texts(input({ records: [relax, study(25)] }))).toContain('🥇 최고까지 6분 남았어!')
+  })
+})
+
 describe('말풍선 눌러 다음 한마디', () => {
   test('누르면 다음 후보로, 마지막 뒤엔 처음으로 돌아간다', () => {
     expect(nextChatIndex(0, 3)).toBe(1)

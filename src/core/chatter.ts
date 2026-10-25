@@ -1,8 +1,9 @@
 import { ACTIVITIES } from './activities'
 import { winnableStages } from './coach'
 import { todayGoal } from './goal'
+import { dayMinutes } from './history'
 import { todayMission } from './mission'
-import { computeProgress } from './progression'
+import { computeProgress, dayKey } from './progression'
 import { restedYesterday, restStreak } from './rest'
 import { upcomingRewards, type RewardKind, type UpcomingReward } from './rewards'
 import type { ActivityRecord } from './types'
@@ -19,7 +20,7 @@ export const CHAT_MAX_CHARS = 18
 /** 마지막으로 본 뒤 이만큼 지났으면 "보고 싶었어" */
 export const MISSED_MS = 24 * 60 * 60_000
 
-export type ChatKind = 'rested' | 'welcome' | 'missed' | 'goal' | 'mission' | 'allDone' | 'reward' | 'winnable' | 'streak' | 'week' | 'cheer'
+export type ChatKind = 'rested' | 'welcome' | 'missed' | 'goal' | 'mission' | 'allDone' | 'reward' | 'best' | 'winnable' | 'streak' | 'week' | 'cheer'
 
 export interface ChatLine {
   kind: ChatKind
@@ -65,6 +66,22 @@ export function rewardChatText(r: UpcomingReward): string | null {
   return text !== null && Array.from(text).length <= CHAT_MAX_CHARS ? text : null
 }
 
+/** 오늘 인정 분이 지난 하루 최고의 이 비율을 넘었을 때만 최고까지 남은 분을 말한다 */
+export const BEST_CHAT_RATIO = 0.5
+
+/** 오늘 인정 분이 지난날 하루 최고의 절반을 넘고 아직 못 넘었으면 "🥇 최고까지 8분 남았어!"(넘으려면 1분 더). 아니면 null */
+export function bestChatText(records: ActivityRecord[], now: number): string | null {
+  const today = dayKey(now)
+  let todayMinutes = 0
+  let best = 0
+  for (const [key, day] of dayMinutes(records)) {
+    if (key === today) todayMinutes = day.total
+    else if (key < today) best = Math.max(best, day.total)
+  }
+  if (best <= 0 || todayMinutes <= best * BEST_CHAT_RATIO || todayMinutes > best) return null
+  return `🥇 최고까지 ${best + 1 - todayMinutes}분 남았어!`
+}
+
 /** 늘 마지막에 오는 기본 한마디 */
 export const CHEER_LINE: ChatLine = { kind: 'cheer', text: '💪 오늘도 같이 크는 중!' }
 
@@ -100,6 +117,9 @@ export function chatLines({ records, stageProgress, skills, now, lastSeen }: Cha
     .map(rewardChatText)
     .find((t): t is string => t !== null)
   if (reward) lines.push({ kind: 'reward', text: reward })
+
+  const best = bestChatText(records, now)
+  if (best) lines.push({ kind: 'best', text: best })
 
   const minutes = computeProgress(records).creditedMinutes
   if (winnableStages(minutes, skills, stageProgress, 1) > 0) lines.push({ kind: 'winnable', text: '🍀 이길 만한 곳이 있어!' })
