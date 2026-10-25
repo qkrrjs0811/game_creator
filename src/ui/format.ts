@@ -9,6 +9,7 @@ import type { TodayMission } from '../core/mission'
 import type { BestDay, HistoryDay, WeekTotals } from '../core/history'
 import { WINNABLE_MAX } from '../core/coach'
 import { AUTO_RUN_MAX, type AutoRun } from '../core/autorun'
+import type { AchievementProgress } from '../core/achievements'
 
 const pad =(n: number) => String(n).padStart(2, '0')
 
@@ -206,4 +207,34 @@ export function awayCard(a: AwaySummary): { title: string; did: string; gain: st
     gain: [`EXP +${a.exp}`, ...stats].join(' · '),
     chips,
   }
+}
+
+/** 업적 칸 진행 글자("운동 7 / 10시간"). 목표를 넘어도 목표에서 멈춘다 */
+export function achievementValueText(a: AchievementProgress): string {
+  const v = Math.min(a.value, a.goal)
+  switch (a.kind) {
+    case 'minutes': {
+      const now = v > 0 && v < 60 ? `${v}분` : String(Math.floor(v / 60))
+      return `${ACTIVITIES[a.activity!].label} ${now} / ${a.goal / 60}시간`
+    }
+    case 'stamps':
+      return `도장 ${v} / ${a.goal}개`
+    case 'streak':
+      return `가장 길게 ${v} / ${a.goal}일`
+    case 'variety':
+      return `해 본 활동 ${v} / ${a.goal}가지`
+  }
+}
+
+/** 흐리게 보일 먼 업적: 같은 줄(활동·종류)에서 아직 못 닿은 첫 업적 뒤의 것 */
+export function farAchievementIds(list: AchievementProgress[]): Set<string> {
+  const next = new Set<string>()
+  const far = new Set<string>()
+  for (const a of list) {
+    if (a.done) continue
+    const line = `${a.kind}:${a.activity ?? ''}`
+    if (next.has(line)) far.add(a.id)
+    else next.add(line)
+  }
+  return far
 }

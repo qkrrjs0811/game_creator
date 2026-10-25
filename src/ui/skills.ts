@@ -5,7 +5,8 @@ import type { WeekGoal } from '../core/week'
 import type { HistoryDay, HistoryPage, RecordSummary } from '../core/history'
 import { ACTIVITIES } from '../core/activities'
 import type { ActivityId } from '../core/types'
-import { bestDayText, dayDetail, formatMinutes, pageRangeText, weekDoneText, weekGoalText, weekTotalText } from './format'
+import type { AchievementKind, AchievementProgress } from '../core/achievements'
+import { achievementValueText, bestDayText, dayDetail, farAchievementIds, formatMinutes, pageRangeText, weekDoneText, weekGoalText, weekTotalText } from './format'
 
 export interface SkillsView {
   points: number
@@ -16,6 +17,8 @@ export interface SkillsView {
   history: RecordSummary
   /** 내 기록 막대를 앞뒤 주로 넘겨 볼 때의 7일 쪽(0 = 최근 7일) */
   historyPage(page: number): HistoryPage
+  /** 업적마다 현재 값·달성 여부(목록 순서) */
+  achievements: AchievementProgress[]
 }
 
 const WEEK = ['일', '월', '화', '수', '목', '금', '토']
@@ -84,6 +87,32 @@ export function historyTotalsHtml(h: RecordSummary): string {
   ).join('')
 }
 
+const ACHIEVEMENT_ICONS: Record<ActivityId | Exclude<AchievementKind, 'minutes'>, string> = {
+  exercise: '🏃',
+  study: '✏️',
+  reading: '📚',
+  relax: '🍵',
+  stamps: '🌟',
+  streak: '🔥',
+  variety: '🌈',
+}
+
+/** 업적 칸: 이름, 진행 막대와 글자, 달성 표시. 같은 줄에서 다음 것보다 먼 업적은 흐리게 */
+export function achievementsHtml(list: AchievementProgress[]): string {
+  const far = farAchievementIds(list)
+  return list
+    .map((a) => {
+      const cls = ['ach', a.done && 'done', far.has(a.id) && 'far'].filter(Boolean).join(' ')
+      const icon = ACHIEVEMENT_ICONS[a.kind === 'minutes' ? a.activity! : a.kind]
+      const fill = a.kind === 'minutes' ? ` act-${a.activity}` : ''
+      const pct = Math.min(100, (a.value / a.goal) * 100).toFixed(1)
+      const mark = a.done ? '<span class="ach-mark">달성</span>' : ''
+      const sub = a.done ? `🏅 칭호 “${a.titleName}”` : achievementValueText(a)
+      return `<li class="${cls}" data-testid="ach-${a.id}"><span class="ach-icon" aria-hidden="true">${icon}</span><span class="ach-text"><span class="ach-head"><b>${a.label}</b>${mark}</span><span class="ach-bar"><i class="ach-fill${fill}" style="width:${pct}%"></i></span><small data-testid="ach-value-${a.id}">${sub}</small></span></li>`
+    })
+    .join('')
+}
+
 /** 받침이 있으면 '을', 없으면 '를' */
 export function objectParticle(word: string): string {
   const code = word.charCodeAt(word.length - 1) - 0xac00
@@ -147,6 +176,8 @@ export function createSkills(root: HTMLElement, h: { view(): SkillsView; onLearn
           <p class="hist-best" data-testid="hist-best"></p>
         </div>
       </div>
+      <h3 class="sheet-sub ach-title" data-testid="ach-title"></h3>
+      <ul class="ach-list" data-testid="achievements"></ul>
       <div class="sheet-foot">
         <button type="button" class="sheet-close" data-testid="skills-close">닫기</button>
       </div>
@@ -163,6 +194,7 @@ export function createSkills(root: HTMLElement, h: { view(): SkillsView; onLearn
   let lastBars = ''
   let lastTip = ''
   let lastTotals = ''
+  let lastAch = ''
   /** 내 기록에서 보고 있는 7일 쪽과 누른 날 */
   let page = 0
   let picked: string | null = null
@@ -240,6 +272,13 @@ export function createSkills(root: HTMLElement, h: { view(): SkillsView; onLearn
         lastTotals = totals
         q('hist-totals').innerHTML = totals
       }
+    }
+    const done = v.achievements.filter((a) => a.done).length
+    q('ach-title').textContent = `🏆 업적 ${done} / ${v.achievements.length}`
+    const ach = achievementsHtml(v.achievements)
+    if (ach !== lastAch) {
+      lastAch = ach
+      q('achievements').innerHTML = ach
     }
     q('skill-points').innerHTML = `남은 포인트 <b>${v.points}</b>`
     const asked = SKILLS.find((s) => s.id === asking)

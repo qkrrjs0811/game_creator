@@ -1245,6 +1245,42 @@ body {
 .hist-totals b { margin-left: auto; font-size: 13px; }
 .hist-dot { flex: none; width: 10px; height: 10px; border-radius: 50%; }
 .hist-best { margin: 0; font-size: 13px; font-weight: 700; color: var(--accent); }
+/* 업적: 현실 활동으로만 닿는 이정표 칸. 먼 것은 흐리게, 닿은 것은 노랗게 */
+.ach-title { margin-top: 18px; }
+.ach-list { list-style: none; margin: 6px 0 12px; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.ach {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 20px;
+  background: #fff;
+  box-shadow: 0 3px 0 var(--track);
+}
+.ach.far { opacity: 0.45; }
+.ach.done { background: #fff3cf; box-shadow: 0 3px 0 #f5d98c; }
+.ach-icon {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--bg);
+  font-size: 20px;
+}
+.ach.done .ach-icon { background: #ffe1a6; }
+.ach-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; text-align: left; }
+.ach-head { display: flex; align-items: center; gap: 6px; }
+.ach-head b { font-size: 14px; color: var(--ink); }
+.ach-mark { padding: 1px 8px; border-radius: 999px; background: var(--accent); color: #fff; font-size: 11px; font-weight: 700; }
+.ach-bar { display: block; height: 8px; border-radius: 999px; background: var(--track); overflow: hidden; }
+.ach-fill { display: block; height: 100%; border-radius: 999px; }
+/* 활동 업적은 활동 색(.act-*)으로, 나머지는 노랑으로 */
+:where(.ach-fill) { background: #ffc94d; }
+.ach-text small { font-size: 12px; color: var(--ink-soft); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ach.done .ach-text small { color: #c9861a; font-weight: 700; }
 /* 도장판으로 나 창이 길어져도 닫기는 언제나 화면 안 아래에 */
 .sheet-foot {
   position: sticky;

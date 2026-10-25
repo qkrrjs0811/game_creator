@@ -1,6 +1,7 @@
 import { test, expect } from 'vitest'
 import { WINNABLE_MAX } from '../core/coach'
-import { autoRunCard, awayAdventure, awayCard, formatElapsed, formatMinutes, goalText, objectJosa, weekChip, weekDoneText, weekGoalText, sessionSummary, topicJosa, weekTotalText, bestDayText, dayDetail, pageRangeText, dexShadowText, dexNewText, missionChip } from './format'
+import { autoRunCard, awayAdventure, awayCard, formatElapsed, formatMinutes, goalText, objectJosa, weekChip, weekDoneText, weekGoalText, sessionSummary, topicJosa, weekTotalText, bestDayText, dayDetail, pageRangeText, dexShadowText, dexNewText, missionChip, achievementValueText, farAchievementIds } from './format'
+import { ACHIEVEMENTS, achievementProgress } from '../core/achievements'
 import { AUTO_RUN_MAX } from '../core/autorun'
 import type { Cosmetic } from '../core/cosmetics'
 import type { AwaySummary } from '../core/away'
@@ -208,4 +209,30 @@ test('결과 카드 새 몬스터 알림 글자', () => {
 test('홈의 오늘의 미션 칩은 활동과 분, 채우면 완료', () => {
   expect(missionChip({ activity: 'reading', goal: 15, minutes: 5, done: false })).toBe('📜 독서 5 / 15분')
   expect(missionChip({ activity: 'relax', goal: 10, minutes: 12, done: true })).toBe('📜 휴식 완료!')
+})
+
+test('업적 진행 글자: 활동 시간은 시간(한 시간 전엔 분), 나머지는 개·일·가지, 목표를 넘어도 목표에서 멈춘다', () => {
+  const a = (id: string, value: number) => ({ ...ACHIEVEMENTS.find((x) => x.id === id)!, value, done: false })
+  expect(achievementValueText(a('exercise-10', 7 * 60 + 30))).toBe('운동 7 / 10시간')
+  expect(achievementValueText(a('reading-1', 42))).toBe('독서 42분 / 1시간')
+  expect(achievementValueText(a('study-10', 0))).toBe('공부 0 / 10시간')
+  expect(achievementValueText(a('exercise-1', 500))).toBe('운동 1 / 1시간')
+  expect(achievementValueText(a('stamps-10', 7))).toBe('도장 7 / 10개')
+  expect(achievementValueText(a('streak-7', 9))).toBe('가장 길게 7 / 7일')
+  expect(achievementValueText(a('variety-4', 2))).toBe('해 본 활동 2 / 4가지')
+})
+
+test('먼 업적: 같은 줄(활동·종류)에서 아직 못 닿은 첫 업적 뒤의 것만 흐리게', () => {
+  const list = achievementProgress([])
+  const far = farAchievementIds(list)
+  expect(far.has('exercise-1')).toBe(false)
+  expect(far.has('exercise-10')).toBe(true)
+  expect(far.has('stamps-10')).toBe(false)
+  expect(far.has('stamps-50')).toBe(true)
+  expect(far.has('variety-4')).toBe(false)
+  const done = list.map((x) => (x.id === 'exercise-1' ? { ...x, done: true } : x))
+  const far2 = farAchievementIds(done)
+  expect(far2.has('exercise-1')).toBe(false)
+  expect(far2.has('exercise-10')).toBe(false)
+  expect(far2.has('exercise-50')).toBe(true)
 })
