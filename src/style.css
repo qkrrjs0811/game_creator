@@ -196,6 +196,10 @@ body {
 .away-chips[hidden] { display: none; }
 /* 닫기 버튼은 위에 붙여, 맨 아래 모험 줄이 카드 폭을 다 쓰게 한다 */
 .away .toast-close { top: 8px; margin-top: 0; }
+/* 지난주 편지: 자리 비운 동안 카드와 같은 모양, 분홍 편지 색 */
+.away.letter { background: #fff7fa; box-shadow: 0 4px 0 #ffd6e3; }
+.away.letter b { color: #e0709a; }
+.away .letter-suggest { color: #4f9a5c; font-weight: 700; }
 .away-adventure {
   display: flex;
   align-items: center;
