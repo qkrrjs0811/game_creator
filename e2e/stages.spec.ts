@@ -6,9 +6,15 @@ test('처음에는 1스테이지만 열려 있고 나머지는 잠김', async ({
   await expect(page.getByTestId('stages')).toBeVisible()
   await expect(page.getByTestId('stage-1')).toHaveAttribute('data-state', 'open')
   await expect(page.getByTestId('stage-2')).toHaveAttribute('data-state', 'locked')
-  await expect(page.getByTestId('stage-6')).toHaveAttribute('data-state', 'locked')
-  await expect(page.getByTestId('stage-6')).toContainText('보스')
+  // 한 장은 10칸, 10번째가 보스
+  await expect(page.getByTestId('stage-chapter')).toHaveText('1장 · 말랑 나라')
+  await expect(page.locator('.stage')).toHaveCount(10)
+  await expect(page.getByTestId('stage-10')).toHaveAttribute('data-state', 'locked')
+  await expect(page.getByTestId('stage-10')).toContainText('보스')
   await expect(page.getByTestId('stage-go-2')).toHaveCount(0)
+  // 목록이 길어도 닫기 버튼은 화면 안에 있다
+  const close = (await page.getByTestId('stages-close').boundingBox())!
+  expect(close.y + close.height).toBeLessThanOrEqual(844)
   // 다음에 깰 스테이지에만 이길 만한지 알려 준다
   await expect(page.getByTestId('stage-hint')).toHaveCount(1)
   await expect(page.getByTestId('stage-1').getByTestId('stage-hint')).toHaveText('🍀 지금도 이길 만해요')
@@ -39,4 +45,27 @@ test('깬 스테이지 수(stageProgress)에 따라 깸·도전·잠김을 보�
 
   await page.getByTestId('stages-close').click()
   await page.screenshot({ path: 'test-results/screens/home-adventure.png' })
+})
+
+test('2장으로 넘어가면 지도는 2장 10칸, 다음에 깰 칸이 목록 안에 보임', async ({ page }) => {
+  await page.goto('./')
+  await page.evaluate(() =>
+    localStorage.setItem(
+      'growth-game:save',
+      JSON.stringify({ version: 1, records: [], active: null, skills: [], stageProgress: 17, cosmetics: [] }),
+    ),
+  )
+  await page.reload()
+  await page.getByTestId('open-stages').click()
+  await expect(page.getByTestId('stage-chapter')).toHaveText('2장 · 반짝 나라')
+  await expect(page.locator('.stage')).toHaveCount(10)
+  await expect(page.getByTestId('stage-11')).toHaveAttribute('data-state', 'cleared')
+  await expect(page.getByTestId('stage-18')).toHaveAttribute('data-state', 'open')
+  await expect(page.getByTestId('stage-20')).toContainText('보스')
+  // 스크롤하지 않아도 도전 버튼이 목록 안에 보인다
+  const list = (await page.getByTestId('stage-list').boundingBox())!
+  const go = (await page.getByTestId('stage-go-18').boundingBox())!
+  expect(go.y).toBeGreaterThanOrEqual(list.y)
+  expect(go.y + go.height).toBeLessThanOrEqual(list.y + list.height)
+  await page.screenshot({ path: 'test-results/screens/stages-chapter2.png' })
 })

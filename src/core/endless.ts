@@ -206,8 +206,39 @@ export function endlessStage(no: number): EndlessStage {
   return stage
 }
 
+const cleared = (stageProgress: number) => Math.max(0, Math.floor(stageProgress) || 0)
+
 /** stageProgress = 깬 스테이지 수. 깬 스테이지와 바로 다음 스테이지는 언제든 도전할 수 있고, 끝은 없다 */
 export function endlessStageOpen(stageProgress: number, no: number): boolean {
-  const done = Math.max(0, Math.floor(stageProgress) || 0)
-  return Number.isFinite(no) && no >= 1 && no <= done + 1
+  return Number.isFinite(no) && no >= 1 && no <= cleared(stageProgress) + 1
+}
+
+export function stageMonster(no: number): Monster {
+  return endlessStage(no).monster
+}
+
+/** 스테이지 상대의 전투 값 */
+export function stageEnemy(no: number): Fighter {
+  return endlessStage(no).enemy
+}
+
+/** 홈 장면에 나오는 몬스터: 다음에 도전할 스테이지 */
+export function homeMonster(stageProgress: number): Monster {
+  return stageMonster(cleared(stageProgress) + 1)
+}
+
+export function chapterOf(no: number): number {
+  return Math.ceil(cleanNo(no) / STAGES_PER_CHAPTER)
+}
+
+export type StageState = 'cleared' | 'open' | 'locked'
+
+/** 한 장의 스테이지 10칸과 깸·도전 가능·잠김 상태. 장을 고르지 않으면 다음에 깰 스테이지가 있는 장 */
+export function chapterStages(stageProgress: number, chapter?: number): (EndlessStage & { state: StageState })[] {
+  const done = cleared(stageProgress)
+  const c = chapter === undefined ? chapterOf(done + 1) : Math.max(1, Math.floor(chapter) || 1)
+  return Array.from({ length: STAGES_PER_CHAPTER }, (_, i) => {
+    const s = endlessStage((c - 1) * STAGES_PER_CHAPTER + i + 1)
+    return { ...s, state: s.no <= done ? 'cleared' : s.no === done + 1 ? 'open' : 'locked' }
+  })
 }

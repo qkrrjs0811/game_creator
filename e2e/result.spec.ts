@@ -50,9 +50,9 @@ test('이기면 결과 카드와 함께 다음 스테이지가 열리고 저장�
 })
 
 test('지면 결과 카드가 다시 오라고 하고, 스테이지는 그대로', async ({ page }) => {
-  await useSave(page, 1)
+  await useSave(page, 2)
   await page.getByTestId('open-stages').click()
-  await page.getByTestId('stage-go-2').click()
+  await page.getByTestId('stage-go-3').click()
   await page.getByTestId('battle-action').click()
 
   await expect(page.getByTestId('battle-result-title')).toContainText('아쉬워요')
@@ -62,13 +62,13 @@ test('지면 결과 카드가 다시 오라고 하고, 스테이지는 그대로
   // 지더라도 몬스터를 얼마나 깎았는지 보여 준다
   const damage = page.getByTestId('battle-result-damage')
   await expect(damage).toBeVisible()
-  await expect(page.getByTestId('battle-result-damage-text')).toHaveText(/💥 버섯 뽀짝 체력을 \d+% 깎았어요/)
+  await expect(page.getByTestId('battle-result-damage-text')).toHaveText(/💥 물방울 퐁 체력을 \d+% 깎았어요/)
   const percent = Number(await damage.getAttribute('data-percent'))
   expect(percent).toBeGreaterThan(0)
   expect(percent).toBeLessThan(100)
   await page.waitForTimeout(600)
   await page.screenshot({ path: 'test-results/screens/result-lose.png' })
-  expect(await page.evaluate(() => window.__debug.getSave().stageProgress)).toBe(1)
+  expect(await page.evaluate(() => window.__debug.getSave().stageProgress)).toBe(2)
 })
 
 test('이미 깬 스테이지를 다시 이기면 깬 수는 그대로', async ({ page }) => {
@@ -83,7 +83,7 @@ test('이미 깬 스테이지를 다시 이기면 깬 수는 그대로', async (
   expect(s.cosmetics).toEqual([])
 })
 
-test('보스를 이기면 모든 스테이지를 깸', async ({ page }) => {
+test('장 보스를 이기면 새 장이 열림', async ({ page }) => {
   // 사흘 동안 하루 3시간씩 운동한 말랑이
   const day = 24 * 60 * 60 * 1000
   const base = Date.now() - 5 * day
@@ -93,17 +93,35 @@ test('보스를 이기면 모든 스테이지를 깸', async ({ page }) => {
     startedAt: base + d * day,
     endedAt: base + d * day + 180 * 60 * 1000,
   }))
-  await useSave(page, 5, records)
+  await useSave(page, 9, records)
   await page.getByTestId('open-stages').click()
-  await page.getByTestId('stage-go-6').click()
+  await expect(page.getByTestId('stage-10')).toContainText('보스 · 왕의 둥지')
+  await page.getByTestId('stage-go-10').click()
   await page.getByTestId('battle-action').click()
 
   await expect(page.getByTestId('battle-result-title')).toContainText('승리')
-  await expect(page.getByTestId('battle-result-note')).toContainText('모든 스테이지를 깼어요')
-  await expect(page.getByTestId('battle-result-reward')).toContainText('꼬마 왕관')
+  await expect(page.getByTestId('battle-result-note')).toHaveText('🎉 새 장이 열렸어요 · 2장 반짝 나라')
   await page.waitForTimeout(600)
   await page.screenshot({ path: 'test-results/screens/result-boss.png' })
-  expect(await page.evaluate(() => window.__debug.getSave().stageProgress)).toBe(6)
+  expect(await page.evaluate(() => window.__debug.getSave().stageProgress)).toBe(10)
+
+  // 돌아오면 홈에는 새 장 첫 몬스터, 모험 지도는 새 장
+  await page.getByTestId('battle-action').click()
+  await expect(page.getByTestId('scene')).toHaveAttribute('data-monster', 'c2-s1')
+  await page.getByTestId('open-stages').click()
+  await expect(page.getByTestId('stage-chapter')).toHaveText('2장 · 반짝 나라')
+  await expect(page.getByTestId('stage-11')).toHaveAttribute('data-state', 'open')
+})
+
+test('예전 마지막(6스테이지)을 깬 저장은 7스테이지부터 이어 감', async ({ page }) => {
+  await useSave(page, 6)
+  await expect(page.getByTestId('scene')).toHaveAttribute('data-monster', 'c1-s7')
+  await page.getByTestId('open-stages').click()
+  await expect(page.getByTestId('stage-chapter')).toHaveText('1장 · 말랑 나라')
+  await expect(page.getByTestId('stage-6')).toHaveAttribute('data-state', 'cleared')
+  await expect(page.getByTestId('stage-7')).toHaveAttribute('data-state', 'open')
+  await expect(page.getByTestId('stage-7').getByTestId('stage-hint')).toBeVisible()
+  await expect(page.getByTestId('stage-10')).toHaveAttribute('data-state', 'locked')
 })
 
 /** 이긴 쪽이 폴짝 뛰는 동안 머리끝이 자기 HP 막대를 뚫지 않고, 막대도 위쪽 결과 카드에 닿지 않는지 본다 */
@@ -149,9 +167,9 @@ test('이긴 말랑이가 폴짝 뛰어도 머리가 HP 막대에 닿지 않음(
 })
 
 test('이긴 몬스터가 뛰어도 HP 막대에 닿지 않음', async ({ page }) => {
-  await useSave(page, 1)
+  await useSave(page, 2)
   await page.getByTestId('open-stages').click()
-  await page.getByTestId('stage-go-2').click()
+  await page.getByTestId('stage-go-3').click()
   await page.getByTestId('battle-action').click()
   await expect(page.getByTestId('battle-result-title')).toContainText('아쉬워요')
   await expectHopUnderBar(page, 'monster')

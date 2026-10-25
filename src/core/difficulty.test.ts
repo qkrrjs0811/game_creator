@@ -1,7 +1,7 @@
 import { describe, test, expect } from 'vitest'
 import { freshFighter, freshMinutesToWin, rotatedSkills } from './difficulty'
 import { likelyWin } from './coach'
-import { stageEnemy } from './monsters'
+import { stageEnemy } from './endless'
 import { STAGES } from './stages'
 
 describe('rotatedSkills', () => {
@@ -27,10 +27,10 @@ describe('freshMinutesToWin', () => {
   })
 
   test('이길 만해지는 가장 적은 누적 운동 분', () => {
-    const m = freshMinutesToWin(stageEnemy(2))!
+    const m = freshMinutesToWin(stageEnemy(3))!
     expect(m).toBeGreaterThan(0)
-    expect(likelyWin(freshFighter(m), stageEnemy(2))).toBe(true)
-    expect(likelyWin(freshFighter(m - 1), stageEnemy(2))).toBe(false)
+    expect(likelyWin(freshFighter(m), stageEnemy(3))).toBe(true)
+    expect(likelyWin(freshFighter(m - 1), stageEnemy(3))).toBe(false)
   })
 
   test('지금 스테이지는 뒤로 갈수록 오래 걸린다', () => {

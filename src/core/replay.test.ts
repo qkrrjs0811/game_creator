@@ -1,7 +1,7 @@
 import { describe, test, expect } from 'vitest'
 import { playerFighter, simulateBattle } from './battle'
 import { BASE_STAT } from './progression'
-import { stageEnemy } from './monsters'
+import { stageEnemy } from './endless'
 import { battleTimeline, stepDelay } from './replay'
 
 const base = { str: BASE_STAT, vit: BASE_STAT, int: BASE_STAT }

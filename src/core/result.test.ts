@@ -12,7 +12,7 @@ describe('applyBattleResult', () => {
     expect(r.save.stageProgress).toBe(1)
     expect(r.firstClear).toBe(true)
     expect(r.unlocked).toBe(2)
-    expect(r.allCleared).toBe(false)
+    expect(r.newChapter).toBeNull()
   })
 
   test('지면 저장이 그대로', () => {
@@ -31,16 +31,23 @@ describe('applyBattleResult', () => {
     expect(r.unlocked).toBeNull()
   })
 
-  test('보스를 처음 이기면 모두 깸, 더 열 스테이지는 없음', () => {
-    const r = applyBattleResult(saveAt(5), 6, true)
-    expect(r.save.stageProgress).toBe(6)
+  test('장 보스를 처음 이기면 다음 장의 첫 스테이지가 열림', () => {
+    const r = applyBattleResult(saveAt(9), 10, true)
+    expect(r.save.stageProgress).toBe(10)
     expect(r.firstClear).toBe(true)
-    expect(r.unlocked).toBeNull()
-    expect(r.allCleared).toBe(true)
+    expect(r.unlocked).toBe(11)
+    expect(r.newChapter).toBe(2)
+    expect(applyBattleResult(saveAt(19), 20, true).newChapter).toBe(3)
+  })
+
+  test('예전 마지막(6스테이지)을 깨도 끝나지 않고 7스테이지가 열림', () => {
+    const r = applyBattleResult(saveAt(5), 6, true)
+    expect(r.unlocked).toBe(7)
+    expect(r.newChapter).toBeNull()
   })
 
   test('잠긴 스테이지나 없는 스테이지는 이겨도 바뀌지 않음', () => {
-    for (const no of [3, 0, 7, -1, 1.5]) {
+    for (const no of [3, 0, -1, 1.5]) {
       const s = saveAt(1)
       expect(applyBattleResult(s, no, true).save).toBe(s)
     }

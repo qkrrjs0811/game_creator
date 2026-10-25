@@ -1,12 +1,11 @@
 import { COSMETICS, type Cosmetic, type Worn } from '../core/cosmetics'
-import { STAGES } from '../core/stages'
+import { endlessStage } from '../core/endless'
+import { stageLabel } from './stages'
 
 export interface CosmeticsView {
   owned: Cosmetic[]
   worn: Worn
 }
-
-const stageLabel = (no: number) => (STAGES[no - 1]?.boss ? '보스' : `${no}스테이지`)
 
 /** 꾸미기 창: 가진 모자·색을 골라 말랑이에게 입힌다. 아직 없는 건 얻는 곳을 알려 준다 */
 export function createCosmetics(root: HTMLElement, h: { view(): CosmeticsView; onWear(id: string): void }) {
@@ -39,7 +38,7 @@ export function createCosmetics(root: HTMLElement, h: { view(): CosmeticsView; o
       const kind = c.kind === 'hat' ? '모자' : '색'
       const btn = owned
         ? `<button type="button" class="cosmetic-wear" data-id="${c.id}" data-testid="wear-${c.id}">${worn ? '벗기' : '입기'}</button>`
-        : `<span class="cosmetic-lock">🔒 ${stageLabel(c.stage)}</span>`
+        : `<span class="cosmetic-lock">🔒 ${stageLabel(endlessStage(c.stage))}</span>`
       return `
         <li class="cosmetic ${state}" data-testid="cosmetic-${c.id}" data-state="${state}">
           <span class="cosmetic-icon" aria-hidden="true">${owned ? c.icon : '❔'}</span>

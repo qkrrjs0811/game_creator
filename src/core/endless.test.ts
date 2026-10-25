@@ -1,5 +1,17 @@
 import { describe, test, expect } from 'vitest'
-import { STAGES_PER_CHAPTER, endlessStage, endlessStageOpen, targetMinutes } from './endless'
+import {
+  STAGES_PER_CHAPTER,
+  chapterOf,
+  chapterStages,
+  endlessStage,
+  endlessStageOpen,
+  homeMonster,
+  stageEnemy,
+  stageMonster,
+  targetMinutes,
+} from './endless'
+import { playerFighter, simulateBattle } from './battle'
+import { BASE_STAT } from './progression'
 import { freshMinutesToWin } from './difficulty'
 import { MONSTERS } from './monsters'
 import { STAGES } from './stages'
@@ -131,5 +143,57 @@ describe('endlessStageOpen', () => {
     expect(endlessStageOpen(-4, 1)).toBe(true)
     expect(endlessStageOpen(Number.NaN, 1)).toBe(true)
     expect(endlessStageOpen(Number.NaN, 2)).toBe(false)
+  })
+})
+
+describe('스테이지로 찾기', () => {
+  test('스테이지 몬스터와 전투 값', () => {
+    expect(stageMonster(3)).toEqual(endlessStage(3).monster)
+    expect(stageEnemy(3)).toEqual(endlessStage(3).enemy)
+    expect(stageEnemy(0)).toEqual(stageEnemy(1))
+  })
+
+  test('처음 시작한 말랑이도 1스테이지는 이기고 3스테이지는 아직 어렵다', () => {
+    const me = playerFighter({ str: BASE_STAT, vit: BASE_STAT, int: BASE_STAT }, [])
+    for (let seed = 0; seed < 300; seed++) {
+      expect(simulateBattle(me, stageEnemy(1), seed).win).toBe(true)
+      expect(simulateBattle(me, stageEnemy(3), seed).win).toBe(false)
+    }
+  })
+
+  test('홈 장면에는 다음에 도전할 스테이지의 몬스터가 나오고, 끝이 없다', () => {
+    expect(homeMonster(0).id).toBe(MONSTERS[0].id)
+    expect(homeMonster(2).id).toBe(MONSTERS[2].id)
+    expect(homeMonster(9).id).toBe(MONSTERS[5].id)
+    expect(homeMonster(6)).toEqual(stageMonster(7))
+    expect(homeMonster(42)).toEqual(stageMonster(43))
+    expect(homeMonster(-3).id).toBe(MONSTERS[0].id)
+  })
+})
+
+describe('chapterStages', () => {
+  test('지금 장(다음에 깰 스테이지가 있는 장)의 10칸', () => {
+    const list = chapterStages(0)
+    expect(list.map((s) => s.no)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10])
+    expect(list.map((s) => s.state)).toEqual(['open', ...Array(9).fill('locked')])
+    expect(chapterStages(10)[0].no).toBe(11)
+    expect(chapterStages(9)[9].no).toBe(10)
+  })
+
+  test('깸·도전 가능·잠김 상태', () => {
+    expect(chapterStages(12).map((s) => s.state)).toEqual(['cleared', 'cleared', 'open', ...Array(7).fill('locked')])
+  })
+
+  test('이전 저장(6까지 깸)은 1장의 6칸이 깬 것, 7스테이지가 도전', () => {
+    expect(chapterStages(6).map((s) => s.state)).toEqual([...Array(6).fill('cleared'), 'open', 'locked', 'locked', 'locked'])
+  })
+
+  test('다른 장을 골라 볼 수 있고, 이상한 값(백업)이어도 깨지지 않는다', () => {
+    expect(chapterStages(12, 1).every((s) => s.state === 'cleared')).toBe(true)
+    expect(chapterStages(0, 3).every((s) => s.state === 'locked')).toBe(true)
+    expect(chapterStages(-1)[0].state).toBe('open')
+    expect(chapterStages(Number.NaN)[0].no).toBe(1)
+    expect(chapterOf(10)).toBe(1)
+    expect(chapterOf(11)).toBe(2)
   })
 })

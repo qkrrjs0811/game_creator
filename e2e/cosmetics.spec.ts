@@ -20,7 +20,7 @@ test('처음에는 꾸미기가 모두 잠겨 있고 얻는 곳을 알려 줌', 
   await expect(page.getByTestId('cosmetics')).toBeVisible()
   await expect(page.getByTestId('cosmetics-desc')).toContainText('스테이지를 처음 깨면')
   await expect(page.getByTestId('cosmetic-hat-sprout')).toHaveAttribute('data-state', 'locked')
-  await expect(page.getByTestId('cosmetic-hat-crown')).toContainText('보스')
+  await expect(page.getByTestId('cosmetic-hat-crown')).toContainText('6스테이지')
   await expect(page.locator('.cosmetic-wear')).toHaveCount(0)
   await page.screenshot({ path: 'test-results/screens/cosmetics-empty.png' })
   await page.getByTestId('cosmetics-close').click()

@@ -389,8 +389,30 @@ body {
   cursor: pointer;
 }
 .sheet { max-height: 92dvh; overflow-y: auto; }
-.stage-list { list-style: none; margin: 10px 0 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.stage-chapter {
+  display: inline-block;
+  margin: 0 0 8px;
+  padding: 4px 14px;
+  border-radius: 999px;
+  background: var(--chip);
+  font-size: 14px;
+  font-weight: 700;
+}
+/* 한 장 10칸이 길어도 닫기 버튼은 화면 안에 두고 목록만 넘긴다 */
+.stage-list {
+  position: relative;
+  list-style: none;
+  margin: 10px -6px 0;
+  padding: 2px 6px 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: calc(92dvh - 250px);
+  overflow-y: auto;
+}
 .stage {
+  /* 넘기는 목록 안에서도 칸이 눌려 줄어들지 않게 한다 */
+  flex: none;
   display: flex;
   align-items: center;
   gap: 12px;

@@ -1,10 +1,20 @@
 import { test, expect } from '@playwright/test'
 
-const IDS = ['leaf', 'mushroom', 'drop', 'cloud', 'rock', 'king']
+/** 깬 스테이지 수 → 홈에 나오는 몬스터. 1장 앞쪽 5종, 새 6스테이지, 장 보스, 2장 첫 몬스터 */
+const HOME: [number, string][] = [
+  [0, 'leaf'],
+  [1, 'mushroom'],
+  [2, 'drop'],
+  [3, 'cloud'],
+  [4, 'rock'],
+  [5, 'c1-s6'],
+  [9, 'king'],
+  [10, 'c2-s1'],
+]
 
-test('홈 장면에는 다음에 도전할 스테이지의 몬스터가 나옴(5종 + 보스)', async ({ page }) => {
+test('홈 장면에는 다음에 도전할 스테이지의 몬스터가 나옴(끝없는 스테이지)', async ({ page }) => {
   await page.goto('./')
-  for (let progress = 0; progress < IDS.length; progress++) {
+  for (const [progress, id] of HOME) {
     await page.evaluate(
       (p) =>
         localStorage.setItem(
@@ -14,9 +24,9 @@ test('홈 장면에는 다음에 도전할 스테이지의 몬스터가 나옴(5
       progress,
     )
     await page.reload()
-    await expect(page.getByTestId('scene')).toHaveAttribute('data-monster', IDS[progress])
+    await expect(page.getByTestId('scene')).toHaveAttribute('data-monster', id)
     await page.waitForTimeout(300)
-    await page.getByTestId('scene').screenshot({ path: `test-results/screens/monster-${progress + 1}-${IDS[progress]}.png` })
+    await page.getByTestId('scene').screenshot({ path: `test-results/screens/monster-${progress + 1}-${id}.png` })
   }
 })
 

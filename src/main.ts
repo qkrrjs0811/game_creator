@@ -11,17 +11,16 @@ import { createHud } from './ui/hud'
 import { createSettings } from './ui/settings'
 import { createSkills } from './ui/skills'
 import { learnSkill, remainingSkillPoints, skillRanks } from './core/skills'
-import { STAGES } from './core/stages'
-import { createStages } from './ui/stages'
+import { endlessStage, homeMonster } from './core/endless'
+import { createStages, stageLabel } from './ui/stages'
 import { createBattleBar } from './ui/battle'
 import { enemyDamagePercent, playerFighter, simulateBattle } from './core/battle'
 import { battleTimeline, stepDelay } from './core/replay'
-import { homeMonster, stageEnemy, stageMonster } from './core/monsters'
 import { applyBattleResult, type BattleOutcome } from './core/result'
 import { ownedCosmetics, toggleWear, wornCosmetics } from './core/cosmetics'
 import { createCosmetics } from './ui/cosmetics'
 import { statRows } from './core/stats'
-import { minutesToWin, nextStageAdvice } from './core/coach'
+import { nextStageAdvice, stageMinutesToWin } from './core/coach'
 import { formatMinutes, sessionSummary } from './ui/format'
 import { sessionGain } from './core/gain'
 
@@ -166,9 +165,9 @@ function resultNote(o: BattleOutcome, win: boolean, toWin: number | null): strin
     if (toWin === 0) return '🍀 지금도 이길 만해요 · 다시 도전해 봐요'
     return `💪 운동 ${formatMinutes(toWin)} 더 하면 이길 만해요`
   }
-  if (o.allCleared) return '👑 모든 스테이지를 깼어요!'
   if (o.unlocked !== null) {
-    const next = STAGES[o.unlocked - 1]
+    const next = endlessStage(o.unlocked)
+    if (o.newChapter !== null) return `🎉 새 장이 열렸어요 · ${next.chapter}장 ${next.chapterName}`
     return next.boss ? `🔓 보스 스테이지가 열렸어요 · ${next.name}` : `🔓 ${next.no}스테이지가 열렸어요 · ${next.name}`
   }
   return '⭐ 이미 깬 스테이지예요'
@@ -189,13 +188,13 @@ const stages = createStages(app, {
   advice: () => nextStageAdvice(currentProgress().creditedMinutes, save.skills, save.stageProgress),
   onChallenge(no) {
     pullSave()
-    const s = STAGES[no - 1]
+    const s = endlessStage(no)
     const p = computeProgress(liveRecords(save, Date.now()))
     const me = playerFighter(p.stats, save.skills)
-    const enemy = stageEnemy(no)
+    const enemy = s.enemy
     const result = simulateBattle(me, enemy, Date.now())
     const timeline = battleTimeline(me, enemy, result)
-    const foe = stageMonster(no)
+    const foe = s.monster
     // 결과는 재생 전에 저장한다(재생 중 앱을 닫아도 깬 스테이지가 남게). 바뀌는 건 깬 스테이지 수와 꾸미기뿐이다
     const outcome = applyBattleResult(save, no, result.win)
     if (outcome.save !== save) {
@@ -207,14 +206,14 @@ const stages = createStages(app, {
       win: result.win,
       rounds: result.rounds,
       // 지면 얼마나 더 키우면 되는지 알려 다시 운동하러 가게 한다(화면에 보여 줄 값일 뿐)
-      note: resultNote(outcome, result.win, result.win ? null : minutesToWin(p.creditedMinutes, save.skills, enemy)),
+      note: resultNote(outcome, result.win, result.win ? null : stageMinutesToWin(p.creditedMinutes, save.skills, no)),
       reward,
       foe: foe.name,
       damage: enemyDamagePercent(enemy, result),
     }
     stages.close()
     hud.hideToasts()
-    battleBar.start(`${s.boss ? '보스' : `${no}스테이지`} · ${s.name}`, foe.name)
+    battleBar.start(`${stageLabel(s)} · ${s.name}`, foe.name)
     const scene = homeScene()
     if (scene) scene.playBattle(timeline, stepDelay(timeline.steps.length), foe, () => battleBar.end(view))
     else battleBar.end(view)

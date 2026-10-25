@@ -30,16 +30,16 @@ test('건너뛰면 바로 결과, 전투는 경험치·기록을 바꾸지 않�
   await page.evaluate(() =>
     localStorage.setItem(
       'growth-game:save',
-      JSON.stringify({ version: 1, records: [], active: null, skills: [], stageProgress: 1, cosmetics: [] }),
+      JSON.stringify({ version: 1, records: [], active: null, skills: [], stageProgress: 2, cosmetics: [] }),
     ),
   )
   await page.reload()
   await page.getByTestId('open-stages').click()
-  await page.getByTestId('stage-go-2').click()
+  await page.getByTestId('stage-go-3').click()
   await expect(page.getByTestId('battle')).toHaveAttribute('data-state', 'playing')
   await page.getByTestId('battle-action').click()
 
-  // 처음 시작한 말랑이에게 2스테이지는 아직 어렵다
+  // 처음 시작한 말랑이에게 3스테이지는 아직 어렵다
   await expect(page.getByTestId('battle')).toHaveAttribute('data-state', 'done')
   await expect(page.getByTestId('battle')).toHaveAttribute('data-win', 'false')
   await expect(page.getByTestId('battle-status')).toContainText('졌어요')
@@ -50,7 +50,7 @@ test('건너뛰면 바로 결과, 전투는 경험치·기록을 바꾸지 않�
   const s = await page.evaluate(() => window.__debug.getSave())
   expect(s.records).toEqual([])
   expect(s.skills).toEqual([])
-  expect(s.stageProgress).toBe(1)
+  expect(s.stageProgress).toBe(2)
 })
 
 test('데미지 숫자는 HP 막대 위에서 떠올라 막대를 가리지 않음', async ({ page }) => {
