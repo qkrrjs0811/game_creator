@@ -171,9 +171,9 @@ test('꾸미기가 많아도 모자·색으로 나눠 보고, 열면 입은 모�
   await expect(page.getByTestId('cosmetic-hat-ch18')).toHaveAttribute('data-state', 'worn')
   expect(await inside('cosmetic-hat-ch18')).toBe(true)
 
-  // 색 칸은 색만
+  // 색 칸은 색만(스테이지 색 둘 + 주간 색 셋)
   await page.getByTestId('cosmetic-tab-color').click()
-  await expect(page.getByTestId('cosmetic-grid').locator('.cosmetic')).toHaveCount(2)
+  await expect(page.getByTestId('cosmetic-grid').locator('.cosmetic')).toHaveCount(5)
   await expect(page.getByTestId('cosmetic-color-cotton')).toHaveAttribute('data-state', 'worn')
   await page.getByTestId('cosmetics-close').click()
   await expect(page.getByTestId('scene')).toHaveAttribute('data-look', 'hat-ch18 color-cotton')

@@ -107,6 +107,9 @@ const FONT = 'Segoe UI, Malgun Gothic, sans-serif'
 const BODY_COLORS: Record<string, [number, number]> = {
   'color-sky': [0xb5dcff, 0x8fc2f0],
   'color-cotton': [0xffc6de, 0xf5a3c6],
+  'color-week1': [0xfff0a0, 0xf2d670],
+  'color-week4': [0xb8ecd4, 0x8fd4b6],
+  'color-week12': [0xd9c8f7, 0xbba4ea],
 }
 const CONFETTI =[0xff8a5b, 0xffd36b, 0x9be3c4, 0xa8d4ff, 0xffa8c8, 0xc9a7ff]
 /** 말랑이 기분: 쉬는 중(타이머 꺼짐), 같이 운동·공부·독서·휴식 중, 오늘 상한을 채워 쉬어도 되는 중 */

@@ -2,6 +2,7 @@ import { describe, test, expect } from 'vitest'
 import {
   COSMETICS,
   STAMP_COSMETICS,
+  WEEK_COSMETICS,
   chapterCosmetic,
   cosmeticById,
   cosmeticCatalog,
@@ -86,6 +87,57 @@ describe('STAMP_COSMETICS', () => {
   })
 })
 
+/** 2026-10-05(월)부터 n주 동안 주마다 월~금 운동 30분(채운 주 n번) */
+function weekDays(n: number): ActivityRecord[] {
+  return Array.from({ length: n * 5 }, (_, i) => {
+    const start = new Date(2026, 9, 5 + Math.floor(i / 5) * 7 + (i % 5), 7).getTime()
+    return { id: `w${i}`, activity: 'exercise' as const, startedAt: start, endedAt: start + 30 * 60_000 }
+  })
+}
+
+describe('WEEK_COSMETICS', () => {
+  test('주간 목표를 1·4·12번 채우면 주는 몸 색 셋, 스테이지·도장으로는 얻지 않음', () => {
+    expect(WEEK_COSMETICS.map((c) => [c.id, c.kind, c.weeks])).toEqual([
+      ['color-week1', 'color', 1],
+      ['color-week4', 'color', 4],
+      ['color-week12', 'color', 12],
+    ])
+    for (const c of WEEK_COSMETICS) {
+      expect(c.stage).toBeUndefined()
+      expect(c.stamps).toBeUndefined()
+    }
+    expect(new Set(WEEK_COSMETICS.map((c) => c.name)).size).toBe(3)
+  })
+
+  test('이름으로 찾음', () => {
+    expect(cosmeticById('color-week4')).toEqual(WEEK_COSMETICS[1])
+  })
+
+  test('채운 주 1·4·12번마다 하나씩 가짐', () => {
+    const owned = (n: number) =>
+      ownedCosmetics({ ...newSave(), records: weekDays(n) }).map((c) => c.id).filter((id) => id.startsWith('color-week'))
+    expect(owned(0)).toEqual([])
+    expect(owned(1)).toEqual(['color-week1'])
+    expect(owned(3)).toEqual(['color-week1'])
+    expect(owned(4)).toEqual(['color-week1', 'color-week4'])
+    expect(owned(11)).toEqual(['color-week1', 'color-week4'])
+    expect(owned(12)).toEqual(['color-week1', 'color-week4', 'color-week12'])
+  })
+
+  test('한 주에 4일만 채우면 없고, 저장에 이름이 있거나 스테이지를 많이 깨도 없음', () => {
+    const four = weekDays(1).slice(0, 4)
+    const save = { ...newSave(), stageProgress: 500, cosmetics: ['color-week1'], records: four }
+    expect(ownedCosmetics(save).map((c) => c.id)).not.toContain('color-week1')
+  })
+
+  test('입을 수 있고, 다른 색과 바꿔 입음', () => {
+    const save = { ...newSave(), stageProgress: 3, records: weekDays(1) }
+    const on = toggleWear(toggleWear(save, 'color-sky'), 'color-week1')
+    expect(wornCosmetics(on).color).toEqual(WEEK_COSMETICS[0])
+    expect(on.worn).toEqual(['color-week1'])
+  })
+})
+
 describe('cosmeticById', () => {
   test('도장 모자를 찾음', () => {
     expect(cosmeticById('hat-stamp30')).toEqual(STAMP_COSMETICS[1])
@@ -106,6 +158,7 @@ describe('cosmeticCatalog', () => {
     expect(cosmeticCatalog(newSave()).map((c) => c.id)).toEqual([
       ...COSMETICS.map((c) => c.id),
       ...STAMP_COSMETICS.map((c) => c.id),
+      ...WEEK_COSMETICS.map((c) => c.id),
       'hat-ch1',
     ])
     expect(cosmeticCatalog({ ...newSave(), stageProgress: 25 }).map((c) => c.id).slice(-3)).toEqual(['hat-ch1', 'hat-ch2', 'hat-ch3'])
