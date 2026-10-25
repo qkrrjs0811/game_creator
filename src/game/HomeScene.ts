@@ -11,6 +11,7 @@ import { contactAt, finishDelay, hitImpact, hpTrail, isFinalBlow, type Impact } 
 import { skillFxSize, skillFxTiming, stepSkillFx, type SkillFxKind, type SkillStyle } from '../core/skillfx'
 import { drawMonsterBody, drawMonsterFace } from './monsterArt'
 import { BOSS_BAR_RAISE, bossLook, monsterScale, monsterTop } from '../core/bossLook'
+import { bossDropOffset, bossEntrance, bossNameTag, type BossEntrance } from '../core/bossEntrance'
 import { monsterChapter, monsterDecor } from '../core/monsterDecor'
 import { monsterEndFace, monsterStepFace, type MonsterFace } from '../core/monsterLook'
 import { MONSTER_ATTACK, MONSTER_BOTTOM, MONSTER_IDLE, REST_POSE, attackPlan, poseY, type Pose } from '../core/monsterMotion'
@@ -532,6 +533,8 @@ export class HomeScene extends Phaser.Scene {
     knockout?: boolean
     onEnd: (win: boolean) => void
     ended: boolean
+    /** 보스 등장 연출(어두운 막·이름표)과 끝나면 첫 걸음을 시작할 예약 */
+    intro?: { dim: Phaser.GameObjects.Rectangle; tag: Phaser.GameObjects.Container; start: Phaser.Time.TimerEvent }
   }
 
   constructor() {
@@ -767,7 +770,104 @@ export class HomeScene extends Phaser.Scene {
     this.game.canvas.parentElement?.setAttribute('data-fainted', '')
     this.game.canvas.parentElement?.setAttribute('data-skill-fx', '')
     this.layout(this.scale.width, this.scale.height)
-    this.battle.timer = this.time.addEvent({ delay, loop: true, startAt: delay * 0.4, callback: () => this.playStep() })
+    const entrance = bossEntrance(foe, delay)
+    if (entrance) this.bossIntro(this.battle, entrance, foe)
+    else this.battle.timer = this.time.addEvent({ delay, loop: true, startAt: delay * 0.4, callback: () => this.playStep() })
+  }
+
+  /**
+   * 보스 등장: 화면이 어두워짐 → 보스가 위에서 쿵 내려와 땅이 흔들림 → 이름표가 뜸 → 밝아지고 첫 걸음.
+   * 보스와 이름표만 어두운 막 위에 둔다. HP 막대는 밝아질 때 나타난다. 모습만 바뀐다
+   */
+  private bossIntro(b: NonNullable<HomeScene['battle']>, e: BossEntrance, foe: Monster) {
+    const { width: w, height: h } = this.scale
+    const host = this.game.canvas.parentElement
+    const mark = (phase: string) => host?.setAttribute('data-boss-intro', phase)
+    host?.setAttribute('data-boss-intros', String(Number(host.getAttribute('data-boss-intros') ?? 0) + 1))
+    mark('dim')
+    const dim = this.add.rectangle(0, 0, w, h, 0x3b2a4a).setOrigin(0).setAlpha(0).setDepth(1)
+    this.tweens.add({ targets: dim, alpha: e.dimAlpha, duration: e.dim })
+    this.monster.setDepth(2)
+    for (const bar of b.bars) bar.setAlpha(0)
+    this.monsterBody.setY(bossDropOffset(this.monster.y, this.monsterTop()))
+    this.monsterBody.setVisible(false)
+
+    const tag = this.bossTag(foe, w / 2, Math.max(44, h * 0.2))
+    tag.setDepth(3).setAlpha(0)
+
+    const live = () => this.battle === b && b.intro !== undefined
+    this.time.delayedCall(e.dropAt, () => {
+      if (!live()) return
+      mark('drop')
+      this.monsterBody.setVisible(true)
+      this.tweens.add({
+        targets: this.monsterBody,
+        y: 0,
+        duration: e.drop,
+        ease: 'Quad.easeIn',
+        onComplete: () => {
+          if (!live()) return
+          mark('tag')
+          // 쿵: 화면이 흔들리고 보스가 납작해졌다 펴지며 발밑에 먼지가 퐁 인다
+          this.cameras.main.shake(e.shake, e.shakePx / Math.max(1, w))
+          this.tweens.add({ targets: this.monsterBody, scaleY: 0.82, scaleX: 1.14, duration: 90, yoyo: true, ease: 'Quad.easeOut' })
+          this.puff(this.monster.x - 26, this.monster.y + 14)
+          this.puff(this.monster.x + 26, this.monster.y + 14)
+          playSound('crit')
+          tag.setScale(0.5).setAlpha(1)
+          this.tweens.add({ targets: tag, scale: 1, duration: 260, ease: 'Back.easeOut' })
+        },
+      })
+    })
+    this.time.delayedCall(e.fadeAt, () => {
+      if (!live()) return
+      mark('fade')
+      this.tweens.add({ targets: [dim, tag], alpha: 0, duration: e.fade })
+      this.tweens.add({ targets: b.bars, alpha: 1, duration: e.fade })
+    })
+    const start = this.time.delayedCall(e.total, () => {
+      if (!live()) return
+      this.endIntro(b)
+      b.timer = this.time.addEvent({ delay: b.delay, loop: true, startAt: b.delay * 0.4, callback: () => this.playStep() })
+    })
+    b.intro = { dim, tag, start }
+  }
+
+  /** 이름표: 둥근 흰 판에 작은 "보스 등장!"과 큰 이름 */
+  private bossTag(foe: Monster, x: number, y: number): Phaser.GameObjects.Container {
+    const t = bossNameTag(foe)
+    const title = this.add
+      .text(0, -13, t.title, { fontFamily: FONT, fontSize: '13px', color: '#ff8a5b', fontStyle: 'bold' })
+      .setOrigin(0.5)
+    const name = this.add
+      .text(0, 9, t.name, { fontFamily: FONT, fontSize: '20px', color: '#5a4636', fontStyle: 'bold' })
+      .setOrigin(0.5)
+    const bw = Math.max(title.width, name.width) + 44
+    const bg = this.add.graphics()
+    bg.fillStyle(0xffffff).fillRoundedRect(-bw / 2, -30, bw, 60, 30)
+    bg.lineStyle(3, CROWN).strokeRoundedRect(-bw / 2, -30, bw, 60, 30)
+    this.game.canvas.parentElement?.setAttribute('data-boss-tag', `${t.title} ${t.name}`)
+    return this.add.container(x, y, [bg, title, name])
+  }
+
+  /** 보스 등장 연출을 치우고 보스를 제자리·보통 겹침으로 돌린다 */
+  private endIntro(b: NonNullable<HomeScene['battle']>) {
+    const intro = b.intro
+    if (!intro) return
+    b.intro = undefined
+    intro.start.remove()
+    for (const o of [intro.dim, intro.tag]) {
+      this.tweens.killTweensOf(o)
+      o.destroy()
+    }
+    for (const bar of b.bars) {
+      this.tweens.killTweensOf(bar)
+      bar.setAlpha(1)
+    }
+    this.restMonsterBody()
+    this.monsterBody.setVisible(true)
+    this.monster.setDepth(0)
+    this.game.canvas.parentElement?.setAttribute('data-boss-intro', '')
   }
 
   /** 남은 걸음을 건너뛰고 결과로 간다 */
@@ -786,6 +886,7 @@ export class HomeScene extends Phaser.Scene {
     const b = this.battle
     if (!b) return
     b.timer?.remove()
+    this.endIntro(b)
     for (const t of b.trailTween) t?.stop()
     for (const bar of b.bars) {
       this.tweens.killTweensOf(bar)
@@ -1408,6 +1509,7 @@ export class HomeScene extends Phaser.Scene {
     if (!b || b.ended) return
     b.ended = true
     b.timer?.remove()
+    this.endIntro(b)
     this.battleFace = endFace(b.win)
     this.monsterFace = monsterEndFace(b.win)
     for (const who of [this.mascot, this.monster]) this.tweens.killTweensOf(who)
@@ -1575,6 +1677,7 @@ export class HomeScene extends Phaser.Scene {
     // e2e가 말랑이·몬스터 발끝(장면 위에서부터 px)을 볼 수 있게 남긴다
     this.game.canvas.parentElement?.setAttribute('data-feet', String(Math.round(ground + FEET)))
     if (this.battle) this.drawBars(...this.battle.hp)
+    this.battle?.intro?.dim.setSize(w, h)
   }
 
   /** e2e가 말랑이·몬스터가 실제로 그려진 아래끝(장면 위에서부터 px)을 볼 수 있게 남긴다 */
