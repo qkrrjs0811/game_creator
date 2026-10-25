@@ -52,8 +52,8 @@ test('상한을 채우면 나 창의 능력치 칸이 내일 이어서 오른다
   // 열어 둔 채 상한에 닿으면 바로 "내일"로 바뀐다
   await page.clock.fastForward('03:00')
   await expect(page.getByTestId('stat-next-str')).toHaveText('내일 운동 10분 더')
-  await expect(page.getByTestId('stat-next-vit')).toHaveText('내일 운동 10분 더')
-  // 공부는 상한이 따로라 오늘 더 하면 된다
+  // 체력은 휴식으로도 오르니 오늘 휴식을 하면 된다. 공부도 상한이 따로라 오늘 더 하면 된다
+  await expect(page.getByTestId('stat-next-vit')).toHaveText('휴식 15분 더')
   await expect(page.getByTestId('stat-next-int')).toHaveText('공부 5분 더')
   const small = page.getByTestId('stat-next-str')
   const card = page.getByTestId('stat-str')

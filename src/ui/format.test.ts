@@ -39,9 +39,14 @@ test('독서 마침 요약은 독서 이름과 오른 집중을 보여 줌', () 
   expect(sessionSummary({ ...g, minutes: 0, exp: 0 }, false, 'reading').title).toBe('🎉 독서를 마쳤어요!')
 })
 
+test('휴식 마침 요약은 휴식 이름과 오른 체력을 보여 줌', () => {
+  const g = { minutes: 30, exp: 300, stats: { str: 0, vit: 2, int: 0, focus: 0 } }
+  expect(sessionSummary(g, true, 'relax')).toEqual({ title: '🎉 휴식 30분 했어요!', detail: 'EXP +300 · ❤️ 체력 +2' })
+})
+
 test('받침에 맞춰 을/를, 은/는을 고른다', () => {
-  expect(['운동', '공부', '독서'].map(objectJosa)).toEqual(['을', '를', '를'])
-  expect(['운동', '공부', '독서'].map(topicJosa)).toEqual(['은', '는', '는'])
+  expect(['운동', '공부', '독서', '휴식'].map(objectJosa)).toEqual(['을', '를', '를', '을'])
+  expect(['운동', '공부', '독서', '휴식'].map(topicJosa)).toEqual(['은', '는', '는', '은'])
 })
 
 test('경험치를 못 얻었으면 까닭을 알려 줌', () => {

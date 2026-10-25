@@ -75,7 +75,7 @@ describe('공부', () => {
 
   test('공부 5분마다 지능이 1 오르고 힘·체력은 그대로, 경험치는 함께 쌓인다', () => {
     const p = computeProgress([study('2026-10-24T19:00:00', '2026-10-24T19:30:00')])
-    expect(p.creditedMinutes).toEqual({ exercise: 0, study: 30, reading: 0 })
+    expect(p.creditedMinutes).toEqual({ exercise: 0, study: 30, reading: 0, relax: 0 })
     expect(p.stats).toEqual({ str: 5, vit: 5, int: 11, focus: 5 })
     expect(p.exp).toBe(300)
   })
@@ -101,7 +101,7 @@ describe('독서', () => {
 
   test('독서 5분마다 집중이 1 오르고 지능·힘·체력은 그대로, 경험치는 함께 쌓인다', () => {
     const p = computeProgress([read('2026-10-24T19:00:00', '2026-10-24T19:30:00')])
-    expect(p.creditedMinutes).toEqual({ exercise: 0, study: 0, reading: 30 })
+    expect(p.creditedMinutes).toEqual({ exercise: 0, study: 0, reading: 30, relax: 0 })
     expect(p.stats).toEqual({ str: 5, vit: 5, int: 5, focus: 11 })
     expect(p.exp).toBe(300)
   })
@@ -117,5 +117,25 @@ describe('독서', () => {
     expect(todayStatus(rs, 'study', kst('2026-10-24T20:00:00'))).toEqual({ minutes: 30, cap: 120, reached: false })
     expect(computeProgress(rs).stats).toEqual({ str: 11, vit: 11, int: 11, focus: 29 })
     expect(computeProgress(rs).exp).toBe(2100)
+  })
+})
+
+describe('휴식', () => {
+  const relax = (a: string, b: string, id = a) => ({ id, activity: 'relax' as const, startedAt: kst(a), endedAt: kst(b) })
+
+  test('휴식 15분마다 체력이 1 오르고 힘·지능·집중은 그대로, 경험치는 함께 쌓인다', () => {
+    const p = computeProgress([relax('2026-10-24T19:00:00', '2026-10-24T19:30:00')])
+    expect(p.creditedMinutes).toEqual({ exercise: 0, study: 0, reading: 0, relax: 30 })
+    expect(p.stats).toEqual({ str: 5, vit: 7, int: 5, focus: 5 })
+    expect(p.exp).toBe(300)
+  })
+
+  test('휴식 하루 상한은 30분이라 켜 두고 잊어도 하루에 체력 +2까지다', () => {
+    const rs = [relax('2026-10-24T08:00:00', '2026-10-24T20:00:00'), rec('2026-10-24T21:00:00', '2026-10-24T21:30:00')]
+    expect(creditedMinutes(rs, 'relax')).toBe(30)
+    expect(todayStatus(rs, 'relax', kst('2026-10-24T22:00:00'))).toEqual({ minutes: 30, cap: 30, reached: true })
+    expect(todayStatus(rs, 'exercise', kst('2026-10-24T22:00:00'))).toEqual({ minutes: 30, cap: 180, reached: false })
+    // 운동 30분(힘·체력 +3)에 휴식 체력 +2가 더해진다
+    expect(computeProgress(rs).stats).toEqual({ str: 8, vit: 10, int: 5, focus: 5 })
   })
 })

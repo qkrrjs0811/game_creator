@@ -26,12 +26,14 @@ const ACTIVITY_TEXT: Record<ActivityId, { idle: string; running: string }> = {
   exercise: { idle: '운동하는 동안 경험치가 쌓여요', running: '운동 중 · 경험치가 쌓이고 있어요' },
   study: { idle: '공부하는 동안 지능이 올라요', running: '공부 중 · 지능이 오르고 있어요' },
   reading: { idle: '독서하는 동안 집중이 올라요', running: '독서 중 · 집중이 오르고 있어요' },
+  relax: { idle: '푹 쉬는 동안 체력이 조금 올라요', running: '휴식 중 · 체력이 조금씩 올라요' },
 }
 
 const TABS: { label: string; activity?: ActivityId; testid?: string }[] = [
   { label: '운동', activity: 'exercise' },
   { label: '공부', activity: 'study' },
   { label: '독서', activity: 'reading' },
+  { label: '휴식', activity: 'relax' },
   { label: '나', testid: 'tab-me' },
 ]
 

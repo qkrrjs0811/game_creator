@@ -29,14 +29,14 @@ export function statRows(p: Progress, cappedToday: ActivityId[] = []): StatRow[]
   return STAT_INFO.map((s) => {
     const linked = ids.filter((id) => ACTIVITIES[id].stats.includes(s.id))
     if (linked.length === 0) return { ...s, value: p.stats[s.id], source: null, toNext: null, tomorrow: false }
-    // 능력치마다 올리는 활동은 하나라서 그 활동의 분으로 센다
-    const per = ACTIVITIES[linked[0]].minutesPerStat
-    const minutes = linked.reduce((sum, id) => sum + p.creditedMinutes[id], 0)
+    // 활동마다 따로 내림해 오르므로, 오늘 더 할 수 있는 첫 활동(운동이 먼저)의 분으로 센다
+    const next = linked.find((id) => !cappedToday.includes(id)) ?? linked[0]
+    const per = ACTIVITIES[next].minutesPerStat
     return {
       ...s,
       value: p.stats[s.id],
-      source: linked.map((id) => ACTIVITIES[id].label).join('·'),
-      toNext: per - (minutes % per),
+      source: ACTIVITIES[next].label,
+      toNext: per - (p.creditedMinutes[next] % per),
       tomorrow: linked.every((id) => cappedToday.includes(id)),
     }
   })

@@ -26,6 +26,13 @@ describe('statRows', () => {
     expect(rows.find((r) => r.id === 'int')).toMatchObject({ value: 5, toNext: 5, source: '공부', tomorrow: false })
   })
 
+  test('체력은 휴식으로도 15분마다 1씩 오르고, 남은 분은 운동이 먼저다', () => {
+    const rested: ActivityRecord[] = [{ id: 'r', activity: 'relax', startedAt: T0, endedAt: T0 + 20 * MIN }]
+    const rows = statRows(computeProgress(rested), ['relax'])
+    expect(rows.find((r) => r.id === 'vit')).toMatchObject({ value: 6, toNext: 10, source: '운동', tomorrow: false })
+    expect(rows.find((r) => r.id === 'str')).toMatchObject({ value: 5, toNext: 10 })
+  })
+
   test('다음 +1까지 남은 분은 오른 활동의 인정 분으로 센다', () => {
     const rows = statRows(computeProgress(exercise(37)))
     expect(rows.find((r) => r.id === 'str')).toMatchObject({ value: 8, toNext: 3, source: '운동' })
@@ -59,7 +66,9 @@ describe('statRows', () => {
     const p = computeProgress(exercise(200))
     const rows = statRows(p, ['exercise'])
     expect(rows.find((r) => r.id === 'str')).toMatchObject({ toNext: 10, tomorrow: true })
-    expect(rows.find((r) => r.id === 'vit')).toMatchObject({ tomorrow: true })
+    // 체력은 휴식으로도 오르니 운동 상한을 채워도 오늘 휴식으로 더 올릴 수 있다
+    expect(rows.find((r) => r.id === 'vit')).toMatchObject({ tomorrow: false, source: '휴식', toNext: 15 })
+    expect(statRows(p, ['exercise', 'relax']).find((r) => r.id === 'vit')).toMatchObject({ tomorrow: true, source: '운동', toNext: 10 })
     expect(rows.find((r) => r.id === 'int')).toMatchObject({ tomorrow: false })
     // 상한 전이면 오늘 더 하면 된다
     expect(statRows(computeProgress(exercise(37))).find((r) => r.id === 'str')).toMatchObject({ tomorrow: false })

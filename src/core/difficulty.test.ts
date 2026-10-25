@@ -3,6 +3,8 @@ import { freshFighter, freshMinutesToWin, freshMixFighter, rotatedSkills } from 
 import { likelyWin } from './coach'
 import { stageEnemy } from './endless'
 import { STAGES } from './stages'
+import { BASE_STAT, statsFromMinutes } from './progression'
+import type { ActivityId } from './types'
 
 describe('rotatedSkills', () => {
   test('레벨이 오를 때마다 받은 포인트를 펀치→몸→발 순서로 돌려 가며 쓴다', () => {
@@ -77,6 +79,25 @@ describe('여러 활동을 섞어도 불리하지 않음', () => {
       return best
     }
     expect(reach(freshMixFighter({ reading: 1200 }))).toBeLessThanOrEqual(reach(freshFighter(1200)) + 3)
+  })
+
+  test('휴식은 다른 활동보다 적게 오른다: 같은 분이면 능력치 합이 운동·공부·독서보다 작다', () => {
+    const gained = (id: ActivityId) => {
+      const s = statsFromMinutes({ [id]: 30 })
+      return s.str + s.vit + s.int + s.focus - 4 * BASE_STAT
+    }
+    expect(gained('relax')).toBe(2)
+    for (const other of ['exercise', 'study', 'reading'] as const) expect(gained('relax')).toBeLessThan(gained(other))
+  })
+
+  test('운동에 하루 휴식 30분을 더하면 이길 만한 스테이지가 줄지 않는다', () => {
+    for (const exercise of [0, 20, 60, 300, 1200, 3000]) {
+      const solo = freshFighter(exercise)
+      const rested = freshMixFighter({ exercise, relax: 30 })
+      for (let n = 1; n <= 60; n++) {
+        if (likelyWin(solo, stageEnemy(n))) expect(likelyWin(rested, stageEnemy(n)), `운동 ${exercise}분 + 휴식, ${n}스테이지`).toBe(true)
+      }
+    }
   })
 })
 

@@ -60,7 +60,7 @@ test('아래 탭 글자가 칸 가운데에 옴', async ({ page }) => {
       }
     }),
   )
-  expect(offsets.length).toBe(4)
+  expect(offsets.length).toBe(5)
   for (const o of offsets) expect(o.diff, o.label).toBeLessThanOrEqual(3)
   await page.locator('nav.tabs').screenshot({ path: 'test-results/screens/tabs.png' })
 })
