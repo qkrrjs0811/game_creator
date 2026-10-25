@@ -28,6 +28,8 @@ export interface BattleEvent {
   crit?: boolean
   /** 단단한 상대의 방어를 치명타가 뚫었는지. 그럴 때만 붙는다 */
   pierce?: boolean
+  /** 집중이 날쌘 상대의 회피를 깎지 않았다면 빗나갔을 공격인지. 그럴 때만 붙는다 */
+  aimed?: boolean
   /** 맞은 쪽의 남은 HP */
   targetHp: number
 }
@@ -105,7 +107,8 @@ export function simulateBattle(player: Fighter, enemy: Fighter, seed: number): B
       const target = actor === 'player' ? 'enemy' : 'player'
       // 날쌘 상대는 집중으로 덜 피한다(주사위 수는 그대로)
       const dodge = side[target].trait === 'swift' ? Math.max(0, side[target].dodge - (side[actor].accuracy ?? 0)) : side[target].dodge
-      if (rand() < dodge) {
+      const dodgeRoll = rand()
+      if (dodgeRoll < dodge) {
         log.push({ actor, kind: 'miss', damage: 0, targetHp: hp[target] })
         continue
       }
@@ -123,7 +126,8 @@ export function simulateBattle(player: Fighter, enemy: Fighter, seed: number): B
       if (pierce) damage = roll(Math.floor(side[target].def / 2))
       if (crit) damage = Math.floor(damage * CRIT_MULTIPLIER)
       hp[target] = Math.max(0, hp[target] - damage)
-      log.push({ actor, kind: 'hit', damage, ...(crit ? { crit } : {}), ...(pierce ? { pierce } : {}), targetHp: hp[target] })
+      const aimed = dodgeRoll < side[target].dodge
+      log.push({ actor, kind: 'hit', damage, ...(crit ? { crit } : {}), ...(pierce ? { pierce } : {}), ...(aimed ? { aimed } : {}), targetHp: hp[target] })
       if (hp[target] === 0) break
     }
   }

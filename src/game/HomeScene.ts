@@ -10,6 +10,7 @@ import { stepSound } from '../core/sound'
 import { playSound } from '../ui/sound'
 import { contactAt, finishDelay, hitImpact, hpTrail, isFinalBlow, type Impact } from '../core/impact'
 import { skillFxSize, skillFxTiming, stepSkillFx, type SkillFxKind, type SkillStyle } from '../core/skillfx'
+import { weakHitText } from '../core/traits'
 import { drawMonsterBody, drawMonsterFace } from './monsterArt'
 import { BOSS_BAR_RAISE, bossLook, monsterScale, monsterTop } from '../core/bossLook'
 import { bossDropOffset, bossEntrance, bossNameTag, type BossEntrance } from '../core/bossEntrance'
@@ -794,6 +795,8 @@ export class HomeScene extends Phaser.Scene {
     this.game.canvas.parentElement?.setAttribute('data-final', '0')
     this.game.canvas.parentElement?.setAttribute('data-fainted', '')
     this.game.canvas.parentElement?.setAttribute('data-skill-fx', '')
+    this.game.canvas.parentElement?.setAttribute('data-weak-hits', '')
+    this.game.canvas.parentElement?.setAttribute('data-weak-hit', '')
     this.layout(this.scale.width, this.scale.height)
     const entrance = bossEntrance(foe, delay)
     if (entrance) this.bossIntro(this.battle, entrance, foe)
@@ -1310,8 +1313,12 @@ export class HomeScene extends Phaser.Scene {
         return
       }
       this.contact(fx, s.actor === 'player', dir)
-      // 치명타(지능)는 노란 글자로 더 크게 알린다
-      if (s.crit) this.floatText(target.x, `치명타! -${s.damage}`, '#f0a020', bar, 28)
+      // 약점이 통하면(방어를 뚫은 치명타·집중으로 맞힘) 그 글자와 연출을, 치명타(지능)는 노란 글자로 더 크게 알린다
+      const weak = weakHitText(s)
+      if (weak) {
+        this.floatText(target.x, weak, s.pierce ? '#e0602e' : '#8a6ad8', bar, 28)
+        this.weakHitFx(s.pierce ? 'pierce' : 'aimed', fx)
+      } else if (s.crit) this.floatText(target.x, `치명타! -${s.damage}`, '#f0a020', bar, 28)
       else this.floatText(target.x, `-${s.damage}`, s.actor === 'player' ? '#ff8a5b' : '#e0607e', bar)
       this.drawBars(s.playerHp, s.enemyHp)
       // 히트스톱: 부딪힌 채로 아주 잠깐 멈췄다가, 맞은 쪽이 찌그러지며 밀리고 때린 쪽은 돌아온다
@@ -1386,6 +1393,58 @@ export class HomeScene extends Phaser.Scene {
     }
     host?.setAttribute('data-sparks', String(fx.sparks))
     this.markImpact('stop')
+  }
+
+  /**
+   * 약점이 통한 순간의 연출. pierce: 단단한 몸에 금이 가고 조각이 톡톡 떨어진다,
+   * aimed: 날쌘 몸에 보라 과녁이 조여 들며 꽂힌다. 그림만이라 전투 값은 그대로다
+   */
+  private weakHitFx(kind: 'pierce' | 'aimed', fx: Impact) {
+    const host = this.game.canvas.parentElement
+    host?.setAttribute('data-weak-hit', kind)
+    host?.setAttribute('data-weak-hits', `${host.getAttribute('data-weak-hits') ?? ''} ${kind}`.trim())
+    const body = this.bodyOf(true)
+    const hold = fx.hitstop + fx.back
+    if (kind === 'pierce') {
+      // 몸 가운데에서 뻗는 지그재그 금(하얀 테두리 위 진한 갈색)
+      const crack = this.add.graphics()
+      const paths: [number, number][][] = [
+        [[0, -0.1], [-0.18, -0.38], [-0.08, -0.55], [-0.26, -0.8]],
+        [[0, -0.1], [0.22, -0.2], [0.34, -0.48], [0.56, -0.5]],
+        [[0, -0.1], [0.06, 0.2], [-0.16, 0.4], [-0.1, 0.62]],
+      ]
+      for (const [w, c] of [[7, 0xffffff], [3.5, 0x8a5a3c]] as const) {
+        crack.lineStyle(w, c, 1)
+        for (const p of paths) {
+          crack.beginPath()
+          crack.moveTo(body.x + p[0][0] * body.rx, body.y + p[0][1] * body.ry)
+          for (const [px, py] of p.slice(1)) crack.lineTo(body.x + px * body.rx, body.y + py * body.ry)
+          crack.strokePath()
+        }
+      }
+      this.tweens.add({ targets: crack, alpha: 0, delay: hold, duration: 260, ease: 'Quad.easeIn', onComplete: () => crack.destroy() })
+      // 깨진 조각이 둥글게 튀었다가 아래로 떨어진다
+      for (let i = 0; i < 6; i++) {
+        const a = -Math.PI * (0.15 + 0.7 * (i / 5))
+        const sx = body.x + Math.cos(a) * body.rx * 0.6
+        const sy = body.y + Math.sin(a) * body.ry * 0.6
+        const bit = this.add.triangle(sx, sy, 0, 0, 9, 2, 4, 9, i % 2 ? 0xd9c2a8 : 0xfff1e0).setStrokeStyle(1.5, 0x8a5a3c)
+        this.tweens.add({ targets: bit, x: sx + Math.cos(a) * 34, angle: Phaser.Math.Between(-200, 200), duration: 520, ease: 'Quad.easeOut' })
+        this.tweens.add({ targets: bit, y: { from: sy, to: sy + 40 }, duration: 520, ease: 'Back.easeIn' })
+        this.tweens.add({ targets: bit, alpha: 0, delay: 320, duration: 200, onComplete: () => bit.destroy() })
+      }
+      return
+    }
+    // 큰 보라 고리 두 개가 몸 가운데로 조여 들고, 가운데 별이 톡 빛난다
+    const r = Math.max(body.rx, body.ry)
+    for (const [k, delay] of [[1.6, 0], [1.1, 60]] as const) {
+      const ring = this.add.circle(body.x, body.y, r * k).setStrokeStyle(4, 0x9a7fd6).setFillStyle(0xffffff, 0)
+      this.tweens.add({ targets: ring, scale: 0.35, delay, duration: 220, ease: 'Quad.easeIn' })
+      this.tweens.add({ targets: ring, alpha: 0, delay: delay + 200, duration: 140, onComplete: () => ring.destroy() })
+    }
+    const star = this.add.star(body.x, body.y, 5, 6, 14, 0xfff3a6).setStrokeStyle(2, 0x9a7fd6).setScale(0)
+    this.tweens.add({ targets: star, scale: 1.2, delay: 200, duration: 140, ease: 'Back.easeOut' })
+    this.tweens.add({ targets: star, alpha: 0, delay: 200 + hold, duration: 200, onComplete: () => star.destroy() })
   }
 
   /** 말랑이(enemy=false) 또는 몬스터(true)의 몸 가운데와 반지름(장면 좌표) */

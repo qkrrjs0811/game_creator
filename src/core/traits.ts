@@ -1,3 +1,4 @@
+import type { BattleEvent } from './battle'
 import { chapterOf, stageMonsterLook } from './endless'
 import { STAT_INFO } from './stats'
 import type { MonsterShape } from './monsters'
@@ -45,4 +46,15 @@ export function traitLabel(trait: MonsterTrait): string | null {
 /** 스테이지 번호의 몬스터 성격 */
 export function stageTrait(no: number): MonsterTrait {
   return shapeTrait(stageMonsterLook(no).shape, chapterOf(no))
+}
+
+/**
+ * 약점이 통한 공격에 띄울 글자. 단단한 상대의 방어를 뚫은 치명타는 "약점!",
+ * 집중 덕분에 날쌘 상대를 맞힌 공격은 "명중!". 그 밖에는 null(보통 숫자·치명타 글자를 쓴다)
+ */
+export function weakHitText(step: Pick<BattleEvent, 'kind' | 'damage' | 'crit' | 'pierce' | 'aimed'>): string | null {
+  if (step.kind !== 'hit') return null
+  if (step.pierce) return `약점! -${step.damage}`
+  if (step.aimed) return `명중! -${step.damage}`
+  return null
 }

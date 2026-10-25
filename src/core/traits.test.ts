@@ -3,7 +3,7 @@ import { playerFighter, simulateBattle, type Fighter } from './battle'
 import { freshFighter } from './difficulty'
 import { stageEnemy, stageMonsterLook } from './endless'
 import { BASE_STAT } from './progression'
-import { TRAITS, shapeTrait, stageTrait, traitLabel, weaknessHint } from './traits'
+import { TRAITS, shapeTrait, stageTrait, traitLabel, weakHitText, weaknessHint } from './traits'
 
 const base = { str: 30, vit: 30, int: BASE_STAT, focus: BASE_STAT }
 const seeds = Array.from({ length: 40 }, (_, i) => i + 1)
@@ -97,5 +97,32 @@ describe('약점이 전투에서 하는 일', () => {
       return seeds.reduce((sum, s) => sum + simulateBattle(me, enemy, s).enemyHp, 0)
     }
     expect(left(sturdy)).toBeLessThan(left({ ...sturdy, trait: 'plain' }))
+  })
+
+  test('집중이 없었다면 피했을 공격을 맞혔을 때만 기록에 명중이 붙는다', () => {
+    const swift: Fighter = { name: '퐁', hp: 3000, atk: 30, def: 5, spd: 1, dodge: 0.2, trait: 'swift' }
+    const me = playerFighter({ ...base, focus: 25 }, [])
+    const hits = (enemy: Fighter) =>
+      seeds.flatMap((s) => simulateBattle(me, enemy, s).log).filter((e) => e.actor === 'player' && e.kind === 'hit')
+    const aimed = hits(swift).filter((e) => e.aimed)
+    expect(aimed.length).toBeGreaterThan(0)
+    expect(hits(swift).length).toBeGreaterThan(hits({ ...swift, trait: 'plain' }).length)
+    expect(hits({ ...swift, trait: 'plain' }).some((e) => e.aimed)).toBe(false)
+    // 집중이 없으면 명중도 없다
+    const calmless = playerFighter(base, [])
+    expect(seeds.some((s) => simulateBattle(calmless, swift, s).log.some((e) => e.aimed))).toBe(false)
+  })
+})
+
+describe('약점 글자', () => {
+  test('방어를 뚫은 치명타는 "약점!", 집중으로 맞힌 공격은 "명중!"', () => {
+    expect(weakHitText({ kind: 'hit', damage: 31, crit: true, pierce: true })).toBe('약점! -31')
+    expect(weakHitText({ kind: 'hit', damage: 9, aimed: true })).toBe('명중! -9')
+  })
+
+  test('보통 공격·치명타·빗나감에는 붙지 않는다', () => {
+    expect(weakHitText({ kind: 'hit', damage: 9 })).toBeNull()
+    expect(weakHitText({ kind: 'hit', damage: 14, crit: true })).toBeNull()
+    expect(weakHitText({ kind: 'miss', damage: 0 })).toBeNull()
   })
 })
