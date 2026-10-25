@@ -1,7 +1,5 @@
 import type { SessionGain } from '../core/gain'
 import { STAT_INFO } from '../core/stats'
-import { ACTIVITIES } from '../core/activities'
-import type { ActivityId } from '../core/types'
 
 const pad =(n: number) => String(n).padStart(2, '0')
 
@@ -22,23 +20,12 @@ export function formatMinutes(minutes: number): string {
   return m === 0 ? `${h}시간` : `${h}시간 ${m}분`
 }
 
-function hasBatchim(word: string): boolean {
-  const code = word.charCodeAt(word.length - 1) - 0xac00
-  return code >= 0 && code < 11172 && code % 28 !== 0
-}
-
-/** 낱말 끝 글자에 받침이 있으면 "을", 없으면 "를"(운동을 · 공부를) */
-export const objectJosa = (word: string) => (hasBatchim(word) ? '을' : '를')
-/** 받침이 있으면 "은", 없으면 "는"(운동은 · 공부는) */
-export const topicJosa = (word: string) => (hasBatchim(word) ? '은' : '는')
-
 /**
- * 활동을 그만둘 때 띄우는 요약. capReached = 오늘 상한에 닿았는지.
+ * 운동을 그만둘 때 띄우는 요약. capReached = 오늘 상한에 닿았는지.
  * 안내는 폰 폭에서 한 줄에 들어가게 짧게 쓴다(두 줄이면 카드가 길어져 말랑이를 가린다)
  */
-export function sessionSummary(g: SessionGain, capReached: boolean, activity: ActivityId = 'exercise'): { title: string; detail: string } {
-  const name = ACTIVITIES[activity].label
-  const title = g.minutes > 0 ? `🎉 ${name} ${formatMinutes(g.minutes)} 했어요!` : `🎉 ${name}${objectJosa(name)} 마쳤어요!`
+export function sessionSummary(g: SessionGain, capReached: boolean): { title: string; detail: string } {
+  const title = g.minutes > 0 ? `🎉 운동 ${formatMinutes(g.minutes)} 했어요!` : '🎉 운동을 마쳤어요!'
   if (g.exp <= 0) {
     return { title, detail: capReached ? '상한을 채워서 경험치는 내일 쌓여요' : '1분 넘게 하면 경험치가 쌓여요' }
   }

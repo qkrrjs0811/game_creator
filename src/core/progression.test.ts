@@ -69,29 +69,3 @@ describe('todayStatus', () => {
     expect(todayStatus([], 'exercise', kst('2026-10-25T13:00:00'))).toEqual({ minutes: 0, cap: 180, reached: false })
   })
 })
-
-describe('공부', () => {
-  const study = (a: string, b: string, id = a) => ({ id, activity: 'study' as const, startedAt: kst(a), endedAt: kst(b) })
-
-  test('공부 5분마다 지능이 1 오르고 힘·체력은 그대로, 경험치는 함께 쌓인다', () => {
-    const p = computeProgress([study('2026-10-24T19:00:00', '2026-10-24T19:30:00')])
-    expect(p.creditedMinutes).toEqual({ exercise: 0, study: 30 })
-    expect(p.stats).toEqual({ str: 5, vit: 5, int: 11 })
-    expect(p.exp).toBe(300)
-  })
-
-  test('공부 하루 상한은 120분이고 운동 상한과 따로 센다', () => {
-    const rs = [study('2026-10-24T08:00:00', '2026-10-24T11:00:00'), rec('2026-10-24T12:00:00', '2026-10-24T13:00:00')]
-    expect(creditedMinutes(rs, 'study')).toBe(120)
-    expect(creditedMinutes(rs, 'exercise')).toBe(60)
-    expect(todayStatus(rs, 'study', kst('2026-10-24T20:00:00'))).toEqual({ minutes: 120, cap: 120, reached: true })
-    expect(todayStatus(rs, 'exercise', kst('2026-10-24T20:00:00'))).toEqual({ minutes: 60, cap: 180, reached: false })
-    expect(computeProgress(rs).stats).toEqual({ str: 11, vit: 11, int: 29 })
-  })
-
-  test('운동만 한 기록은 예전과 같다', () => {
-    const p = computeProgress([rec('2026-10-24T19:00:00', '2026-10-24T21:00:00')])
-    expect(p.stats).toEqual({ str: 17, vit: 17, int: 5 })
-    expect(p.exp).toBe(1200)
-  })
-})

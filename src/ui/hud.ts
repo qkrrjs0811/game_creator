@@ -1,16 +1,9 @@
-import { formatElapsed, objectJosa, topicJosa } from './format'
-import { ACTIVITIES } from '../core/activities'
-import type { ActivityId } from '../core/types'
+import { formatElapsed } from './format'
 
 export interface HudView {
   level: number
   expIntoLevel: number
   expForNextLevel: number
-  /** 지금 고른 활동 탭 */
-  activity: ActivityId
-  /** 켜져 있는 타이머의 활동. 꺼져 있으면 null */
-  live: ActivityId | null
-  /** 고른 활동의 타이머가 켜져 있는지 */
   running: boolean
   elapsedMs: number
   todayMinutes: number
@@ -21,17 +14,11 @@ export interface HudView {
   saveFailed: boolean
 }
 
-/** 활동마다 타이머 카드에 쓰는 안내 */
-const ACTIVITY_TEXT: Record<ActivityId, { idle: string; running: string }> = {
-  exercise: { idle: '운동하는 동안 경험치가 쌓여요', running: '운동 중 · 경험치가 쌓이고 있어요' },
-  study: { idle: '공부하는 동안 지능이 올라요', running: '공부 중 · 지능이 오르고 있어요' },
-}
-
-const TABS: { label: string; activity?: ActivityId; testid?: string }[] = [
-  { label: '운동', activity: 'exercise' },
-  { label: '공부', activity: 'study' },
-  { label: '독서' },
-  { label: '나', testid: 'tab-me' },
+const TABS = [
+  { label: '운동', ready: true },
+  { label: '공부', ready: false },
+  { label: '독서', ready: false },
+  { label: '나', ready: true },
 ]
 
 /** 레벨 바·타이머 카드·탭을 그리고, 가운데 Phaser 장면이 들어갈 자리를 돌려준다 */
@@ -42,7 +29,6 @@ export function createHud(
   onMe: () => void,
   onAdventure: () => void,
   onDress: () => void,
-  onSelect: (activity: ActivityId) => void,
 ) {
   root.innerHTML = `
     <header class="top">
@@ -86,15 +72,14 @@ export function createHud(
       <button class="toggle" data-testid="toggle" type="button">운동 시작</button>
     </section>
     <nav class="tabs">
-      ${TABS.map((t) => {
-        const ready = t.activity !== undefined || t.testid !== undefined
-        const id = t.activity ? `tab-${t.activity}` : t.testid
-        return `<button type="button" class="tab" ${ready ? '' : 'disabled'}${id ? ` data-testid="${id}"` : ''}${
-          t.activity ? ` data-activity="${t.activity}"` : ''
-        }>${t.label}${ready ? '' : '<small>준비 중</small>'}${
-          t.activity ? `<small class="tab-live" data-testid="tab-live-${t.activity}" hidden>⏱ 켜짐</small>` : ''
-        }${t.testid === 'tab-me' ? '<em class="tab-badge" data-testid="skill-badge" hidden></em>' : ''}</button>`
-      }).join('')}
+      ${TABS.map(
+        (t, i) =>
+          `<button type="button" class="tab${i === 0 ? ' on' : ''}" ${t.ready ? '' : 'disabled'}${
+            t.label === '나' ? ' data-testid="tab-me"' : ''
+          }>${t.label}${t.ready ? '' : '<small>준비 중</small>'}${
+            t.label === '나' ? '<em class="tab-badge" data-testid="skill-badge" hidden></em>' : ''
+          }</button>`,
+      ).join('')}
     </nav>`
 
   const q = (id: string) => root.querySelector<HTMLElement>(`[data-testid=${id}]`)!
@@ -131,9 +116,6 @@ export function createHud(
   q('open-stages').addEventListener('click', onAdventure)
   q('open-cosmetics').addEventListener('click', onDress)
   const skillBadge = q('skill-badge')
-  const activityTabs = [...root.querySelectorAll<HTMLElement>('[data-activity]')]
-  for (const tab of activityTabs) tab.addEventListener('click', () => onSelect(tab.dataset.activity as ActivityId))
-  const toastDetail = toast.querySelector('span')!
 
   return {
     sceneHost: q('scene'),
@@ -143,41 +125,26 @@ export function createHud(
       expBar.style.width = `${Math.min(100, (v.expIntoLevel / v.expForNextLevel) * 100)}%`
       today.textContent = `오늘 ${v.todayMinutes}분 / ${v.todayCap}분`
       today.classList.toggle('full', v.capReached)
-      const name = ACTIVITIES[v.activity].label
-      // 다른 활동 타이머가 켜져 있으면 동시에 켤 수 없어 시작 버튼을 막는다
-      const busy = v.live !== null && v.live !== v.activity
-      label.textContent = busy
-        ? `${ACTIVITIES[v.live!].label} 중이에요 · 그만하면 ${name}${objectJosa(name)} 켤 수 있어요`
-        : v.capReached
-          ? '오늘은 충분히 했어요 · 경험치는 내일 다시 쌓여요'
-          : v.running
-            ? ACTIVITY_TEXT[v.activity].running
-            : ACTIVITY_TEXT[v.activity].idle
+      label.textContent = v.capReached
+        ? '오늘은 충분히 했어요 · 경험치는 내일 다시 쌓여요'
+        : v.running
+          ? '운동 중 · 경험치가 쌓이고 있어요'
+          : '운동하는 동안 경험치가 쌓여요'
       timer.textContent = formatElapsed(v.running ? v.elapsedMs : 0)
-      toggle.textContent = v.running ? '그만하기' : `${name} 시작`
+      toggle.textContent = v.running ? '그만하기' : '운동 시작'
       toggle.classList.toggle('running', v.running)
-      ;(toggle as HTMLButtonElement).disabled = busy
-      for (const tab of activityTabs) {
-        const id = tab.dataset.activity as ActivityId
-        tab.classList.toggle('on', id === v.activity)
-        tab.setAttribute('aria-pressed', String(id === v.activity))
-        tab.querySelector<HTMLElement>('.tab-live')!.hidden = v.live !== id
-      }
       skillBadge.hidden = v.skillPoints < 1
       skillBadge.textContent = String(v.skillPoints)
       saveWarning.hidden = !v.saveFailed
     },
     /** 하루 상한에 닿았다는 안내를 잠깐 띄운다 */
-    showCapToast(activity: ActivityId) {
+    showCapToast() {
       hideSummary()
-      // 한 줄에 들어가게 짧게 쓴다(두 줄이면 카드가 말랑이를 가린다)
-      const name = ACTIVITIES[activity].label
-      toastDetail.textContent = `오늘 ${name}${topicJosa(name)} 여기까지! 내일 또 만나요`
       toast.hidden = false
       clearTimeout(toastTimer)
       toastTimer = setTimeout(hideToast, 6000)
     },
-    /** 활동을 그만둔 순간 이번에 얻은 것을 잠깐 띄운다(상한 안내와 같은 자리라 그건 닫는다) */
+    /** 운동을 그만둔 순간 이번에 얻은 것을 잠깐 띄운다(상한 안내와 같은 자리라 그건 닫는다) */
     showSessionSummary(s: { title: string; detail: string }) {
       hideToast()
       q('session-summary-title').textContent = s.title

@@ -42,19 +42,18 @@ const CRIT_MULTIPLIER = 1.5
 
 /**
  * 능력치와 스킬로 말랑이의 전투 값을 만든다. 힘 → 공격, 체력 → HP·방어,
- * 지능 → 치명타(1마다 1%)와 요령(2마다 공격 +1, 4마다 방어 +1, 1마다 HP +2: 두루 조금씩).
- * 공부 10분(지능 +2)이 운동 10분(힘·체력 +1)만큼 되게 맞췄고, 치명타만큼 조금 더 낫다.
- * 스킬 단계와 곱하지 않아 오래 공부해도 운동보다 훨씬 앞서 가지 않는다.
+ * 지능 → 치명타(1마다 1%)와 스킬 위력(10마다 펀치·몸 한 단계에 +1).
  * 지능은 기본값을 넘은 만큼만 쳐서 운동만 한 말랑이는 예전 값 그대로다
  */
 export function playerFighter(stats: Record<StatId, number>, skills: string[]): Fighter {
   const r = skillRanks(skills)
   const smart = Math.max(0, stats.int - BASE_STAT)
+  const perRank = 2 + Math.floor(smart / 10)
   return {
     name: '말랑이',
-    hp: 20 + stats.vit * 4 + smart * 2,
-    atk: stats.str + r.punch * 2 + Math.floor(smart / 2),
-    def: Math.floor(stats.vit / 2) + r.tough * 2 + Math.ceil(smart / 4),
+    hp: 20 + stats.vit * 4,
+    atk: stats.str + r.punch * perRank,
+    def: Math.floor(stats.vit / 2) + r.tough * perRank,
     spd: 5 + r.quick * 2,
     dodge: Math.min(MAX_DODGE, r.quick * 0.05),
     crit: Math.min(MAX_CRIT, smart * 0.01),

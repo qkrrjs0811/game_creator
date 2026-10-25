@@ -768,7 +768,3 @@ body {
 .cosmetic.worn .cosmetic-wear { background: #fff; color: var(--accent); box-shadow: 0 3px 0 var(--track); }
 .cosmetic-lock { margin-top: 6px; font-size: 12px; line-height: 44px; color: var(--ink-soft); }
 .cosmetic-grid + .cosmetic-note { margin: 14px 0 0; }
-/* 켜져 있는 활동 탭 표시와, 다른 활동이 켜져 있어 막힌 시작 버튼 */
-.tab .tab-live { color: var(--accent); font-weight: 700; }
-.tab.on .tab-live { color: #ffd36b; }
-.toggle:disabled { opacity: 0.45; cursor: default; }

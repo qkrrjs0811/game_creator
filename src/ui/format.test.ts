@@ -1,5 +1,5 @@
 import { test, expect } from 'vitest'
-import { formatElapsed, formatMinutes, objectJosa, sessionSummary, topicJosa } from './format'
+import { formatElapsed, formatMinutes, sessionSummary } from './format'
 
 test('한 시간 미만은 MM:SS', () => {
   expect(formatElapsed(0)).toBe('00:00')
@@ -25,17 +25,6 @@ test('운동 마침 요약은 한 시간·얻은 경험치·오른 능력치를 
   const g = { minutes: 32, exp: 320, stats: { str: 3, vit: 3, int: 0 } }
   expect(sessionSummary(g, false)).toEqual({ title: '🎉 운동 32분 했어요!', detail: 'EXP +320 · 💪 힘 +3 · ❤️ 체력 +3' })
   expect(sessionSummary({ ...g, exp: 40, stats: { str: 0, vit: 0, int: 0 } }, false).detail).toBe('EXP +40')
-})
-
-test('공부 마침 요약은 공부 이름과 오른 지능을 보여 줌', () => {
-  const g = { minutes: 25, exp: 250, stats: { str: 0, vit: 0, int: 5 } }
-  expect(sessionSummary(g, false, 'study')).toEqual({ title: '🎉 공부 25분 했어요!', detail: 'EXP +250 · 🧠 지능 +5' })
-  expect(sessionSummary({ ...g, minutes: 0, exp: 0 }, false, 'study').title).toBe('🎉 공부를 마쳤어요!')
-})
-
-test('받침에 맞춰 을/를, 은/는을 고른다', () => {
-  expect(['운동', '공부'].map(objectJosa)).toEqual(['을', '를'])
-  expect(['운동', '공부'].map(topicJosa)).toEqual(['은', '는'])
 })
 
 test('경험치를 못 얻었으면 까닭을 알려 줌', () => {

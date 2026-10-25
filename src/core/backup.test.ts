@@ -27,15 +27,6 @@ test('내보낸 백업을 다시 읽으면 같은 저장', () => {
   expect(r).toEqual({ ok: true, save: s })
 })
 
-test('공부 기록과 진행 중인 공부도 백업에 남는다', () => {
-  const s: SaveData = {
-    ...sample(),
-    records: [...sample().records, { id: 'study-2000000', activity: 'study', startedAt: 2_000_000, endedAt: 2_600_000 }],
-    active: { activity: 'study', startedAt: 3_000_000 },
-  }
-  expect(parseBackup(exportBackup(s, 5000))).toEqual({ ok: true, save: s })
-})
-
 test('진행 중 세션도 함께 보존', () => {
   const s = { ...sample(), active: { activity: 'exercise' as const, startedAt: 2_000_000 } }
   expect(parseBackup(exportBackup(s, 0))).toEqual({ ok: true, save: s })

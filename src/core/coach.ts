@@ -1,6 +1,5 @@
 import { playerFighter, simulateBattle, type Fighter } from './battle'
-import { statsFromMinutes } from './progression'
-import { ACTIVITIES } from './activities'
+import { MINUTES_PER_STAT, statsFromMinutes } from './progression'
 import { stageEnemy, targetMinutes } from './endless'
 import type { ActivityId } from './types'
 
@@ -22,16 +21,15 @@ export function likelyWin(me: Fighter, enemy: Fighter): boolean {
  * 화면에 보여 줄 값만 만들고 저장·성장은 바꾸지 않는다
  */
 export function minutesToWin(
-  minutes: Partial<Record<ActivityId, number>>,
+  minutes: Record<ActivityId, number>,
   skills: string[],
   enemy: Fighter,
   maxMinutes = SEARCH_MINUTES,
   activity: ActivityId = 'exercise',
 ): number | null {
-  const now = minutes[activity] ?? 0
-  const per = ACTIVITIES[activity].minutesPerStat
-  // 능력치는 per 분마다 오르므로 그 순간들만 본다
-  for (let extra = 0; extra <= maxMinutes; extra = per * (Math.floor((now + extra) / per) + 1) - now) {
+  const now = minutes[activity]
+  // 능력치는 MINUTES_PER_STAT 분마다 오르므로 그 순간들만 본다
+  for (let extra = 0; extra <= maxMinutes; extra = MINUTES_PER_STAT * (Math.floor((now + extra) / MINUTES_PER_STAT) + 1) - now) {
     const me = playerFighter(statsFromMinutes({ ...minutes, [activity]: now + extra }), skills)
     if (likelyWin(me, enemy)) return extra
   }
@@ -42,7 +40,7 @@ export function minutesToWin(
  * 스테이지 번호로 운동 몇 분 더 하면 이길 만한지. 먼 장은 처음부터 100시간 넘게 걸리므로
  * 그 스테이지 난이도 곡선의 두 배까지는 찾는다
  */
-export function stageMinutesToWin(minutes: Partial<Record<ActivityId, number>>, skills: string[], no: number): number | null {
+export function stageMinutesToWin(minutes: Record<ActivityId, number>, skills: string[], no: number): number | null {
   return minutesToWin(minutes, skills, stageEnemy(no), Math.max(SEARCH_MINUTES, Math.ceil(targetMinutes(no) * 2)))
 }
 
@@ -51,7 +49,7 @@ export function stageMinutesToWin(minutes: Partial<Record<ActivityId, number>>, 
  * 스테이지는 끝이 없어 언제나 다음이 있다. 화면에 보여 줄 값일 뿐이다
  */
 export function nextStageAdvice(
-  minutes: Partial<Record<ActivityId, number>>,
+  minutes: Record<ActivityId, number>,
   skills: string[],
   stageProgress: number,
 ): { no: number; toWin: number | null } | null {

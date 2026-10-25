@@ -14,7 +14,7 @@ describe('statRows', () => {
     expect(statRows(computeProgress([])).map((r) => [r.id, r.value, r.toNext])).toEqual([
       ['str', 5, 10],
       ['vit', 5, 10],
-      ['int', 5, 5],
+      ['int', 5, null],
     ])
   })
 
@@ -24,19 +24,16 @@ describe('statRows', () => {
     expect(rows.find((r) => r.id === 'vit')).toMatchObject({ value: 8, toNext: 3 })
   })
 
-  test('지능은 공부로 오르고 5분마다 1씩이라 다음까지 남은 분도 5분 단위로 센다', () => {
-    expect(statRows(computeProgress(exercise(120))).find((r) => r.id === 'int')).toMatchObject({ value: 5, toNext: 5, source: '공부', name: '지능' })
-    const studied: ActivityRecord[] = [{ id: 's', activity: 'study', startedAt: T0, endedAt: T0 + 13 * MIN }]
-    const rows = statRows(computeProgress(studied), ['study'])
-    expect(rows.find((r) => r.id === 'int')).toMatchObject({ value: 7, toNext: 2, tomorrow: true })
-    expect(rows.find((r) => r.id === 'str')).toMatchObject({ value: 5, toNext: 10, tomorrow: false })
+  test('지능은 아직 오르는 활동이 없어 준비 중으로 둔다', () => {
+    const int = statRows(computeProgress(exercise(120))).find((r) => r.id === 'int')!
+    expect(int).toMatchObject({ value: 5, toNext: null, source: null, name: '지능' })
   })
 
   test('능력치마다 전투에서 하는 일을 알려 준다', () => {
     expect(statRows(computeProgress([])).map((r) => [r.id, r.role])).toEqual([
       ['str', '공격'],
       ['vit', 'HP·방어'],
-      ['int', '치명타·두루'],
+      ['int', '치명타·스킬'],
     ])
   })
 

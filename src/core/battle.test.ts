@@ -45,14 +45,13 @@ describe('지능의 전투 역할', () => {
     expect(playerFighter({ ...base, int: 500 }, []).crit).toBe(0.3)
   })
 
-  test('지능은 요령: 넘은 2마다 공격 +1, 4마다 방어 +1(올림), 1마다 HP +2', () => {
+  test('지능 10마다 펀치·몸 스킬 단계 하나가 1씩 더 세진다', () => {
     const plain = playerFighter(base, ['punch', 'tough'])
-    const smart = playerFighter({ ...base, int: 15 }, ['punch', 'tough'])
-    expect(smart.atk).toBe(plain.atk + 5)
-    expect(smart.def).toBe(plain.def + 3)
-    expect(smart.hp).toBe(plain.hp + 20)
-    // 스킬 단계와 곱하지 않아 오래 공부해도 운동보다 훨씬 세지지 않는다
-    expect(playerFighter({ ...base, int: 25 }, ['punch', 'punch', 'punch']).atk - playerFighter(base, ['punch', 'punch', 'punch']).atk).toBe(10)
+    const smart = playerFighter({ ...base, int: 25 }, ['punch', 'tough'])
+    expect(smart.atk).toBe(plain.atk + 2)
+    expect(smart.def).toBe(plain.def + 2)
+    // 스킬이 없으면 위력이 붙을 곳이 없다
+    expect(playerFighter({ ...base, int: 25 }, []).atk).toBe(playerFighter(base, []).atk)
   })
 
   test('치명타는 1.5배 아프고 기록에 표시된다', () => {

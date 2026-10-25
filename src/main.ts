@@ -6,8 +6,7 @@ import { levelUpPoints, levelUpTo, restoreShownLevel } from './core/levelup'
 import { liveRecords, startSession, stopSession } from './core/session'
 import { backupFileName, exportBackup, importLosesProgress } from './core/backup'
 import { canPersist, loadSave, syncSave, writeSave, SAVE_KEY, type KV } from './core/storage'
-import type { ActivityId, SaveData } from './core/types'
-import { ACTIVITIES } from './core/activities'
+import type { SaveData } from './core/types'
 import { createHud } from './ui/hud'
 import { createSettings } from './ui/settings'
 import { createSkills } from './ui/skills'
@@ -64,22 +63,16 @@ function pullSave(): boolean {
 
 const app = document.querySelector<HTMLElement>('#app')!
 
-// 고른 활동 탭. 켜져 있는 타이머가 있으면 그 활동으로 연다
-let selected: ActivityId = save.active?.activity ?? 'exercise'
-
 const hud = createHud(
   app,
   () => {
     pullSave()
     const now = Date.now()
-    // 동시에 두 활동 타이머를 켤 수 없다(버튼도 막혀 있다)
-    if (save.active && save.active.activity !== selected) return render()
     // 그만둘 때 이번에 얻은 것을 보여 줘 성장을 느끼게 한다(화면에 보여 줄 값일 뿐)
     const gain = sessionGain(save, now)
-    const done = save.active?.activity ?? selected
-    save = save.active ? stopSession(save, now) : startSession(save, selected, now)
+    save = save.active ? stopSession(save, now) : startSession(save, 'exercise', now)
     persist()
-    if (gain) hud.showSessionSummary(sessionSummary(gain, todayStatus(save.records, done, now).reached, done))
+    if (gain) hud.showSessionSummary(sessionSummary(gain, todayStatus(save.records, 'exercise', now).reached))
     else hud.hideSessionSummary()
     render()
   },
@@ -87,10 +80,6 @@ const hud = createHud(
   () => skills.open(),
   () => stages.open(),
   () => cosmetics.open(),
-  (activity) => {
-    selected = activity
-    render()
-  },
 )
 
 // 설정 창은 HUD 뒤에 붙인다(HUD가 #app 내용을 새로 채우기 때문)
@@ -106,7 +95,7 @@ const settings = createSettings(app, {
   },
   describe(s) {
     const p = computeProgress(liveRecords(s, Date.now()))
-    return `Lv.${p.level} · 활동 기록 ${s.records.length}개`
+    return `Lv.${p.level} · 운동 기록 ${s.records.length}개`
   },
   describeCurrent() {
     pullSave()
@@ -137,9 +126,8 @@ const skills = createSkills(app, {
     const now = Date.now()
     const records = liveRecords(save, now)
     const p = computeProgress(records)
-    // 오늘 상한을 채운 활동은 능력치 칸에 "내일" 이어서 오른다고 알려 준다
-    const capped = (Object.keys(ACTIVITIES) as ActivityId[]).filter((id) => todayStatus(records, id, now).reached)
-    const stats = statRows(p, capped)
+    // 오늘 상한을 채웠으면 능력치 칸에 "내일" 이어서 오른다고 알려 준다
+    const stats = statRows(p, todayStatus(records, 'exercise', now).reached ? ['exercise'] : [])
     return { points: remainingSkillPoints(p.level, save.skills), ranks: skillRanks(save.skills), stats }
   },
   onLearn(id) {
@@ -267,14 +255,11 @@ function render() {
   const now = Date.now()
   const records = liveRecords(save, now)
   const p = computeProgress(records)
-  const live = save.active?.activity ?? null
-  const today = todayStatus(records, selected, now)
-  // 상한 안내는 켜져 있는 활동이 상한에 닿았을 때 활동마다 하루 한 번
-  const liveFull = live !== null && todayStatus(records, live, now).reached
-  const day = `${new Date(now).toDateString()}:${live}`
-  if (liveFull && capToastDay !== day) {
+  const today = todayStatus(records, 'exercise', now)
+  const day = new Date(now).toDateString()
+  if (today.reached && save.active && capToastDay !== day) {
     capToastDay = day
-    hud.showCapToast(live!)
+    hud.showCapToast()
   }
   const up = levelUpTo(shownLevel, p.level)
   const points = levelUpPoints(shownLevel, p.level)
@@ -293,9 +278,7 @@ function render() {
     level: p.level,
     expIntoLevel: p.expIntoLevel,
     expForNextLevel: p.expForNextLevel,
-    activity: selected,
-    live,
-    running: live === selected,
+    running: save.active !== null,
     elapsedMs: save.active ? now - save.active.startedAt : 0,
     todayMinutes: today.minutes,
     todayCap: today.cap,
@@ -307,7 +290,7 @@ function render() {
   homeScene()?.showHomeMonster(homeMonster(save.stageProgress))
   homeScene()?.dress(wornCosmetics(save))
   // 상한을 채운 뒤에도 타이머가 켜져 있으면 말랑이가 그만 쉬자고 한다(모습만 바뀜)
-  homeScene()?.setMood(live === null ? 'rest' : liveFull ? 'full' : live)
+  homeScene()?.setMood(!save.active ? 'rest' : today.reached ? 'full' : 'exercise')
 }
 
 const game = new Phaser.Game({

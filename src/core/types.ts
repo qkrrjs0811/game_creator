@@ -1,4 +1,4 @@
-export type ActivityId = 'exercise' | 'study'
+export type ActivityId = 'exercise'
 export type StatId = 'str' | 'vit' | 'int'
 
 /** 시각은 모두 epoch ms */
