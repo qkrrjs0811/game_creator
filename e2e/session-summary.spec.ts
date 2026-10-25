@@ -67,3 +67,44 @@ test('상한을 채운 뒤 그만하면 경험치는 내일 쌓인다고 알려 
   await page.waitForTimeout(700)
   await page.screenshot({ path: 'test-results/screens/session-summary-cap.png' })
 })
+
+test('집중 목표를 골랐으면 마침 요약에 채웠는지 붙여 줌', async ({ page }) => {
+  await page.clock.install({ time: new Date('2026-10-25T08:00:00+09:00') })
+  await page.goto('./')
+  await page.getByTestId('focus-25').click()
+  await page.getByTestId('toggle').click()
+  await page.clock.fastForward('18:20')
+  await page.getByTestId('toggle').click()
+  const title = page.getByTestId('session-summary-title')
+  const goal = page.getByTestId('session-summary-goal')
+  await expect(title).toHaveText('🎉 운동 18분!')
+  await expect(goal).toHaveText('🎯 25분 중 18분')
+  await page.getByTestId('session-summary-close').click()
+
+  // 채우면 ✓. 꼬리표가 제목과 한 줄에 들어가 카드가 길어지지 않고, 닫기 버튼과 겹치지 않는다
+  await page.getByTestId('toggle').click()
+  await page.clock.fastForward('01:05:20')
+  await page.getByTestId('toggle').click()
+  await expect(title).toHaveText('🎉 운동 1시간 5분!')
+  await expect(goal).toHaveText('🎯 25분 ✓')
+  const t = (await title.boundingBox())!
+  const g = (await goal.boundingBox())!
+  expect(t.height).toBeLessThan(16 * 1.6)
+  expect(Math.abs(t.y + t.height / 2 - (g.y + g.height / 2))).toBeLessThanOrEqual(2)
+  expect(g.x + g.width).toBeLessThanOrEqual((await page.getByTestId('session-summary-close').boundingBox())!.x)
+  const box = (await page.getByTestId('session-summary').boundingBox())!
+  const scene = (await page.getByTestId('scene').boundingBox())!
+  const feet = Number(await page.locator('[data-feet]').getAttribute('data-feet'))
+  expect(scene.y + feet).toBeLessThanOrEqual(box.y)
+  await page.waitForTimeout(700)
+  await page.screenshot({ path: 'test-results/screens/session-summary-focus.png' })
+
+  // 목표 없이 켜면 평소 제목 그대로
+  await page.getByTestId('session-summary-close').click()
+  await page.getByTestId('focus-0').click()
+  await page.getByTestId('toggle').click()
+  await page.clock.fastForward('10:20')
+  await page.getByTestId('toggle').click()
+  await expect(title).toHaveText('🎉 운동 10분 했어요!')
+  await expect(goal).toBeHidden()
+})
