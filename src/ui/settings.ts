@@ -10,9 +10,12 @@ export interface SettingsHandlers {
   /** 가져오면 지금보다 덜 자란 상태가 되는지 */
   losesProgress(save: SaveData): boolean
   onImport(save: SaveData): void
+  /** 효과음이 켜져 있는지와, 켬·끔을 바꿀 때 */
+  soundOn(): boolean
+  onSound(on: boolean): void
 }
 
-/** 설정 창: 백업 내려받기와, 파일을 골라 확인 후 되돌리기 */
+/** 설정 창: 효과음 켬·끔, 백업 내려받기와, 파일을 골라 확인 후 되돌리기 */
 export function createSettings(root: HTMLElement, h: SettingsHandlers) {
   const wrap = document.createElement('div')
   wrap.className = 'sheet-backdrop'
@@ -22,6 +25,7 @@ export function createSettings(root: HTMLElement, h: SettingsHandlers) {
     <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="settings-title">
       <h2 id="settings-title">설정</h2>
       <section class="sheet-body" data-testid="backup-menu">
+        <button type="button" class="sheet-btn sound-toggle" data-testid="sound-toggle"></button>
         <p class="sheet-desc">기록을 파일로 저장해 두면 폰을 바꾸거나 앱을 지워도 되찾을 수 있어요.</p>
         <button type="button" class="sheet-btn main" data-testid="backup-export">백업 파일 내려받기</button>
         <button type="button" class="sheet-btn" data-testid="backup-import">백업 파일 가져오기</button>
@@ -50,6 +54,17 @@ export function createSettings(root: HTMLElement, h: SettingsHandlers) {
   const file = q<HTMLInputElement>('backup-file')
   const closeBtn = q('settings-close')
   let pending: SaveData | null = null
+
+  const soundBtn = q('sound-toggle')
+  const showSound = () => {
+    const on = h.soundOn()
+    soundBtn.textContent = on ? '🔊 효과음 켬' : '🔇 효과음 끔'
+    soundBtn.setAttribute('aria-pressed', String(on))
+  }
+  soundBtn.addEventListener('click', () => {
+    h.onSound(!h.soundOn())
+    showSound()
+  })
 
   const showMenu = (text = '', bad = false) => {
     pending = null
@@ -100,6 +115,7 @@ export function createSettings(root: HTMLElement, h: SettingsHandlers) {
   return {
     open() {
       showMenu()
+      showSound()
       wrap.hidden = false
     },
   }

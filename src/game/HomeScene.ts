@@ -5,6 +5,8 @@ import type { Cosmetic, HatLook, HatShape, Worn } from '../core/cosmetics'
 import { chapterBackdrop, type Backdrop } from '../core/backdrop'
 import type { ActivityId } from '../core/types'
 import { keepChatIndex, nextChatIndex } from '../core/chatter'
+import { stepSound } from '../core/sound'
+import { playSound } from '../ui/sound'
 import { contactAt, finishDelay, hitImpact, hpTrail, isFinalBlow, type Impact } from '../core/impact'
 
 const MASCOT = 0xffd7a8
@@ -1026,6 +1028,7 @@ export class HomeScene extends Phaser.Scene {
     const recover = () => this.tweens.add({ targets: attacker, x: home.attacker, scaleX: 1, scaleY: 1, duration: fx.back, ease: 'Quad.easeOut' })
     this.time.delayedCall(contactAt(fx), () => {
       if (!live()) return
+      playSound(stepSound(s.kind, !!s.crit))
       if (s.kind === 'miss') {
         this.markImpact('back')
         recover()
@@ -1163,6 +1166,7 @@ export class HomeScene extends Phaser.Scene {
     this.tweens.add({ targets: winner, angle: { from: -7, to: 7 }, duration: 240, yoyo: true, repeat: 2, ease: 'Sine.easeInOut', onComplete: () => winner.setAngle(0) })
     if (b.win) this.burst(winner.x, winner.y - 70, 12)
     host?.setAttribute('data-winner', b.win ? 'mascot' : 'monster')
+    playSound(b.win ? 'win' : 'lose')
     b.onEnd(b.win)
   }
 

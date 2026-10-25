@@ -35,6 +35,8 @@ import { statRows } from './core/stats'
 import { nextStageAdvice, stageMinutesToWin, winnableStages } from './core/coach'
 import { achievementToast, autoRunCard, awayAdventure, awayCard, bestBrokenText, dexNewText, formatMinutes, letterCard, newPropText, sessionSummary } from './ui/format'
 import { autoRun } from './core/autorun'
+import { parseSoundOn, serializeSoundOn } from './core/sound'
+import { playSound, setSoundOn, soundOn } from './ui/sound'
 import { awaySummary, shouldShowAway } from './core/away'
 import { sessionGain } from './core/gain'
 import { GROWTH_STAGES, grownStage, lookLine, malangLook, restoreSeenStage } from './core/look'
@@ -134,6 +136,10 @@ const hud = createHud(
 // 업적 알림이 떠 있는 동안 장면 말풍선이 비켜 준다(장면이 늦게 준비돼도 render에서 맞춘다)
 let achievementShown = false
 
+// 효과음 켬·끔(기본 켬). 저장 원본 밖의 보조 값이다
+const SOUND_KEY = `${SAVE_KEY}:sound`
+setSoundOn(parseSoundOn(readKey(SOUND_KEY)))
+
 // 설정 창은 HUD 뒤에 붙인다(HUD가 #app 내용을 새로 채우기 때문)
 const settings = createSettings(app, {
   onExport() {
@@ -155,6 +161,11 @@ const settings = createSettings(app, {
   },
   // 실수로 오래된 백업을 고르면 그 뒤에 쌓은 기록이 사라지므로 미리 알린다
   losesProgress: (s) => importLosesProgress(save, s, Date.now()),
+  soundOn,
+  onSound(on) {
+    setSoundOn(on)
+    writeKey(SOUND_KEY, serializeSoundOn(on))
+  },
   onImport(s) {
     // 덮어쓰기 전 지금 저장을 따로 남겨 둔다(잘못 가져와도 기록이 사라지지 않게)
     const now = Date.now()
@@ -669,7 +680,10 @@ function render() {
   if (shownLevel !== p.level) rememberShownLevel(p.level)
   shownLevel = p.level
   if (up !== null) {
-    if (up !== awayLevel) hud.showLevelUp(up, points)
+    if (up !== awayLevel) {
+      hud.showLevelUp(up, points)
+      playSound('levelup')
+    }
     celebratePending = true
   }
   awayLevel = null

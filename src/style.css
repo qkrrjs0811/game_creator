@@ -544,6 +544,8 @@ body {
   cursor: pointer;
 }
 .sheet-btn.main { background: var(--accent); color: #fff; box-shadow: 0 4px 0 #e9764a; }
+/* 효과음 켬·끔은 아래 백업 묶음과 조금 떨어뜨린다 */
+.sound-toggle { margin-bottom: 8px; }
 .sheet-msg { min-height: 20px; margin: 0; font-size: 13px; color: var(--ink); }
 .sheet-msg.bad { color: #d9534f; }
 .confirm-title { margin: 6px 0 0; font-size: 17px; font-weight: 700; }
