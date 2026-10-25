@@ -626,9 +626,9 @@ function render() {
   checkGrown(look.index)
   homeScene()?.grow({ scale: look.stage.scale, traits: look.traits })
   // 상한을 채운 뒤에도 타이머가 켜져 있으면 말랑이가 그만 쉬자고 한다(모습만 바뀜)
-  // 쉬는 중 말풍선은 기록을 읽고 지금 가장 중요한 한마디를 고른다(계산만)
-  homeScene()?.setRestLine(
-    chatLines({ records, stageProgress: save.stageProgress, skills: save.skills, now, lastSeen: visitSeen })[0].text,
+  // 쉬는 중 말풍선은 기록을 읽고 지금 가장 중요한 한마디부터 보여 주고, 누르면 다음 한마디로 넘어간다(계산만)
+  homeScene()?.setRestLines(
+    chatLines({ records, stageProgress: save.stageProgress, skills: save.skills, now, lastSeen: visitSeen }).map((l) => l.text),
   )
   homeScene()?.setMood(live === null ? 'rest' : liveFull ? 'full' : live)
   homeScene()?.setBubbleAway(achievementShown)

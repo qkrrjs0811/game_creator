@@ -78,3 +78,14 @@ export function chatLines({ records, stageProgress, skills, now, lastSeen }: Cha
   lines.push(CHEER_LINE)
   return lines
 }
+
+/** 말풍선을 누르면 다음 후보로 넘어간다. 마지막 뒤(또는 후보가 줄어 범위를 벗어났으면) 처음으로 돌아간다 */
+export function nextChatIndex(index: number, count: number): number {
+  return count > 0 && index + 1 < count ? index + 1 : 0
+}
+
+/** 후보 목록이 그대로면 보던 자리를 지키고, 하나라도 바뀌었으면(기록·날이 바뀌면) 처음 후보부터 다시 보여 준다 */
+export function keepChatIndex(prev: readonly string[], next: readonly string[], index: number): number {
+  const same = prev.length === next.length && prev.every((t, i) => t === next[i])
+  return same && index < next.length ? index : 0
+}

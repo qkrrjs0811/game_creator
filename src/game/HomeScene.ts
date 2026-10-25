@@ -4,6 +4,7 @@ import { MONSTERS, type Monster } from '../core/monsters'
 import type { Cosmetic, HatLook, HatShape, Worn } from '../core/cosmetics'
 import { chapterBackdrop, type Backdrop } from '../core/backdrop'
 import type { ActivityId } from '../core/types'
+import { keepChatIndex, nextChatIndex } from '../core/chatter'
 
 const MASCOT = 0xffd7a8
 const MASCOT_SHADE = 0xf7b97a
@@ -312,12 +313,18 @@ export class HomeScene extends Phaser.Scene {
   private scenery!: Phaser.GameObjects.Graphics
   private backdrop: Backdrop = chapterBackdrop(1)
   private jump?: Phaser.Tweens.Tween
+  /** 말풍선을 눌렀을 때 살짝 통 튀기 */
+  private hop?: Phaser.Tweens.Tween
   /** 숨쉬기(쉬는 중) 또는 꾹꾹 누르기(운동 중) 움직임 */
   private breathe?: Phaser.Tweens.Tween
   /** 타이머가 켜져 있으면 말랑이도 같이 운동한다. 오늘 상한을 채웠으면 쉬자고 한다 */
   private mood: Mood = 'rest'
-  /** 쉬는 중 말풍선에 띄울 말랑이 한마디(기록을 읽고 화면이 골라 준다) */
-  private restLine = BUBBLES.rest
+  /** 쉬는 중 말풍선에 띄울 말랑이 한마디 후보(기록을 읽고 화면이 골라 준다)와 지금 보여 주는 자리 */
+  private restLines: string[] = [BUBBLES.rest]
+  private chatIndex = 0
+  /** 말풍선·말랑이를 눌렀을 때 다음 한마디로 넘기는 칸(장면 안 px) */
+  private bubbleTap = new Phaser.Geom.Rectangle()
+  private mascotTap = new Phaser.Geom.Rectangle()
   /** 홈에서 보여 줄 몬스터(다음에 도전할 스테이지)와 지금 그려진 몬스터 */
   private homeLook?: Monster
   private shownMonster = ''
@@ -367,6 +374,7 @@ export class HomeScene extends Phaser.Scene {
 
     this.layout(this.scale.width, this.scale.height)
     this.scale.on('resize', (size: Phaser.Structs.Size) => this.layout(size.width, size.height))
+    this.input.on('pointerdown', (p: Phaser.Input.Pointer) => this.onTap(p.x, p.y))
 
     this.idle()
     // 장면이 다 준비되면(RUNNING) 알린다. 그 전에 밀린 축하 등을 화면이 다시 그려 맞춘다
@@ -383,20 +391,59 @@ export class HomeScene extends Phaser.Scene {
     if (!this.battle) this.moveMascot()
   }
 
-  /** 타이머가 꺼져 있을 때 말풍선에 띄울 한마디. 켜 둔 동안·상한 말풍선은 그대로다 */
-  setRestLine(text: string) {
-    if (this.restLine === text) return
-    this.restLine = text
+  /**
+   * 타이머가 꺼져 있을 때 말풍선에 띄울 한마디 후보(중요한 순서). 후보가 그대로면 눌러 넘긴 자리를 지키고,
+   * 바뀌면 첫 후보부터 다시 보여 준다. 켜 둔 동안·상한 말풍선은 그대로다
+   */
+  setRestLines(lines: string[]) {
+    if (lines.length === 0) lines = [BUBBLES.rest]
+    if (lines.length === this.restLines.length && lines.every((t, i) => t === this.restLines[i])) return
+    this.chatIndex = keepChatIndex(this.restLines, lines, this.chatIndex)
+    this.restLines = lines
     if (this.bubbleText && this.mood === 'rest') this.drawBubble()
   }
 
+  /** 말풍선이나 말랑이를 누르면 다음 한마디로 넘어가며 말랑이가 살짝 통 튄다. 쉬는 중 말풍선이 보일 때만 */
+  private onTap(x: number, y: number) {
+    if (this.battle || this.mood !== 'rest' || this.bubble.alpha < 0.5) return
+    if (!this.bubbleTap.contains(x, y) && !this.mascotTap.contains(x, y)) return
+    this.chatIndex = nextChatIndex(this.chatIndex, this.restLines.length)
+    this.drawBubble()
+    // 레벨업 폴짝 중에는 그대로 둔다
+    if (this.jump?.isPlaying()) return
+    this.hop?.stop()
+    this.mascotBody.setY(0)
+    this.hop = this.tweens.add({ targets: this.mascotBody, y: -14, duration: 130, yoyo: true, ease: 'Quad.easeOut' })
+    const host = this.game.canvas.parentElement
+    host?.setAttribute('data-chat-hops', String(Number(host.getAttribute('data-chat-hops') ?? 0) + 1))
+  }
+
   private drawBubble() {
-    this.bubbleText.setText(this.mood === 'rest' ? this.restLine : BUBBLES[this.mood])
+    this.bubbleText.setText(this.mood === 'rest' ? this.restLines[this.chatIndex] : BUBBLES[this.mood])
     const w = this.bubbleText.width
     this.bubbleBg.clear().fillStyle(0xffffff).fillRoundedRect(-w / 2 - 12, -15, w + 24, 30, 15)
     // e2e가 말랑이 기분을 볼 수 있게 남긴다
     this.game.canvas.parentElement?.setAttribute('data-mood', this.mood)
     this.game.canvas.parentElement?.setAttribute('data-bubble', this.bubbleText.text)
+    this.placeTaps()
+  }
+
+  /**
+   * 누르는 칸: 말풍선은 그린 모양보다 위아래로 넓혀 손가락 크기(48px)로, 말랑이는 머리(모자)끝부터 발끝까지.
+   * e2e가 누를 자리와 크기를 볼 수 있게 남긴다
+   */
+  private placeTaps() {
+    if (!this.mascot) return
+    const bw = Math.max(48, this.bubbleText.width + 24)
+    this.bubbleTap.setTo(this.bubble.x - bw / 2, this.bubble.y - 24, bw, 48)
+    const s = this.growth.scale
+    const top = this.mascot.y + grownTop(this.look.hat, s)
+    const bottom = this.mascot.y + FEET * s
+    this.mascotTap.setTo(this.mascot.x - 44 * s, top, 88 * s, bottom - top)
+    const box = this.game.canvas.parentElement
+    const rect = (r: Phaser.Geom.Rectangle) => [r.x, r.y, r.width, r.height].map(Math.round).join(',')
+    box?.setAttribute('data-bubble-tap', rect(this.bubbleTap))
+    box?.setAttribute('data-mascot-tap', rect(this.mascotTap))
   }
 
   /** 업적 알림이 장면 위쪽에 떠 있는 동안 말풍선이 자리를 비켜 준다. 모습만 바뀐다 */
@@ -415,6 +462,7 @@ export class HomeScene extends Phaser.Scene {
     if (this.battle) return
     // 뛰는 중에 또 오르면 땅으로 돌려놓고 다시 뛴다
     this.jump?.stop()
+    this.hop?.stop()
     this.mascotBody.setY(0)
     this.layout(this.scale.width, this.scale.height)
     const { x, y } = this.mascot
@@ -576,6 +624,7 @@ export class HomeScene extends Phaser.Scene {
     this.mascotGrow.add(this.mascotParts(worn, traits))
     this.mascotGrow.setScale(scale).setY(FEET * (1 - scale))
     if (this.battle) this.drawBars(...this.battle.hp)
+    if (this.bubbleText) this.placeTaps()
     // e2e가 지금 입은 꾸미기와 모습을 볼 수 있게 남긴다
     const host = this.game.canvas.parentElement
     host?.setAttribute('data-look', key)
@@ -907,6 +956,7 @@ export class HomeScene extends Phaser.Scene {
     this.mascot.setPosition(w * 0.3, ground)
     this.monster.setPosition(w * 0.72, ground + 6)
     this.bubble.setPosition(w / 2, Math.max(28, h * 0.16))
+    this.placeTaps()
     // e2e가 말랑이·몬스터 발끝(장면 위에서부터 px)을 볼 수 있게 남긴다
     this.game.canvas.parentElement?.setAttribute('data-feet', String(Math.round(ground + FEET)))
     if (this.battle) this.drawBars(...this.battle.hp)

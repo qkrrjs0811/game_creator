@@ -1,5 +1,5 @@
 import { describe, test, expect } from 'vitest'
-import { CHAT_MAX_CHARS, chatLines, type ChatInput } from './chatter'
+import { CHAT_MAX_CHARS, chatLines, keepChatIndex, nextChatIndex, type ChatInput } from './chatter'
 import { missionFor } from './mission'
 import type { ActivityId, ActivityRecord } from './types'
 
@@ -139,5 +139,25 @@ describe('말랑이 한마디', () => {
     const copy = JSON.parse(JSON.stringify(records))
     chatLines(input({ records }))
     expect(records).toEqual(copy)
+  })
+})
+
+describe('말풍선 눌러 다음 한마디', () => {
+  test('누르면 다음 후보로, 마지막 뒤엔 처음으로 돌아간다', () => {
+    expect(nextChatIndex(0, 3)).toBe(1)
+    expect(nextChatIndex(1, 3)).toBe(2)
+    expect(nextChatIndex(2, 3)).toBe(0)
+    expect(nextChatIndex(0, 1)).toBe(0)
+    // 후보가 줄어 범위를 벗어났으면 처음으로
+    expect(nextChatIndex(5, 3)).toBe(0)
+    expect(nextChatIndex(0, 0)).toBe(0)
+  })
+
+  test('후보가 그대로면 보던 자리를 지키고, 바뀌면(기록·날이 바뀌면) 처음부터 다시', () => {
+    const a = ['🎯 오늘 목표까지 25분!', '📜 오늘은 휴식 10분 어때?', '💪 오늘도 같이 크는 중!']
+    expect(keepChatIndex(a, [...a], 2)).toBe(2)
+    expect(keepChatIndex(a, ['🎯 오늘 목표까지 20분!', ...a.slice(1)], 2)).toBe(0)
+    expect(keepChatIndex(a, a.slice(0, 2), 1)).toBe(0)
+    expect(keepChatIndex([], a, 0)).toBe(0)
   })
 })
