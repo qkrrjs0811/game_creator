@@ -54,17 +54,24 @@ test('처음 열 때 이미 닿아 있던 업적은 묶어서 한 번만 알린�
   await page.addInitScript((s) => {
     if (!localStorage.getItem('growth-game:save')) localStorage.setItem('growth-game:save', s)
   }, JSON.stringify({ ...base, records }))
+  // 시계가 실제로도 흐르면 느린 실행에서 첫 화면을 띄우는 동안 4초짜리 알림이 재기 전에 사라진다 — 멈춰 두고 runFor로만 흘린다
+  await page.clock.pauseAt(new Date('2026-10-23T20:00:00+09:00'))
   await page.goto('./')
   const toast = page.getByTestId('achievement-toast')
-  await expect(toast).toBeVisible({ timeout: 8000 })
+  await expect
+    .poll(async () => {
+      await page.clock.runFor(100)
+      return toast.isVisible()
+    })
+    .toBe(true)
   await expect(page.getByTestId('achievement-toast-title')).toHaveText('🏆 업적 2개 달성!')
   await expect(page.getByTestId('achievement-toast-detail')).toHaveText('🏅 땀방울 새싹 외 칭호 1개')
-  await page.waitForTimeout(700)
+  await page.clock.runFor(700)
   await page.screenshot({ path: 'test-results/screens/achievement-toast-bundle.png' })
 
-  await page.clock.fastForward('00:05')
+  await page.clock.runFor(5000)
   await expect(toast).toBeHidden()
   await page.reload()
-  await page.clock.fastForward('00:03')
+  await page.clock.runFor(3000)
   await expect(toast).toBeHidden()
 })
