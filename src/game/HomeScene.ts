@@ -10,6 +10,7 @@ import { playSound } from '../ui/sound'
 import { contactAt, finishDelay, hitImpact, hpTrail, isFinalBlow, type Impact } from '../core/impact'
 import { skillFxSize, skillFxTiming, stepSkillFx, type SkillFxKind, type SkillStyle } from '../core/skillfx'
 import { MONSTER_TOP, drawMonsterBody, drawMonsterFace } from './monsterArt'
+import { monsterChapter, monsterDecor } from '../core/monsterDecor'
 import { monsterEndFace, monsterStepFace, type MonsterFace } from '../core/monsterLook'
 import { MONSTER_ATTACK, MONSTER_BOTTOM, MONSTER_IDLE, REST_POSE, attackPlan, poseY, type Pose } from '../core/monsterMotion'
 import { BLINK_MS, HAPPY_MS, blinkGap, endFace, moodFace, pickFace, stepFace, type Face, type Mood } from '../core/face'
@@ -1027,6 +1028,7 @@ export class HomeScene extends Phaser.Scene {
     if (!this.battle) this.idleMonster()
     // e2e가 지금 어떤 몬스터가 나와 있는지 볼 수 있게 남긴다
     this.game.canvas.parentElement?.setAttribute('data-monster', m.id)
+    this.game.canvas.parentElement?.setAttribute('data-monster-decor', monsterDecor(monsterChapter(m)).join(' '))
   }
 
   /** 몬스터 모양. 모두 아래쪽(y≈26)이 땅에 닿는 둥근 도형이다. 얼굴은 표정이 바뀔 때만 다시 그린다 */

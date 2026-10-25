@@ -1,6 +1,7 @@
 import Phaser from 'phaser'
 import type { Monster, MonsterShape } from '../core/monsters'
 import { MONSTER_FEATURES, MONSTER_TOP, type MonsterFace } from '../core/monsterLook'
+import { MONSTER_DECOR_SPOTS, monsterChapter, monsterDecor } from '../core/monsterDecor'
 
 const MONSTER_INK = 0x3d2a63
 const CROWN = 0xffd36b
@@ -220,6 +221,55 @@ export function drawMonsterBody(g: Phaser.GameObjects.Graphics, m: Monster) {
   }
   const [cx, cy] = CHEEKS[m.shape]
   g.fillStyle(0xff8fa8, 0.55).fillEllipse(-cx, cy, 9, 5).fillEllipse(cx, cy, 9, 5)
+  drawMonsterDecor(g, m)
+}
+
+const BOW = 0xff8fb1
+const HEART = 0xff7a9a
+const SPARKLE = 0xffe07a
+
+/** 장이 올라가면 늘어나는 무늬·장식(점무늬·리본·배 하트·반짝이). 1장 몬스터는 그대로다 */
+function drawMonsterDecor(g: Phaser.GameObjects.Graphics, m: Monster) {
+  const spots = MONSTER_DECOR_SPOTS[m.shape]
+  const v = (x: number, y: number) => new Phaser.Math.Vector2(x, y)
+  for (const d of monsterDecor(monsterChapter(m))) {
+    for (const [x, y] of spots[d]) {
+      switch (d) {
+        case 'dots':
+          g.fillStyle(mix(m.shade, MONSTER_INK, 0.15), 0.55).fillCircle(x, y, 4)
+          g.fillStyle(0xffffff, 0.35).fillCircle(x - 1.2, y - 1.2, 1.3)
+          break
+        case 'bow': {
+          // 양쪽 날개를 조금 크게 진한 색으로 먼저 칠해 테두리를 만든다
+          const wing = (s: number, k: number) =>
+            [[0, 0], [9, -6], [10, 1], [8, 6]].map(([dx, dy]) => v(x + s * dx * k, y + dy * k))
+          g.fillStyle(mix(BOW, MONSTER_INK, 0.45))
+          for (const s of [-1, 1]) g.fillPoints(wing(s, 1.28), true)
+          g.fillStyle(BOW)
+          for (const s of [-1, 1]) g.fillPoints(wing(s, 1), true)
+          g.fillStyle(0xffffff, 0.6).fillCircle(x - 6, y - 2, 1.4).fillCircle(x + 5, y - 2, 1.2)
+          g.fillStyle(mix(BOW, MONSTER_INK, 0.3)).fillCircle(x, y, 3.2)
+          break
+        }
+        case 'heart':
+          g.fillStyle(0xffffff, 0.75).fillCircle(x - 2.6, y - 1.5, 3.8).fillCircle(x + 2.6, y - 1.5, 3.8)
+          g.fillTriangle(x - 6.2, y - 0.5, x + 6.2, y - 0.5, x, y + 6)
+          g.fillStyle(HEART).fillCircle(x - 2.2, y - 1.4, 2.6).fillCircle(x + 2.2, y - 1.4, 2.6)
+          g.fillTriangle(x - 4.7, y - 0.6, x + 4.7, y - 0.6, x, y + 4.3)
+          break
+        case 'sparkle': {
+          const star = [0, 1, 2, 3, 4, 5, 6, 7].map((i) => {
+            const a = (i / 8) * Math.PI * 2 - Math.PI / 2
+            const r = i % 2 === 0 ? 6 : 1.8
+            return v(x + Math.cos(a) * r, y + Math.sin(a) * r)
+          })
+          g.fillStyle(SPARKLE).fillPoints(star, true)
+          g.fillStyle(0xffffff).fillCircle(x, y, 1.2)
+          break
+        }
+      }
+    }
+  }
 }
 
 /** 눈 자리(y, 간격) */
