@@ -1,9 +1,10 @@
 import { stampCount } from './goal'
 import { missionStars } from './mission'
-import type { SaveData } from './types'
+import { activityTotals } from './history'
+import type { ActivityId, SaveData } from './types'
 import { doneWeeks } from './week'
 
-export type CosmeticKind = 'hat' | 'color'
+export type CosmeticKind = 'hat' | 'color' | 'prop'
 
 export type HatShape = 'cone' | 'beret' | 'flower' | 'star'
 export type HatPattern = 'plain' | 'dots' | 'stripes'
@@ -29,6 +30,9 @@ export interface Cosmetic {
   weeks?: number
   /** 오늘의 미션을 채운 날(미션 별)이 이만큼 모이면 얻는 꾸미기 */
   missions?: number
+  /** 소품이면 그 활동과, 그 활동의 누적 인정 분(상한 안)이 이만큼 되면 얻는 분 */
+  activity?: ActivityId
+  minutes?: number
   /** 장 보스가 주는 모자면 그 장 번호와 모습 */
   chapter?: number
   hat?: HatLook
@@ -63,6 +67,20 @@ export const MISSION_COSMETICS: Cosmetic[] = [
   { id: 'hat-mission5', name: '네잎클로버 핀', icon: '🍀', kind: 'hat', missions: 5 },
   { id: 'hat-mission20', name: '네 빛깔 방울모자', icon: '🧶', kind: 'hat', missions: 20 },
   { id: 'hat-mission50', name: '별똥별 머리띠', icon: '🌠', kind: 'hat', missions: 50 },
+]
+
+const props = (activity: ActivityId, list: [string, string][]): Cosmetic[] =>
+  list.map(([name, icon], i) => {
+    const h = [1, 5, 20][i]
+    return { id: `prop-${activity}-${h}`, name, icon, kind: 'prop', activity, minutes: h * 60 }
+  })
+
+/** 활동마다 누적 인정 시간 1·5·20시간에 얻는 장면 소품. 기록에서 센 인정 분으로 정해져 저장에는 남기지 않는다 */
+export const PROP_COSMETICS: Cosmetic[] = [
+  ...props('exercise', [['아령', '🏋️'], ['줄넘기', '🪢'], ['트로피', '🏆']]),
+  ...props('study', [['연필꽂이', '✏️'], ['공책', '📓'], ['지구본', '🌍']]),
+  ...props('reading', [['책 더미', '📚'], ['책갈피', '🔖'], ['책장', '🗄️']]),
+  ...props('relax', [['찻잔', '🍵'], ['쿠션', '🛋️'], ['화분', '🪴']]),
 ]
 
 const HAT_SHAPES: { shape: HatShape; name: string; icon: string }[] = [
@@ -114,7 +132,7 @@ export function stageReward(no: number): Cosmetic | null {
 
 /** 이름으로 꾸미기를 찾는다. 장 모자는 "hat-ch<장>"이다 */
 export function cosmeticById(id: string): Cosmetic | null {
-  const first = [...COSMETICS, ...STAMP_COSMETICS, ...WEEK_COSMETICS, ...MISSION_COSMETICS].find((c) => c.id === id)
+  const first = [...COSMETICS, ...STAMP_COSMETICS, ...WEEK_COSMETICS, ...MISSION_COSMETICS, ...PROP_COSMETICS].find((c) => c.id === id)
   if (first) return first
   const m = /^hat-ch([1-9]\d*)$/.exec(id)
   return m ? chapterCosmetic(Number(m[1])) : null
@@ -122,14 +140,17 @@ export function cosmeticById(id: string): Cosmetic | null {
 
 /**
  * 가진 꾸미기. 저장된 이름에 더해, 보상이 생기기 전에 깬 스테이지의 꾸미기도 가진 것으로 본다.
- * 도장 모자·주간 색·미션 모자는 기록에서 센 도장 수·채운 주 수·미션 별 수로만 정한다. 모르는 이름은 건너뛰고(지우지는 않음) 목록 순서로 돌려준다.
+ * 도장 모자·주간 색·미션 모자·소품은 기록에서 센 도장 수·채운 주 수·미션 별 수·활동별 누적 인정 분으로만 정한다. 모르는 이름은 건너뛰고(지우지는 않음) 목록 순서로 돌려준다.
  */
 export function ownedCosmetics(save: SaveData): Cosmetic[] {
   const stamps = stampCount(save.records)
   const weeks = doneWeeks(save.records)
   const missions = missionStars(save.records)
+  const totals = activityTotals(save.records)
   const owns = (c: Cosmetic) =>
-    c.stamps !== undefined
+    c.activity !== undefined
+      ? totals[c.activity] >= (c.minutes ?? Infinity)
+      : c.stamps !== undefined
       ? stamps >= c.stamps
       : c.weeks !== undefined
         ? weeks >= c.weeks
@@ -150,20 +171,20 @@ export function cosmeticCatalog(save: SaveData): Cosmetic[] {
     const ch = cosmeticById(id)?.chapter
     if (ch) chapters.add(ch)
   }
-  return [...COSMETICS, ...STAMP_COSMETICS, ...WEEK_COSMETICS, ...MISSION_COSMETICS, ...[...chapters].sort((a, b) => a - b).map((ch) => chapterCosmetic(ch)!)]
+  return [...COSMETICS, ...STAMP_COSMETICS, ...WEEK_COSMETICS, ...MISSION_COSMETICS, ...PROP_COSMETICS, ...[...chapters].sort((a, b) => a - b).map((ch) => chapterCosmetic(ch)!)]
 }
 
 export type Worn = Record<CosmeticKind, Cosmetic | null>
 
-/** 지금 입은 모자와 색. 가지지 않았거나 모르는 이름은 입지 않은 것으로 본다 */
+/** 지금 입은 모자와 색, 장면에 놓은 소품. 가지지 않았거나 모르는 이름은 입지 않은 것으로 본다 */
 export function wornCosmetics(save: SaveData): Worn {
   const owned = ownedCosmetics(save)
   const pick = (kind: CosmeticKind) =>
     save.worn.map((id) => owned.find((c) => c.id === id && c.kind === kind)).find((c) => c !== undefined) ?? null
-  return { hat: pick('hat'), color: pick('color') }
+  return { hat: pick('hat'), color: pick('color'), prop: pick('prop') }
 }
 
-/** 가진 꾸미기를 입는다. 같은 종류는 하나만 입고, 입은 것을 다시 고르면 벗는다. 입는 것 말고는 바꾸지 않는다 */
+/** 가진 꾸미기를 입는다(소품은 놓는다). 같은 종류는 하나만 입고, 입은 것을 다시 고르면 벗는다. 입는 것 말고는 바꾸지 않는다 */
 export function toggleWear(save: SaveData, id: string): SaveData {
   const c = ownedCosmetics(save).find((x) => x.id === id)
   if (!c) return save

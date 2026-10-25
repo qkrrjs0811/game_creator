@@ -330,7 +330,7 @@ export class HomeScene extends Phaser.Scene {
   private shownMonster = ''
   private monsterShape: Monster['shape'] = 'slime'
   /** 입은 꾸미기와 지금 그려진 모습 */
-  private look: Worn = { hat: null, color: null }
+  private look: Worn = { hat: null, color: null, prop: null }
   private shownLook?: string
   private battle?: {
     steps: ReplayStep[]

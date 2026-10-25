@@ -2,6 +2,7 @@ import { describe, test, expect } from 'vitest'
 import {
   COSMETICS,
   MISSION_COSMETICS,
+  PROP_COSMETICS,
   STAMP_COSMETICS,
   WEEK_COSMETICS,
   chapterCosmetic,
@@ -225,6 +226,7 @@ describe('cosmeticCatalog', () => {
       ...STAMP_COSMETICS.map((c) => c.id),
       ...WEEK_COSMETICS.map((c) => c.id),
       ...MISSION_COSMETICS.map((c) => c.id),
+      ...PROP_COSMETICS.map((c) => c.id),
       'hat-ch1',
     ])
     expect(cosmeticCatalog({ ...newSave(), stageProgress: 25 }).map((c) => c.id).slice(-3)).toEqual(['hat-ch1', 'hat-ch2', 'hat-ch3'])
@@ -284,16 +286,16 @@ describe('wornCosmetics', () => {
   const all = { ...newSave(), stageProgress: 6 }
 
   test('처음에는 아무것도 안 입음', () => {
-    expect(wornCosmetics(newSave())).toEqual({ hat: null, color: null })
+    expect(wornCosmetics(newSave())).toEqual({ hat: null, color: null, prop: null })
   })
 
   test('입은 모자와 색을 돌려줌', () => {
-    expect(wornCosmetics({ ...all, worn: ['hat-crown', 'color-sky'] })).toEqual({ hat: byId('hat-crown'), color: byId('color-sky') })
+    expect(wornCosmetics({ ...all, worn: ['hat-crown', 'color-sky'] })).toEqual({ hat: byId('hat-crown'), color: byId('color-sky'), prop: null })
   })
 
   test('가지지 않았거나 모르는 꾸미기는 입지 않은 것으로 봄', () => {
     const save = { ...newSave(), stageProgress: 1, worn: ['hat-crown', '???', 'color-sky'] }
-    expect(wornCosmetics(save)).toEqual({ hat: null, color: null })
+    expect(wornCosmetics(save)).toEqual({ hat: null, color: null, prop: null })
   })
 })
 
@@ -306,7 +308,7 @@ describe('toggleWear', () => {
 
   test('같은 종류는 하나만 — 새 모자를 쓰면 이전 모자를 벗음', () => {
     const save = toggleWear(toggleWear(toggleWear(all, 'hat-sprout'), 'color-sky'), 'hat-crown')
-    expect(wornCosmetics(save)).toEqual({ hat: byId('hat-crown'), color: byId('color-sky') })
+    expect(wornCosmetics(save)).toEqual({ hat: byId('hat-crown'), color: byId('color-sky'), prop: null })
     expect(save.worn).not.toContain('hat-sprout')
   })
 
@@ -322,7 +324,7 @@ describe('toggleWear', () => {
 
   test('장 모자를 쓰면 다른 모자를 벗고 색은 그대로, 다시 누르면 벗음', () => {
     const on = toggleWear({ ...newSave(), stageProgress: 10, worn: ['hat-crown', 'color-sky'] }, 'hat-ch1')
-    expect(wornCosmetics(on)).toEqual({ hat: chapterCosmetic(1), color: byId('color-sky') })
+    expect(wornCosmetics(on)).toEqual({ hat: chapterCosmetic(1), color: byId('color-sky'), prop: null })
     expect(toggleWear(on, 'hat-ch1').worn).toEqual(['color-sky'])
   })
 
@@ -342,6 +344,87 @@ describe('toggleWear', () => {
   test('입기는 기록·스킬·스테이지·가진 꾸미기를 바꾸지 않음', () => {
     const save = { ...all, cosmetics: ['hat-sprout'], skills: ['punch'] }
     const next = toggleWear(save, 'hat-sprout')
+    expect({ ...next, worn: save.worn }).toEqual(save)
+  })
+})
+
+/** 2026-10-01부터 n일 동안 날마다 activity 를 minutes 분 */
+function daysOf(activity: ActivityRecord['activity'], n: number, minutes: number): ActivityRecord[] {
+  return Array.from({ length: n }, (_, i) => {
+    const start = new Date(2026, 9, 1 + i, 8).getTime()
+    return { id: `${activity}${i}`, activity, startedAt: start, endedAt: start + minutes * 60_000 }
+  })
+}
+
+describe('PROP_COSMETICS', () => {
+  test('활동 4종 × 1·5·20시간, 모두 소품이고 이름이 다름', () => {
+    expect(PROP_COSMETICS).toHaveLength(12)
+    expect(PROP_COSMETICS.every((c) => c.kind === 'prop')).toBe(true)
+    expect(new Set(PROP_COSMETICS.map((c) => c.id)).size).toBe(12)
+    expect(new Set(PROP_COSMETICS.map((c) => c.name)).size).toBe(12)
+    for (const a of ['exercise', 'study', 'reading', 'relax'] as const)
+      expect(PROP_COSMETICS.filter((c) => c.activity === a).map((c) => c.minutes)).toEqual([60, 300, 1200])
+  })
+
+  test('이름으로 찾음', () => {
+    expect(cosmeticById('prop-study-1')).toMatchObject({ name: '연필꽂이', activity: 'study', minutes: 60, kind: 'prop' })
+  })
+})
+
+describe('소품 얻기', () => {
+  const props = (records: ActivityRecord[], extra: Partial<ReturnType<typeof newSave>> = {}) =>
+    ownedCosmetics({ ...newSave(), ...extra, records }).filter((c) => c.kind === 'prop').map((c) => c.id)
+
+  test('처음엔 소품이 없지만 꾸미기 목록엔 모두 보임', () => {
+    expect(props([])).toEqual([])
+    expect(cosmeticCatalog(newSave()).filter((c) => c.kind === 'prop')).toEqual(PROP_COSMETICS)
+  })
+
+  test('그 활동의 누적 인정 분이 1·5·20시간에 닿으면 하나씩', () => {
+    expect(props(daysOf('reading', 1, 59))).toEqual([])
+    expect(props(daysOf('reading', 1, 60))).toEqual(['prop-reading-1'])
+    expect(props(daysOf('reading', 5, 59))).toEqual(['prop-reading-1'])
+    expect(props(daysOf('reading', 5, 60))).toEqual(['prop-reading-1', 'prop-reading-5'])
+    expect(props(daysOf('reading', 10, 120))).toEqual(['prop-reading-1', 'prop-reading-5', 'prop-reading-20'])
+  })
+
+  test('다른 활동의 소품은 주지 않음', () => {
+    expect(props(daysOf('exercise', 10, 30))).toEqual(['prop-exercise-1', 'prop-exercise-5'])
+  })
+
+  test('하루 상한을 넘은 시간은 세지 않음(휴식 하루 30분)', () => {
+    expect(props(daysOf('relax', 1, 600))).toEqual([])
+    expect(props(daysOf('relax', 2, 600))).toEqual(['prop-relax-1'])
+  })
+
+  test('저장에 이름이 있거나 스테이지를 많이 깨도 시간이 모자라면 없음', () => {
+    expect(props([], { cosmetics: ['prop-exercise-1'], stageProgress: 500 })).toEqual([])
+  })
+})
+
+describe('소품 놓기', () => {
+  const save = { ...newSave(), stageProgress: 6, records: [...daysOf('study', 3, 120), ...daysOf('relax', 2, 30)] }
+
+  test('하나만 놓고, 다른 소품을 고르면 바꿈. 모자·색·칭호는 그대로', () => {
+    const dressed = { ...save, worn: ['hat-crown', 'color-sky', 'title:study-1'] }
+    const one = toggleWear(dressed, 'prop-study-1')
+    expect(wornCosmetics(one).prop?.id).toBe('prop-study-1')
+    const two = toggleWear(one, 'prop-relax-1')
+    expect(two.worn).toEqual(['hat-crown', 'color-sky', 'title:study-1', 'prop-relax-1'])
+    expect(wornCosmetics(two)).toEqual({ hat: byId('hat-crown'), color: byId('color-sky'), prop: cosmeticById('prop-relax-1') })
+  })
+
+  test('놓은 소품을 다시 고르면 치움', () => {
+    expect(toggleWear(toggleWear(save, 'prop-study-5'), 'prop-study-5').worn).toEqual([])
+  })
+
+  test('못 얻은 소품은 놓을 수 없고, 놓아 둔 소품도 얻지 못한 기록이면 놓지 않은 것으로 봄', () => {
+    expect(toggleWear(save, 'prop-study-20')).toBe(save)
+    expect(wornCosmetics({ ...save, worn: ['prop-reading-1'] }).prop).toBeNull()
+  })
+
+  test('놓기는 기록·스테이지·가진 꾸미기를 바꾸지 않음', () => {
+    const next = toggleWear(save, 'prop-study-1')
     expect({ ...next, worn: save.worn }).toEqual(save)
   })
 })
