@@ -17,7 +17,8 @@ import { createHud } from './ui/hud'
 import { createSettings } from './ui/settings'
 import { createSkills } from './ui/skills'
 import { learnSkill, remainingSkillPoints, skillRanks } from './core/skills'
-import { endlessStage, homeMonster, STAGES_PER_CHAPTER } from './core/endless'
+import { chapterOf, endlessStage, homeMonster, STAGES_PER_CHAPTER } from './core/endless'
+import { stageBackdrop } from './core/backdrop'
 import { createStages, stageLabel } from './ui/stages'
 import { createDex } from './ui/dex'
 import { dexShadows, monsterDex, newDexMonsters } from './core/dex'
@@ -249,11 +250,21 @@ function resultNote(o: BattleOutcome, win: boolean, toWin: number | null): strin
 // 전투가 바꾸는 저장은 깬 스테이지 수와 꾸미기뿐이다(applyBattleResult)
 // 자동 진행 연출 중이면 건너뛰기가 남은 판을 모두 건너뛴다
 let skipAutoRun: (() => void) | null = null
+// 장면 칸 배경은 장마다 다르다. 전투 중에는 싸우는 스테이지, 아니면 다음에 깰 스테이지의 장을 따른다(그림일 뿐)
+let battleStageNo: number | null = null
+function paintBackdrop() {
+  const no = battleStageNo ?? save.stageProgress + 1
+  const b = stageBackdrop(no)
+  hud.sceneHost.style.background = `linear-gradient(${b.sky}, ${b.skyLow})`
+  hud.sceneHost.dataset.chapter = String(chapterOf(no))
+}
 const battleBar = createBattleBar(hud.sceneHost, {
   onSkip: () => (skipAutoRun ? skipAutoRun() : homeScene()?.skipBattle()),
   onLeave() {
     homeScene()?.endBattle()
     battleBar.hide()
+    battleStageNo = null
+    paintBackdrop()
   },
 })
 
@@ -304,6 +315,8 @@ function startAutoRun() {
     const b = run.battles[i]
     const s = endlessStage(b.no)
     battleBar.start(`자동 진행 ${i + 1}/${total} · ${stageLabel(s)}`, s.monster.name)
+    battleStageNo = b.no
+    paintBackdrop()
     const scene = homeScene()
     if (!scene) return finish()
     const timeline = battleTimeline(me, s.enemy, b.result)
@@ -363,6 +376,8 @@ const stages = createStages(app, {
     stages.close()
     hud.hideToasts()
     battleBar.start(`${stageLabel(s)} · ${s.name}`, foe.name)
+    battleStageNo = no
+    paintBackdrop()
     // 장 보스를 처음 깼으면 결과 카드에 배지를 달고 장면에서 색종이가 터진다(연출일 뿐)
     const end = () => {
       battleBar.end(view)
@@ -581,6 +596,7 @@ function render() {
     focus,
   })
   skills.refresh()
+  paintBackdrop()
   homeScene()?.showHomeMonster(homeMonster(save.stageProgress))
   homeScene()?.dress(wornCosmetics({ ...save, records }))
   // 상한을 채운 뒤에도 타이머가 켜져 있으면 말랑이가 그만 쉬자고 한다(모습만 바뀜)
