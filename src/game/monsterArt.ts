@@ -1,13 +1,12 @@
 import Phaser from 'phaser'
 import type { Monster, MonsterShape } from '../core/monsters'
-import { MONSTER_FEATURES, type MonsterFace } from '../core/monsterLook'
+import { MONSTER_FEATURES, MONSTER_TOP, type MonsterFace } from '../core/monsterLook'
 
 const MONSTER_INK = 0x3d2a63
 const CROWN = 0xffd36b
 const MOUTH = 0xc9576b
 
-/** 머리끝 y(땅에 닿는 아래끝은 y≈26). HP 막대·뛰기 높이 계산이 쓴다 */
-export const MONSTER_TOP: Record<MonsterShape, number> = { slime: -39, mushroom: -36, drop: -44, cloud: -36, rock: -31, king: -50 }
+export { MONSTER_TOP }
 
 /** 두 색을 t(0~1)만큼 섞는다 */
 function mix(a: number, b: number, t: number): number {

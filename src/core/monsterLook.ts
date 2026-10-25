@@ -19,6 +19,9 @@ export type MonsterFeature =
   | 'crown'
   | 'ears'
 
+/** 머리끝 y(땅에 닿는 아래끝은 y≈26). HP 막대·뛰기 높이 계산이 쓴다 */
+export const MONSTER_TOP: Record<MonsterShape, number> = { slime: -39, mushroom: -36, drop: -44, cloud: -36, rock: -31, king: -50 }
+
 export const MONSTER_FEATURES: Record<MonsterShape, MonsterFeature[]> = {
   // 머리 위 새싹, 아래로 흘러내린 말랑 방울
   slime: ['sprout', 'drips'],

@@ -11,6 +11,7 @@ import { contactAt, finishDelay, hitImpact, hpTrail, isFinalBlow, type Impact } 
 import { skillFxSize, skillFxTiming, stepSkillFx, type SkillFxKind, type SkillStyle } from '../core/skillfx'
 import { MONSTER_TOP, drawMonsterBody, drawMonsterFace } from './monsterArt'
 import { monsterEndFace, monsterStepFace, type MonsterFace } from '../core/monsterLook'
+import { MONSTER_ATTACK, MONSTER_BOTTOM, MONSTER_IDLE, REST_POSE, attackPlan, poseY, type Pose } from '../core/monsterMotion'
 import { BLINK_MS, HAPPY_MS, blinkGap, endFace, moodFace, pickFace, stepFace, type Face, type Mood } from '../core/face'
 
 export type { Mood } from '../core/face'
@@ -739,7 +740,8 @@ export class HomeScene extends Phaser.Scene {
     // 공부 중 갸웃·운동 중 꾹꾹을 멈추고 똑바로 선다
     for (const who of [this.mascot, this.monster]) this.tweens.killTweensOf(who.setScale(1).setAngle(0))
     // 전투 중에는 둥실·폴짝 없이 땅에 선다
-    for (const body of [this.mascotBody, this.monsterBody]) this.tweens.killTweensOf(body.setY(0))
+    this.tweens.killTweensOf(this.mascotBody.setY(0))
+    this.restMonsterBody()
     this.tweens.killTweensOf(this.bubble)
     this.bubble.setAlpha(0)
     this.battle = {
@@ -1021,6 +1023,8 @@ export class HomeScene extends Phaser.Scene {
     this.monsterShape = m.shape
     this.monsterBody.removeAll(true)
     this.monsterBody.add(this.monsterParts(m))
+    // 홈에서 몬스터가 바뀌면 그 종의 움직임으로 바꾼다
+    if (!this.battle) this.idleMonster()
     // e2e가 지금 어떤 몬스터가 나와 있는지 볼 수 있게 남긴다
     this.game.canvas.parentElement?.setAttribute('data-monster', m.id)
   }
@@ -1037,8 +1041,39 @@ export class HomeScene extends Phaser.Scene {
 
   private idle() {
     this.moveMascot()
-    this.tweens.killTweensOf(this.monsterBody.setY(0))
-    this.tweens.add({ targets: this.monsterBody, y: -6, duration: 1200, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' })
+    this.idleMonster()
+  }
+
+  private idleMonster() {
+    this.restMonsterBody()
+    // 종마다 다르게 가만히 움직인다(말랑 납작·살랑·통통·둥실·부르르·으쓱). 기울기는 양쪽으로 똑같이 흔든다
+    const m = MONSTER_IDLE[this.monsterShape]
+    this.monsterBody.setAngle(-m.pose.angle)
+    this.tweens.add({
+      targets: this.monsterBody,
+      y: poseY(m.pose),
+      angle: m.pose.angle,
+      scaleX: m.pose.sx,
+      scaleY: m.pose.sy,
+      duration: m.duration,
+      repeatDelay: m.rest,
+      yoyo: true,
+      repeat: -1,
+      ease: m.kind === 'bounce' ? 'Quad.easeOut' : 'Sine.easeInOut',
+    })
+    this.game.canvas.parentElement?.setAttribute('data-monster-idle', m.kind)
+  }
+
+  /** 몬스터 몸을 제자리·제모양으로 돌린다 */
+  private restMonsterBody() {
+    this.tweens.killTweensOf(this.monsterBody)
+    this.monsterBody.setPosition(0, 0).setAngle(0).setScale(1)
+    this.game.canvas.parentElement?.setAttribute('data-monster-idle', '')
+  }
+
+  /** 몬스터 몸을 한 자세로 옮긴다 */
+  private poseMonster(p: Pose, duration: number, ease: string) {
+    this.tweens.add({ targets: this.monsterBody, y: poseY(p), angle: p.angle, scaleX: p.sx, scaleY: p.sy, duration, ease })
   }
 
   /**
@@ -1093,6 +1128,17 @@ export class HomeScene extends Phaser.Scene {
     this.battleFace = 'focus'
     this.monsterFace = 'idle'
     this.markImpact('windup')
+    // 몬스터는 종마다 자기만의 공격 동작(박치기·튀어 오르기·찌르기·내려오기·굴리기·내려찍기)을 몸에 더한다
+    this.restMonsterBody()
+    const monsterPlan = s.actor === 'enemy' ? attackPlan(this.monsterShape, fx) : []
+    this.game.canvas.parentElement?.setAttribute('data-monster-attack', monsterPlan.length ? MONSTER_ATTACK[this.monsterShape].kind : '')
+    let planAt = 0
+    monsterPlan.forEach((p, i) => {
+      const start = planAt
+      planAt += p.duration
+      const ease = i === 0 ? 'Sine.easeOut' : i === monsterPlan.length - 1 ? 'Quad.easeIn' : 'Quad.easeOut'
+      this.time.delayedCall(start, () => live() && this.poseMonster(p.pose, p.duration, ease))
+    })
     // 예비 동작: 살짝 뒤로 움츠렸다가 앞으로 튀어 나간다
     this.tweens.add({ targets: attacker, x: home.attacker - fx.pull * dir, scaleX: 0.92, scaleY: 1.06, duration: fx.windup, ease: 'Sine.easeOut' })
     this.time.delayedCall(fx.windup, () => {
@@ -1102,9 +1148,18 @@ export class HomeScene extends Phaser.Scene {
     })
     // 맞은 쪽 HP 막대 위쪽 y
     const bar = s.actor === 'player' ? barY(this.scale.height) : this.mascotBarY(this.scale.height)
-    const recover = () => this.tweens.add({ targets: attacker, x: home.attacker, scaleX: 1, scaleY: 1, duration: fx.back, ease: 'Quad.easeOut' })
+    const recover = () => {
+      this.tweens.add({ targets: attacker, x: home.attacker, scaleX: 1, scaleY: 1, duration: fx.back, ease: 'Quad.easeOut' })
+      if (monsterPlan.length) this.poseMonster(REST_POSE, fx.back, 'Quad.easeOut')
+    }
     this.time.delayedCall(contactAt(fx), () => {
       if (!live()) return
+      // 부딪힌 순간 공격 동작의 마지막 자세로 멈춘다. 한 바퀴 구른 몸은 0도로 돌려 되감기지 않게 한다
+      const end = monsterPlan.at(-1)?.pose
+      if (end) {
+        this.tweens.killTweensOf(this.monsterBody)
+        this.monsterBody.setY(poseY(end)).setAngle(end.angle % 360).setScale(end.sx, end.sy)
+      }
       playSound(stepSound(s.kind, !!s.crit))
       this.battleFace = stepFace(s)
       this.monsterFace = monsterStepFace(s)
@@ -1346,6 +1401,7 @@ export class HomeScene extends Phaser.Scene {
     this.battleFace = endFace(b.win)
     this.monsterFace = monsterEndFace(b.win)
     for (const who of [this.mascot, this.monster]) this.tweens.killTweensOf(who)
+    this.restMonsterBody()
     const winner = b.win ? this.mascot : this.monster
     const loser = b.win ? this.monster : this.mascot
     // 마지막 한 방에 밀려난 쪽은 그 자리에서 쓰러진다
@@ -1506,7 +1562,7 @@ export class HomeScene extends Phaser.Scene {
     const box = this.game.canvas.parentElement
     if (!box) return
     const mascot = String(Math.round(this.mascot.y + this.mascotBody.y + this.mascotGrow.y + FEET * this.growth.scale))
-    const monster = String(Math.round(this.monster.y + this.monsterBody.y + 26))
+    const monster = String(Math.round(this.monster.y + this.monsterBody.y + MONSTER_BOTTOM * this.monsterBody.scaleY))
     if (box.getAttribute('data-mascot-bottom') !== mascot) box.setAttribute('data-mascot-bottom', mascot)
     if (box.getAttribute('data-monster-bottom') !== monster) box.setAttribute('data-monster-bottom', monster)
     this.trackWinnerHop(box)
