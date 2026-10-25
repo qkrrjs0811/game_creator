@@ -151,6 +151,87 @@ function groundTop(h: number): number {
   return groundY(h) + FEET - 14
 }
 
+/** 소품 반 너비. 소품은 이 너비(가로 ±PROP_HALF) 안, 땅(y=0)에서 위로 46px 안에 그린다 */
+const PROP_HALF = 22
+const PROP_HEIGHT = 46
+
+/** 장면 소품(활동 소품 12종). 아래끝 가운데(0, 0)가 땅에 닿는 둥근 도형이다 */
+function drawProp(g: Phaser.GameObjects.Graphics, id: string) {
+  const OUT = 0x8a6a52
+  switch (id) {
+    case 'prop-exercise-1': // 아령
+      g.fillStyle(0x9a8cc9).fillRoundedRect(-12, -10, 24, 5, 2.5)
+      g.fillStyle(0xb8a8ff).fillRoundedRect(-21, -18, 10, 18, 5).fillRoundedRect(11, -18, 10, 18, 5)
+      g.fillStyle(0xffffff, 0.5).fillEllipse(-17, -13, 3, 7).fillEllipse(15, -13, 3, 7)
+      break
+    case 'prop-exercise-5': // 줄넘기: 손잡이 둘과 둥근 줄
+      g.lineStyle(3, 0xff9fbf).beginPath().arc(0, -20, 15, Math.PI * 0.05, Math.PI * 0.95, false).strokePath()
+      g.fillStyle(0x7fd8b0).fillRoundedRect(-20, -38, 8, 20, 4).fillRoundedRect(12, -38, 8, 20, 4)
+      g.fillStyle(0xffffff, 0.6).fillCircle(-16, -34, 2).fillCircle(16, -34, 2)
+      break
+    case 'prop-exercise-20': // 트로피
+      g.fillStyle(0xe8b85a).fillRoundedRect(-14, -8, 28, 8, 3)
+      g.fillRect(-3, -18, 6, 10)
+      g.lineStyle(3.5, 0xffd36b).strokeCircle(-14, -32, 6).strokeCircle(14, -32, 6)
+      g.fillStyle(0xffd36b).fillRoundedRect(-13, -44, 26, 18, { tl: 3, tr: 3, bl: 13, br: 13 })
+      g.fillStyle(0xffffff, 0.8).fillPoints(starPoints(0, -35, 5), true)
+      break
+    case 'prop-study-1': // 연필꽂이
+      g.fillStyle(0xffd36b).fillRoundedRect(-9, -40, 5, 22, 2).fillTriangle(-9, -40, -4, -40, -6.5, -45)
+      g.fillStyle(0xa8d4ff).fillRoundedRect(-2, -36, 5, 18, 2).fillTriangle(-2, -36, 3, -36, 0.5, -41)
+      g.fillStyle(0xffa8c8).fillRoundedRect(5, -42, 5, 24, 2).fillTriangle(5, -42, 10, -42, 7.5, -46)
+      g.fillStyle(0x9be3c4).fillRoundedRect(-14, -24, 28, 24, 6)
+      g.fillStyle(0xffffff, 0.5).fillRoundedRect(-10, -18, 20, 4, 2)
+      break
+    case 'prop-study-5': // 공책 두 권
+      g.fillStyle(0xa8d4ff).fillRoundedRect(-20, -10, 40, 10, 3)
+      g.fillStyle(0xffa8c8).fillRoundedRect(-17, -19, 34, 9, 3)
+      g.fillStyle(0xffffff, 0.8).fillRect(-16, -6, 32, 2).fillRect(-13, -15, 26, 2)
+      break
+    case 'prop-study-20': // 지구본
+      g.fillStyle(0xe8b85a).fillRoundedRect(-11, -6, 22, 6, 3).fillRect(-2, -14, 4, 8)
+      g.fillStyle(0xa8d4ff).fillCircle(0, -28, 15)
+      g.fillStyle(0x9be3c4).fillEllipse(-5, -33, 12, 8).fillEllipse(6, -22, 10, 7)
+      g.lineStyle(2.5, 0xe8b85a).beginPath().arc(0, -28, 17, Math.PI * 0.6, Math.PI * 1.9, false).strokePath()
+      break
+    case 'prop-reading-1': // 책 더미
+      g.fillStyle(0xffa8c8).fillRoundedRect(-19, -9, 38, 9, 3)
+      g.fillStyle(0xfff0a0).fillRoundedRect(-15, -18, 32, 9, 3)
+      g.fillStyle(0xc9a7ff).fillRoundedRect(-17, -27, 30, 9, 3)
+      g.fillStyle(0xffffff, 0.8).fillRect(14, -7, 3, 5).fillRect(12, -16, 3, 5).fillRect(-15, -25, 3, 5)
+      break
+    case 'prop-reading-5': // 펼친 책과 책갈피
+      g.fillStyle(0xff8a5b).fillRect(3, -22, 5, 18).fillTriangle(3, -4, 8, -4, 5.5, 0)
+      g.fillStyle(0xfff6ec).fillRoundedRect(-20, -14, 19, 12, 4).fillRoundedRect(1, -14, 19, 12, 4)
+      g.fillStyle(0xc9a7ff).fillRoundedRect(-21, -4, 42, 4, 2)
+      g.lineStyle(1.5, OUT, 0.4).lineBetween(-16, -10, -5, -10).lineBetween(5, -10, 16, -10)
+      break
+    case 'prop-reading-20': // 작은 책장
+      g.fillStyle(0xe8c49a).fillRoundedRect(-20, -46, 40, 46, 6)
+      g.fillStyle(0xfff1dc).fillRoundedRect(-16, -42, 32, 18, 3).fillRoundedRect(-16, -21, 32, 17, 3)
+      for (const [x, y, c, hh] of [[-14, -24, 0xffa8c8, 14], [-9, -24, 0xa8d4ff, 16], [-4, -24, 0x9be3c4, 12], [-12, -4, 0xc9a7ff, 15], [-6, -4, 0xfff0a0, 13], [1, -4, 0xffa8c8, 16]] as const)
+        g.fillStyle(c).fillRoundedRect(x, y - hh, 4.5, hh, 1.5)
+      break
+    case 'prop-relax-1': // 찻잔
+      g.fillStyle(0xffffff, 0.8).fillEllipse(0, -2, 34, 6)
+      g.lineStyle(3, 0x9be3c4).strokeCircle(13, -13, 5)
+      g.fillStyle(0x9be3c4).fillRoundedRect(-12, -22, 24, 19, { tl: 2, tr: 2, bl: 10, br: 10 })
+      g.fillStyle(0xffffff, 0.6).fillEllipse(-4, -15, 5, 8)
+      g.lineStyle(2, 0xffffff, 0.8).beginPath().arc(-2, -30, 4, Math.PI * 0.5, Math.PI * 1.5, false).strokePath()
+      break
+    case 'prop-relax-5': // 쿠션
+      g.fillStyle(0xffa8c8).fillRoundedRect(-21, -24, 42, 24, 11)
+      g.fillStyle(0xf58fb2).fillCircle(-19, -22, 4).fillCircle(19, -22, 4).fillCircle(-19, -2, 4).fillCircle(19, -2, 4)
+      g.fillStyle(0xffffff, 0.75).fillCircle(0, -12, 3.5)
+      break
+    case 'prop-relax-20': // 화분
+      g.fillStyle(0x7cc576).fillEllipse(-8, -34, 13, 22).fillEllipse(8, -32, 13, 20).fillEllipse(0, -40, 11, 22)
+      g.fillStyle(0xf5a35c).fillRoundedRect(-14, -20, 28, 20, { tl: 3, tr: 3, bl: 9, br: 9 })
+      g.fillStyle(0xf08a6a).fillRoundedRect(-16, -22, 32, 6, 3)
+      break
+  }
+}
+
 /** 다섯 꼭짓점 별 */
 function starPoints(cx: number, cy: number, r: number): Phaser.Math.Vector2[] {
   return Array.from({ length: 10 }, (_, i) => {
@@ -311,6 +392,9 @@ export class HomeScene extends Phaser.Scene {
   private bubbleAway = false
   /** 장 배경(하늘 장식·땅 띠). 캐릭터보다 먼저 만들어 뒤에 그린다 */
   private scenery!: Phaser.GameObjects.Graphics
+  /** 고른 소품. 말랑이 왼쪽 땅 위, 말랑이보다 뒤에 그린다 */
+  private prop!: Phaser.GameObjects.Graphics
+  private shownProp?: string
   private backdrop: Backdrop = chapterBackdrop(1)
   private jump?: Phaser.Tweens.Tween
   /** 말풍선을 눌렀을 때 살짝 통 튀기 */
@@ -355,6 +439,8 @@ export class HomeScene extends Phaser.Scene {
 
   create() {
     this.scenery = this.add.graphics()
+    this.prop = this.add.graphics()
+    this.shownProp = undefined
     this.mascotGrow = this.add.container(0, 0)
     this.mascotBody = this.add.container(0, 0, [this.mascotGrow])
     this.mascot = this.add.container(0, 0, [this.mascotBody])
@@ -600,7 +686,7 @@ export class HomeScene extends Phaser.Scene {
     if (this.scenery) this.layout(this.scale.width, this.scale.height)
   }
 
-  /** 말랑이에게 입은 꾸미기(모자·색)를 입힌다. 모습만 바뀐다 */
+  /** 말랑이에게 입은 꾸미기(모자·색)를 입히고 고른 소품을 놓는다. 모습만 바뀐다 */
   dress(worn: Worn) {
     this.look = worn
     this.redraw()
@@ -608,12 +694,16 @@ export class HomeScene extends Phaser.Scene {
 
   /** 말랑이 모습(성장 단계 몸 크기·많이 한 활동 특징)을 바꾼다. 그림만 바뀐다 */
   grow(growth: Growth) {
+    const grew = growth.scale !== this.growth.scale
     this.growth = growth
     this.redraw()
+    // 자란 말랑이에 닿지 않게 소품 자리를 옮긴다
+    if (grew && this.mascot) this.layout(this.scale.width, this.scale.height)
   }
 
   private redraw() {
     if (!this.mascot) return
+    this.redrawProp()
     const worn = this.look
     const { scale, traits } = this.growth
     const key = [worn.hat?.id, worn.color?.id].filter(Boolean).join(' ')
@@ -630,6 +720,31 @@ export class HomeScene extends Phaser.Scene {
     host?.setAttribute('data-look', key)
     host?.setAttribute('data-grow-scale', String(scale))
     host?.setAttribute('data-traits', traits.join(' '))
+  }
+
+  private redrawProp() {
+    const id = this.look.prop?.id ?? ''
+    if (this.shownProp === id) return
+    this.shownProp = id
+    drawProp(this.prop.clear(), id)
+    // e2e가 지금 놓인 소품을 볼 수 있게 남긴다
+    this.game.canvas.parentElement?.setAttribute('data-prop', id)
+  }
+
+  /**
+   * 소품 자리(아래끝 가운데). 말랑이 왼쪽에, 자란 말랑이 몸·특징 그림(반 너비 약 50)과 닿지 않게 둔다.
+   * 좁은 화면에서 자리가 모자라면 소품을 조금 줄인다
+   */
+  private placeProp(w: number, ground: number) {
+    const room = w * 0.3 - 50 * this.growth.scale - 6
+    const scale = Phaser.Math.Clamp(room / (PROP_HALF * 2), 0.6, 1)
+    const half = PROP_HALF * scale
+    const x = Math.max(half + 2, w * 0.3 - 50 * this.growth.scale - half - 4)
+    const y = ground + FEET - 2
+    this.prop.setPosition(x, y).setScale(scale)
+    // e2e가 소품이 차지하는 칸을 볼 수 있게 남긴다
+    const box = [x - half, y - PROP_HEIGHT * scale, half * 2, PROP_HEIGHT * scale].map(Math.round).join(',')
+    this.game.canvas.parentElement?.setAttribute('data-prop-box', box)
   }
 
   /** 둥근 말랑이. 색 꾸미기는 몸 색을, 모자 꾸미기는 머리 위(y≈-38)를 꾸민다 */
@@ -960,6 +1075,7 @@ export class HomeScene extends Phaser.Scene {
     this.game.canvas.parentElement?.setAttribute('data-decor', this.backdrop.decor)
     this.mascot.setPosition(w * 0.3, ground)
     this.monster.setPosition(w * 0.72, ground + 6)
+    this.placeProp(w, ground)
     this.bubble.setPosition(w / 2, Math.max(28, h * 0.16))
     this.placeTaps()
     // e2e가 말랑이·몬스터 발끝(장면 위에서부터 px)을 볼 수 있게 남긴다
