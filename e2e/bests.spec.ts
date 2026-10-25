@@ -56,3 +56,70 @@ test('나 창 내 최고 기록: 활동별 한 번 최고, 하루·주 최고, �
   expect(overflow).toBe(0)
   await page.screenshot({ path: 'test-results/screens/bests.png' })
 })
+
+async function seedBests(page: import('@playwright/test').Page, records: object[], seen: string | null) {
+  await page.goto('./')
+  await page.evaluate(
+    ([s, v]) => {
+      localStorage.setItem('growth-game:save', JSON.stringify(s))
+      // 빈 저장으로 처음 연 창이 남긴 값은 지운다
+      if (v === null) localStorage.removeItem('growth-game:save:seen-bests')
+      else localStorage.setItem('growth-game:save:seen-bests', v)
+    },
+    [{ ...base, records }, seen] as const,
+  )
+  await page.reload()
+}
+
+// 2026-10-24(토) 아침. 22일(목)에 운동 40분 한 게 지금까지의 최고
+test('타이머를 마쳐 하루 최고를 넘으면 배지를 한 번, 새로고침엔 다시 안 띄움', async ({ page }) => {
+  // 45분을 흘리고 같은 자리의 다른 배지가 사라지길 기다려 느린 실행에선 오래 걸린다
+  test.setTimeout(90_000)
+  await page.clock.install({ time: new Date('2026-10-24T09:00:00+09:00') })
+  await seedBests(page, [rec('exercise', '2026-10-22', 40)], null)
+  const best = page.getByTestId('best-stamp')
+  await page.clock.runFor(1500)
+  // 처음 여는 창은 기억만 한다
+  await expect(best).toBeHidden()
+  const seen = await page.evaluate(() => localStorage.getItem('growth-game:save:seen-bests'))
+  expect(JSON.parse(seen!)).toMatchObject({ day: 40, week: 40 })
+  // 시계가 실제로도 흐르면 느린 실행에서 3.5초짜리 배지가 재기 전에 사라진다 — 멈춰 두고 runFor로만 흘린다
+  const fakeNow = await page.evaluate(() => Date.now())
+  await page.clock.pauseAt(fakeNow + 1000)
+
+  await page.getByTestId('toggle').click()
+  await page.clock.fastForward('45:01')
+  await page.clock.runFor(1500)
+  // 켜 둔 동안은 아직 알리지 않는다
+  await expect(best).toBeHidden()
+  await page.getByTestId('toggle').click()
+  // 같은 자리에 자람 배지 등이 먼저 떠 있으면 그게 사라진 뒤에 찍힌다
+  for (let i = 0; i < 30 && (await best.isHidden()); i++) await page.clock.runFor(300)
+  await expect(best).toBeVisible()
+  await expect(page.locator('.stamp:not([hidden])')).toHaveCount(1)
+  await expect(best).toHaveText('🥇 최고 기록 갱신! · 하루 45분')
+  // 시작 버튼을 가리지 않고 화면 안에 있다(톡 찍히는 움직임이 끝난 뒤에 잰다)
+  await page.waitForTimeout(700)
+  const b = (await best.boundingBox())!
+  const toggle = (await page.getByTestId('toggle').boundingBox())!
+  expect(b.y + b.height).toBeLessThanOrEqual(toggle.y)
+  expect(b.x).toBeGreaterThanOrEqual(0)
+  expect(b.x + b.width).toBeLessThanOrEqual(390)
+  await page.clock.runFor(300)
+  await page.screenshot({ path: 'test-results/screens/best-broken.png' })
+
+  await page.clock.runFor(4000)
+  await expect(best).toBeHidden()
+  await page.reload()
+  await page.clock.runFor(6000)
+  await expect(best).toBeHidden()
+})
+
+test('처음 해 본 활동이나 기록이 그대로면 갱신 배지를 띄우지 않음', async ({ page }) => {
+  await page.clock.install({ time: new Date('2026-10-24T09:00:00+09:00') })
+  const records = [rec('exercise', '2026-10-22', 40), rec('study', '2026-10-24', 10, 7)]
+  const seen = JSON.stringify({ session: { exercise: 40, study: 0, reading: 0, relax: 0 }, day: 40, week: 50, streak: 1 })
+  await seedBests(page, records, seen)
+  await page.clock.runFor(6000)
+  await expect(page.getByTestId('best-stamp')).toBeHidden()
+})

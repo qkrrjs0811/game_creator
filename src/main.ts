@@ -4,7 +4,7 @@ import { HomeScene, HOME_READY } from './game/HomeScene'
 import { computeProgress, dayKey, todayStatus } from './core/progression'
 import { stampCalendar, stampCount, todayGoal } from './core/goal'
 import { lastWeekLetter, letterNow, parseSeenLetter } from './core/letter'
-import { personalBests } from './core/best'
+import { bestValues, bestsNow, parseSeenBests, personalBests, type SeenBests } from './core/best'
 import { parseSeenRests, restEarnedNow, restStreak, restedInMonth, restText } from './core/rest'
 import { weekGoal } from './core/week'
 import { missionStars, todayMission } from './core/mission'
@@ -33,7 +33,7 @@ import { cosmeticCatalog, ownedCosmetics, toggleWear, wornCosmetics } from './co
 import { createCosmetics } from './ui/cosmetics'
 import { statRows } from './core/stats'
 import { nextStageAdvice, stageMinutesToWin, winnableStages } from './core/coach'
-import { achievementToast, autoRunCard, awayAdventure, awayCard, dexNewText, formatMinutes, letterCard, sessionSummary } from './ui/format'
+import { achievementToast, autoRunCard, awayAdventure, awayCard, bestBrokenText, dexNewText, formatMinutes, letterCard, sessionSummary } from './ui/format'
 import { autoRun } from './core/autorun'
 import { awaySummary, shouldShowAway } from './core/away'
 import { sessionGain } from './core/gain'
@@ -165,6 +165,8 @@ const settings = createSettings(app, {
     // 백업으로 들어온 지난주 기록도 편지로 다시 띄우지 않는다
     const letter = lastWeekLetter(save.records, Date.now())
     if (letter) writeKey(SEEN_LETTER_KEY, letter.week)
+    // 백업으로 들어온 최고 기록도 갱신으로 알리지 않고 기억만 한다
+    writeKey(SEEN_BESTS_KEY, JSON.stringify(bestValues(personalBests(save.records, Date.now()))))
     render()
   },
 })
@@ -508,6 +510,28 @@ function checkLetter(now: number) {
   if (r.show) hud.showLetter(letterCard(letter!))
 }
 
+// 본 최고 기록. 처음 여는 창이면 지금 값을 기억만 한다
+const SEEN_BESTS_KEY = `${SAVE_KEY}:seen-bests`
+let bestsKey = ''
+let bestsCache: SeenBests | null = null
+
+/**
+ * 새 최고 기록이 생겼으면 배지를 한 번 띄운다(다른 창이 먼저 띄웠으면 건너뛰게 저장소에서 읽는다).
+ * 켜 둔 타이머는 세지 않아 타이머를 마쳤을 때나 날·주가 바뀌었을 때 알린다. 계산만 한다
+ */
+function checkBests(now: number) {
+  // 기록·날짜가 그대로면 1초마다 다시 셀 필요가 없다
+  const key = `${save.records.length}|${save.records.at(-1)?.endedAt ?? 0}|${dayKey(now)}`
+  if (key !== bestsKey) {
+    bestsKey = key
+    bestsCache = bestValues(personalBests(save.records, now))
+  }
+  const values = bestsCache!
+  const r = bestsNow(values, parseSeenBests(readKey(SEEN_BESTS_KEY)))
+  if (r.remember !== null) writeKey(SEEN_BESTS_KEY, JSON.stringify(r.remember))
+  if (r.show) hud.showBestBroken(bestBrokenText(r.broken, values))
+}
+
 // 이미 알린 업적 id. 처음 여는 창(null)이면 기존 기록으로 닿아 있던 업적을 묶어 한 번만 알린다
 const SEEN_ACHIEVEMENTS_KEY = `${SAVE_KEY}:seen-achievements`
 
@@ -630,6 +654,7 @@ function render() {
   if (restEarned.remember !== null) writeKey(SEEN_RESTS_KEY, String(restEarned.remember))
   if (restEarned.show) hud.showRestEarned()
   checkAchievements(records)
+  checkBests(now)
   const focus = save.active
     ? focusProgress(focusTargetFor(parseFocusGoal(readKey(FOCUS_GOAL_KEY)), save.active), save.active.startedAt, now)
     : null

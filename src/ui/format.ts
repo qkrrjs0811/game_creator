@@ -12,6 +12,7 @@ import { AUTO_RUN_MAX, type AutoRun } from '../core/autorun'
 import { ACHIEVEMENTS, type AchievementProgress } from '../core/achievements'
 import type { FocusProgress } from '../core/focus'
 import { LETTER_ICONS, type WeekLetter } from '../core/letter'
+import type { BestKind, SeenBests } from '../core/best'
 
 const pad =(n: number) => String(n).padStart(2, '0')
 
@@ -291,6 +292,17 @@ export function focusText(p: FocusProgress): string {
 /** 집중 목표에 닿은 순간 타이머 카드에 찍는 배지 */
 export function focusDoneText(target: number): string {
   return `⏰ 목표 ${target}분 채웠어요!`
+}
+
+/** 최고 기록 갱신 배지. 여럿 깼으면 하루 → 주 → 활동 한 번 → 이어 온 날 순으로 하나만 적는다 */
+export function bestBrokenText(broken: BestKind[], v: SeenBests): string {
+  const head = '🥇 최고 기록 갱신!'
+  if (broken.includes('day')) return `${head} · 하루 ${formatMinutes(v.day)}`
+  if (broken.includes('week')) return `${head} · 한 주 ${formatMinutes(v.week)}`
+  const id = (Object.keys(ACTIVITIES) as ActivityId[]).find((a) => broken.includes(a))
+  if (id) return `${head} · ${ACTIVITIES[id].label} 한 번 ${formatMinutes(v.session[id])}`
+  if (broken.includes('streak')) return `${head} · ${v.streak}일 이어 옴`
+  return head
 }
 
 /** 집중 목표 칩 글자 */

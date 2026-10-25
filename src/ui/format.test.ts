@@ -1,6 +1,6 @@
 import { test, expect } from 'vitest'
 import { WINNABLE_MAX } from '../core/coach'
-import { autoRunCard, awayAdventure, awayCard, formatElapsed, formatMinutes, goalText, objectJosa, weekChip, weekDoneText, weekGoalText, sessionSummary, topicJosa, weekTotalText, bestDayText, dayDetail, pageRangeText, dexShadowText, dexNewText, missionChip, achievementValueText, farAchievementIds, achievementToast, focusText, focusChipLabel, focusDoneText, letterCard } from './format'
+import { autoRunCard, awayAdventure, awayCard, formatElapsed, formatMinutes, goalText, objectJosa, weekChip, weekDoneText, weekGoalText, sessionSummary, topicJosa, weekTotalText, bestDayText, dayDetail, pageRangeText, dexShadowText, dexNewText, missionChip, achievementValueText, farAchievementIds, achievementToast, focusText, focusChipLabel, focusDoneText, letterCard, bestBrokenText } from './format'
 import { ACHIEVEMENTS, achievementProgress } from '../core/achievements'
 import { AUTO_RUN_MAX } from '../core/autorun'
 import type { Cosmetic } from '../core/cosmetics'
@@ -303,4 +303,13 @@ test('지난주 편지 카드: 그 전 주가 비면 견주지 않고, 줄었으
   expect(letterCard(letter({ prevTotal: 250, diff: 0 })).total).toBe('지난주 4시간 10분 했어! · 지난번과 똑같아')
   expect(letterCard(letter({ prevTotal: 300, diff: -50 })).total).toBe('지난주 4시간 10분 했어! · 수고했어')
   expect(letterCard(letter({ stamped: 2, goalDone: false })).chips[0]).toBe('🌟 도장 2 / 5일')
+})
+
+test('최고 기록 갱신 배지는 하루 → 주 → 활동 한 번 → 이어 온 날 순으로 하나만 알려 줌', () => {
+  const v = { session: { exercise: 50, study: 40, reading: 0, relax: 0 }, day: 95, week: 300, streak: 12 }
+  expect(bestBrokenText(['exercise', 'day', 'week'], v)).toBe('🥇 최고 기록 갱신! · 하루 1시간 35분')
+  expect(bestBrokenText(['study', 'week', 'streak'], v)).toBe('🥇 최고 기록 갱신! · 한 주 5시간')
+  expect(bestBrokenText(['streak', 'study'], v)).toBe('🥇 최고 기록 갱신! · 공부 한 번 40분')
+  expect(bestBrokenText(['streak'], v)).toBe('🥇 최고 기록 갱신! · 12일 이어 옴')
+  expect(bestBrokenText([], v)).toBe('🥇 최고 기록 갱신!')
 })
