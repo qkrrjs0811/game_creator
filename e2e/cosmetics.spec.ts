@@ -36,10 +36,25 @@ test('가진 모자와 색을 입히면 장면의 말랑이가 바뀌고 저장�
   await expect(page.getByTestId('cosmetic-hat-ch1')).toHaveAttribute('data-state', 'locked')
   await expect(page.getByTestId('cosmetic-hat-ch1')).toContainText('1장 보스')
 
+  // 처음엔 모자 칸: 모자만 보이고 색은 색 칸에
+  await expect(page.getByTestId('cosmetic-tab-hat')).toHaveAttribute('aria-selected', 'true')
+  await expect(page.getByTestId('cosmetic-tab-hat')).toContainText('모자 4')
+  await expect(page.getByTestId('cosmetic-tab-color')).toContainText('색 2')
+  await expect(page.getByTestId('cosmetic-color-sky')).toHaveCount(0)
+  await expect(page.getByTestId('worn-hat')).toContainText('안 입었어요')
+
   await page.getByTestId('wear-hat-crown').click()
+  await expect(page.getByTestId('worn-hat')).toContainText('꼬마 왕관')
+  await page.getByTestId('cosmetic-tab-color').click()
+  await expect(page.getByTestId('cosmetic-hat-crown')).toHaveCount(0)
   await page.getByTestId('wear-color-sky').click()
-  await expect(page.getByTestId('cosmetic-hat-crown')).toHaveAttribute('data-state', 'worn')
   await expect(page.getByTestId('cosmetic-color-sky')).toHaveAttribute('data-state', 'worn')
+  await expect(page.getByTestId('worn-color')).toContainText('하늘색 말랑')
+  await page.screenshot({ path: 'test-results/screens/cosmetics-colors.png' })
+  // 입은 모자를 누르면 모자 칸으로 돌아온다
+  await page.getByTestId('worn-hat').click()
+  await expect(page.getByTestId('cosmetic-tab-hat')).toHaveAttribute('aria-selected', 'true')
+  await expect(page.getByTestId('cosmetic-hat-crown')).toHaveAttribute('data-state', 'worn')
   await expect(page.getByTestId('wear-hat-crown')).toHaveText('벗기')
   await page.screenshot({ path: 'test-results/screens/cosmetics.png' })
 
@@ -67,7 +82,9 @@ test('가진 모자와 색을 입히면 장면의 말랑이가 바뀌고 저장�
 
   // 다시 누르면 벗음
   await page.getByTestId('open-cosmetics').click()
+  await page.getByTestId('cosmetic-tab-color').click()
   await page.getByTestId('wear-color-sky').click()
+  await expect(page.getByTestId('worn-color')).toContainText('안 입었어요')
   await page.getByTestId('cosmetics-close').click()
   await expect(page.getByTestId('scene')).toHaveAttribute('data-look', 'hat-ribbon')
 })
@@ -75,7 +92,9 @@ test('가진 모자와 색을 입히면 장면의 말랑이가 바뀌고 저장�
 test('솜사탕 분홍과 버섯 모자', async ({ page }) => {
   await useSave(page, 4)
   await page.getByTestId('open-cosmetics').click()
+  await page.getByTestId('cosmetic-tab-color').click()
   await page.getByTestId('wear-color-cotton').click()
+  await page.getByTestId('cosmetic-tab-hat').click()
   await page.getByTestId('wear-hat-mushroom').click()
   await page.getByTestId('cosmetics-close').click()
   await expect(page.getByTestId('scene')).toHaveAttribute('data-look', 'hat-mushroom color-cotton')
@@ -117,4 +136,45 @@ test('장 보스를 깬 저장은 장 모자를 가지고, 다음 장 모자는 
   const s = await page.evaluate(() => window.__debug.getSave())
   expect(s.worn).toEqual(['hat-ch4'])
   expect(s.stageProgress).toBe(40)
+})
+
+test('꾸미기가 많아도 모자·색으로 나눠 보고, 열면 입은 모자가 보이는 자리로', async ({ page }) => {
+  // 20장까지 깸: 처음 모자 4 + 장 모자 20 + 다음 장 모자(잠김) 1, 색 2
+  await useSave(page, 200)
+  await page.evaluate(() => {
+    const s = JSON.parse(localStorage.getItem('growth-game:save')!)
+    s.worn = ['hat-ch17', 'color-cotton']
+    localStorage.setItem('growth-game:save', JSON.stringify(s))
+  })
+  await page.reload()
+  await page.getByTestId('open-cosmetics').click()
+  await expect(page.getByTestId('cosmetics-desc')).toContainText('26개 모았어요')
+  await expect(page.getByTestId('cosmetic-tab-hat')).toContainText('모자 24')
+  await expect(page.getByTestId('cosmetic-grid').locator('.cosmetic')).toHaveCount(25)
+  await expect(page.getByTestId('worn-hat')).toContainText('고깔모자')
+  await expect(page.getByTestId('worn-color')).toContainText('솜사탕 분홍')
+
+  // 입은 모자가 목록 안에 보이고, 닫기 버튼은 화면 안
+  const inside = async (id: string) => {
+    const box = (await page.getByTestId(id).boundingBox())!
+    const grid = (await page.getByTestId('cosmetic-grid').boundingBox())!
+    return box.y >= grid.y - 1 && box.y + box.height <= grid.y + grid.height + 1
+  }
+  expect(await inside('cosmetic-hat-ch17')).toBe(true)
+  expect(await inside('cosmetic-hat-sprout')).toBe(false)
+  const close = (await page.getByTestId('cosmetics-close').boundingBox())!
+  expect(close.y + close.height).toBeLessThanOrEqual(page.viewportSize()!.height)
+  await page.screenshot({ path: 'test-results/screens/cosmetics-many.png' })
+
+  // 다른 모자를 입어도 목록이 맨 위로 튀지 않는다
+  await page.getByTestId('wear-hat-ch18').click()
+  await expect(page.getByTestId('cosmetic-hat-ch18')).toHaveAttribute('data-state', 'worn')
+  expect(await inside('cosmetic-hat-ch18')).toBe(true)
+
+  // 색 칸은 색만
+  await page.getByTestId('cosmetic-tab-color').click()
+  await expect(page.getByTestId('cosmetic-grid').locator('.cosmetic')).toHaveCount(2)
+  await expect(page.getByTestId('cosmetic-color-cotton')).toHaveAttribute('data-state', 'worn')
+  await page.getByTestId('cosmetics-close').click()
+  await expect(page.getByTestId('scene')).toHaveAttribute('data-look', 'hat-ch18 color-cotton')
 })
