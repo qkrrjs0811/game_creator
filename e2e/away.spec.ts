@@ -9,6 +9,8 @@ async function setVisibility(page: Page, state: 'hidden' | 'visible') {
 }
 
 test('운동하러 닫아 뒀다가 다시 열면 자리 비운 동안 카드를 한 번 띄움', async ({ context }) => {
+  // 창을 두 번 열고 새로고침하며 시계를 10초 넘게 돌려, 다른 검사와 함께 돌면 30초를 넘길 수 있다
+  test.slow()
   await context.clock.install({ time: new Date('2026-10-25T08:00:00+09:00') })
   let page = await context.newPage()
   await page.goto('./')

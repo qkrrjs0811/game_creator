@@ -34,6 +34,7 @@ import { achievementToast, autoRunCard, awayAdventure, awayCard, dexNewText, for
 import { autoRun } from './core/autorun'
 import { awaySummary, shouldShowAway } from './core/away'
 import { sessionGain } from './core/gain'
+import { malangLook } from './core/look'
 import { focusCelebrateNow, focusProgress, focusTargetFor, parseFocusDefault, parseFocusGoal, serializeFocusGoal } from './core/focus'
 
 declare global {
@@ -600,6 +601,9 @@ function render() {
   paintBackdrop()
   homeScene()?.showHomeMonster(homeMonster(save.stageProgress))
   homeScene()?.dress(wornCosmetics({ ...save, records }))
+  // 레벨로 몸이 자라고 많이 한 활동대로 특징이 붙는다(그림만)
+  const look = malangLook(records)
+  homeScene()?.grow({ scale: look.stage.scale, traits: look.traits })
   // 상한을 채운 뒤에도 타이머가 켜져 있으면 말랑이가 그만 쉬자고 한다(모습만 바뀜)
   homeScene()?.setMood(live === null ? 'rest' : liveFull ? 'full' : live)
   homeScene()?.setBubbleAway(achievementShown)
