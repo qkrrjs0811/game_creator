@@ -50,6 +50,11 @@ export function monsterDex(stageProgress: number): MonsterDex {
   return { entries, count: entries.length }
 }
 
+/** 깬 스테이지 수가 before → after로 늘며 도감에 처음 들어온 몬스터 수. 늘지 않았으면 0 */
+export function newDexMonsters(before: number, after: number): number {
+  return Math.max(0, monsterDex(after).count - monsterDex(before).count)
+}
+
 /** 깬 스테이지 다음부터 도감에 아직 없는 모습을 count 마리까지(찾는 범위 안에서) */
 export function upcomingMonsters(stageProgress: number, count: number): DexEntry[] {
   const done = cleared(stageProgress)

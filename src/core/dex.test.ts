@@ -1,5 +1,5 @@
 import { describe, test, expect } from 'vitest'
-import { DEX_LOOKAHEAD, dexKey, dexPage, dexShadows, monsterDex, upcomingMonsters } from './dex'
+import { DEX_LOOKAHEAD, dexKey, dexPage, dexShadows, monsterDex, newDexMonsters, upcomingMonsters } from './dex'
 import { stageMinutesToWin } from './coach'
 import { stageMonster, stageMonsterLook } from './endless'
 import { MONSTERS } from './monsters'
@@ -127,5 +127,29 @@ describe('dexPage 장별로 나눠 보기', () => {
     expect(dexPage(0).chapter).toBe(1)
     expect(dexPage(0).entries).toEqual([])
     expect(dexPage(10).chapter).toBe(2)
+  })
+})
+
+describe('newDexMonsters 이번에 새로 모은 몬스터', () => {
+  test('깬 스테이지가 늘며 도감에 처음 들어온 수를 센다', () => {
+    expect(newDexMonsters(0, 1)).toBe(1)
+    expect(newDexMonsters(0, 3)).toBe(3)
+    expect(newDexMonsters(2, 25)).toBe(monsterDex(25).count - monsterDex(2).count)
+  })
+
+  test('그대로이거나 줄었으면 0', () => {
+    expect(newDexMonsters(4, 4)).toBe(0)
+    expect(newDexMonsters(6, 3)).toBe(0)
+    expect(newDexMonsters(Number.NaN, 0)).toBe(0)
+  })
+
+  test('이미 모은 모습이 다시 나오는 스테이지를 깨면 세지 않는다', () => {
+    let repeat = 0
+    for (let no = 2; no <= 200 && !repeat; no++) {
+      const keys = monsterDex(no - 1).entries.map((e) => e.key)
+      if (keys.includes(dexKey(stageMonsterLook(no)))) repeat = no
+    }
+    expect(repeat).toBeGreaterThan(0)
+    expect(newDexMonsters(repeat - 1, repeat)).toBe(0)
   })
 })

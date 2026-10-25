@@ -12,6 +12,8 @@ export interface BattleResultView {
   damage: number
   /** 장 보스를 처음 깨서 새로 열린 장 번호. 있으면 카드 위에 배지를 단다 */
   chapter: number | null
+  /** 도감 알림 한 줄("📚 도감에 새 몬스터 +N"). 없으면 숨긴다 */
+  dex?: string | null
   /** 자동 진행처럼 여러 판을 묶어 보여 줄 때 쓰는 제목·설명·띠 글자. 없으면 한 판 결과 글자를 쓴다 */
   title?: string
   detail?: string
@@ -35,7 +37,8 @@ export function createBattleBar(scene: HTMLElement, h: { onSkip(): void; onLeave
       <span class="battle-result-damage-bar"><i></i></span>
     </span>
     <span class="battle-result-note" data-testid="battle-result-note"></span>
-    <span class="battle-result-reward" data-testid="battle-result-reward"></span>`
+    <span class="battle-result-reward" data-testid="battle-result-reward"></span>
+    <span class="battle-result-dex" data-testid="battle-result-dex" hidden></span>`
 
   const bar = document.createElement('div')
   bar.className = 'battle-bar'
@@ -82,6 +85,9 @@ export function createBattleBar(scene: HTMLElement, h: { onSkip(): void; onLeave
       const reward = q(card, 'battle-result-reward')
       reward.textContent = r.reward ?? ''
       reward.hidden = r.reward === null
+      const dex = q(card, 'battle-result-dex')
+      dex.textContent = r.dex ?? ''
+      dex.hidden = !r.dex
       // 새 장이 열렸으면 카드 위 가장자리에 배지를 달고 안내 줄을 강조한다
       const chapter = q(card, 'battle-result-chapter')
       chapter.hidden = r.chapter === null

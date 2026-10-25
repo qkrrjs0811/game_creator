@@ -1,6 +1,6 @@
 import { test, expect } from 'vitest'
 import { WINNABLE_MAX } from '../core/coach'
-import { autoRunCard, awayAdventure, awayCard, formatElapsed, formatMinutes, goalText, objectJosa, weekChip, weekDoneText, weekGoalText, sessionSummary, topicJosa, weekTotalText, bestDayText, dayDetail, pageRangeText, dexShadowText } from './format'
+import { autoRunCard, awayAdventure, awayCard, formatElapsed, formatMinutes, goalText, objectJosa, weekChip, weekDoneText, weekGoalText, sessionSummary, topicJosa, weekTotalText, bestDayText, dayDetail, pageRangeText, dexShadowText, dexNewText } from './format'
 import { AUTO_RUN_MAX } from '../core/autorun'
 import type { Cosmetic } from '../core/cosmetics'
 import type { AwaySummary } from '../core/away'
@@ -197,4 +197,10 @@ test('도감 그림자 칸 글자', () => {
   expect(dexShadowText(45)).toBe('운동 45분 더')
   expect(dexShadowText(130)).toBe('운동 2시간 10분 더')
   expect(dexShadowText(null)).toBe('더 키워서 만나요')
+})
+
+test('결과 카드 새 몬스터 알림 글자', () => {
+  expect(dexNewText(0)).toBeNull()
+  expect(dexNewText(1)).toBe('📚 도감에 새 몬스터 +1')
+  expect(dexNewText(3)).toBe('📚 도감에 새 몬스터 +3')
 })

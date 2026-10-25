@@ -803,6 +803,16 @@ body {
   line-height: 1.4;
 }
 .battle-result .battle-result-reward[hidden] { display: none; }
+.battle-result .battle-result-dex {
+  padding: 6px 14px;
+  border-radius: 999px;
+  background: #e6f0ff;
+  color: #4f6fae;
+  font-weight: 700;
+  font-size: 13px;
+  line-height: 1.4;
+}
+.battle-result .battle-result-dex[hidden] { display: none; }
 .battle-result .battle-result-damage {
   margin-top: 2px;
   width: 100%;

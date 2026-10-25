@@ -38,6 +38,11 @@ export function dexShadowText(toWin: number | null): string {
   return `운동 ${formatMinutes(toWin)} 더`
 }
 
+/** 결과 카드에 다는 도감 알림. 새로 모은 몬스터가 없으면 null(숨김) */
+export function dexNewText(count: number): string | null {
+  return count > 0 ? `📚 도감에 새 몬스터 +${count}` : null
+}
+
 function hasBatchim(word: string): boolean {
   const code = word.charCodeAt(word.length - 1) - 0xac00
   return code >= 0 && code < 11172 && code % 28 !== 0

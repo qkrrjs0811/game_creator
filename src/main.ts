@@ -18,7 +18,7 @@ import { learnSkill, remainingSkillPoints, skillRanks } from './core/skills'
 import { endlessStage, homeMonster, STAGES_PER_CHAPTER } from './core/endless'
 import { createStages, stageLabel } from './ui/stages'
 import { createDex } from './ui/dex'
-import { dexShadows, monsterDex } from './core/dex'
+import { dexShadows, monsterDex, newDexMonsters } from './core/dex'
 import { createBattleBar } from './ui/battle'
 import { enemyDamagePercent, playerFighter, simulateBattle } from './core/battle'
 import { AUTO_RUN_GAP, autoStepDelay, battleTimeline, stepDelay } from './core/replay'
@@ -27,7 +27,7 @@ import { cosmeticCatalog, ownedCosmetics, toggleWear, wornCosmetics } from './co
 import { createCosmetics } from './ui/cosmetics'
 import { statRows } from './core/stats'
 import { nextStageAdvice, stageMinutesToWin, winnableStages } from './core/coach'
-import { autoRunCard, awayAdventure, awayCard, formatMinutes, sessionSummary } from './ui/format'
+import { autoRunCard, awayAdventure, awayCard, dexNewText, formatMinutes, sessionSummary } from './ui/format'
 import { autoRun } from './core/autorun'
 import { awaySummary, shouldShowAway } from './core/away'
 import { sessionGain } from './core/gain'
@@ -260,6 +260,7 @@ function startAutoRun() {
       foe: foe?.monster.name ?? '',
       damage: foe && lost ? enemyDamagePercent(foe.enemy, lost.result) : 0,
       chapter,
+      dex: dexNewText(newDexMonsters(run.from, run.to)),
     })
     if (chapter !== null) homeScene()?.celebrateChapter()
   }
@@ -309,6 +310,8 @@ const stages = createStages(app, {
     const foe = s.monster
     // 결과는 재생 전에 저장한다(재생 중 앱을 닫아도 깬 스테이지가 남게). 바뀌는 건 깬 스테이지 수와 꾸미기뿐이다
     const outcome = applyBattleResult(save, no, result.win)
+    // 처음 보는 몬스터를 이겼으면 결과 카드에 도감 알림을 단다(보여 줄 값일 뿐)
+    const dexNew = newDexMonsters(save.stageProgress, outcome.save.stageProgress)
     if (outcome.save !== save) {
       save = outcome.save
       persist()
@@ -323,6 +326,7 @@ const stages = createStages(app, {
       foe: foe.name,
       damage: enemyDamagePercent(enemy, result),
       chapter: outcome.newChapter,
+      dex: dexNewText(dexNew),
     }
     stages.close()
     hud.hideToasts()
