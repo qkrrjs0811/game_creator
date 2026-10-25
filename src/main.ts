@@ -87,11 +87,14 @@ const hud = createHud(
     // 그만둘 때 이번에 얻은 것을 보여 줘 성장을 느끼게 한다(화면에 보여 줄 값일 뿐)
     const gain = sessionGain(save, now)
     const done = save.active?.activity ?? selected
-    save = save.active ? stopSession(save, now) : startSession(save, selected, now)
+    const focus = save.active
+      ? focusProgress(focusTargetFor(parseFocusGoal(readKey(FOCUS_GOAL_KEY)), save.active), save.active.startedAt, now)
+      : null
+    save =save.active ? stopSession(save, now) : startSession(save, selected, now)
     persist()
     // 켤 때 골라 둔 집중 목표를 이 타이머(시작 시각)에 붙여 둔다
     if (save.active && focusDefault > 0) writeKey(FOCUS_GOAL_KEY, serializeFocusGoal({ startedAt: save.active.startedAt, minutes: focusDefault }))
-    if (gain) hud.showSessionSummary(sessionSummary(gain, todayStatus(save.records, done, now).reached, done))
+    if (gain) hud.showSessionSummary(sessionSummary(gain, todayStatus(save.records, done, now).reached, done, focus))
     else hud.hideSessionSummary()
     render()
   },
