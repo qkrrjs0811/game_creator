@@ -40,7 +40,7 @@ import { sessionGain } from './core/gain'
 import { GROWTH_STAGES, grownStage, lookLine, malangLook, restoreSeenStage } from './core/look'
 import { chatLines } from './core/chatter'
 import { upcomingRewards } from './core/rewards'
-import { canChangePledge, parsePledge, pledgeOptions, pledgeProgress, serializePledge } from './core/pledge'
+import { canChangePledge, parsePledge, pledgeCelebrateNow, pledgeOptions, pledgeProgress, serializePledge } from './core/pledge'
 import { createPledge } from './ui/pledge'
 import { focusCelebrateNow, focusProgress, focusTargetFor, parseFocusDefault, parseFocusGoal, serializeFocusGoal } from './core/focus'
 
@@ -182,6 +182,8 @@ const settings = createSettings(app, {
 
 // 오늘의 다짐: 고른 활동·분을 저장 원본 밖 보조 키에 둔다. 채움은 기록의 인정 분으로만 센다
 const PLEDGE_KEY = `${SAVE_KEY}:pledge`
+// 다짐 지킴 배지를 띄운 날(다짐한 날). 같은 날 다시 띄우지 않는다
+const PLEDGE_DONE_KEY = `${SAVE_KEY}:pledge-done`
 const pledgeSheet = createPledge(app, {
   view() {
     const now = Date.now()
@@ -708,6 +710,13 @@ function render() {
     writeKey(FOCUS_DONE_KEY, String(save.active!.startedAt))
     hud.showFocusDone(focus!.target)
   }
+  // 다짐을 채운 순간 하루 한 번 배지를 찍는다(다른 창이 먼저 알렸으면 건너뛰게 저장소에서 읽는다)
+  const pledge = parsePledge(readKey(PLEDGE_KEY), now)
+  const pledgeNow = pledgeProgress(pledge, records, now)
+  if (pledgeCelebrateNow(pledge, pledgeNow, readKey(PLEDGE_DONE_KEY))) {
+    writeKey(PLEDGE_DONE_KEY, pledge!.day)
+    hud.showPledgeDone()
+  }
   hud.render({
     level: p.level,
     expIntoLevel: p.expIntoLevel,
@@ -727,7 +736,7 @@ function render() {
     title: wornTitle({ records, worn: save.worn })?.titleName ?? null,
     focusTarget: focusDefault,
     focus,
-    pledge: pledgeProgress(parsePledge(readKey(PLEDGE_KEY), now), records, now),
+    pledge: pledgeNow,
   })
   skills.refresh()
   paintBackdrop()
@@ -740,7 +749,7 @@ function render() {
   // 상한을 채운 뒤에도 타이머가 켜져 있으면 말랑이가 그만 쉬자고 한다(모습만 바뀜)
   // 쉬는 중 말풍선은 기록을 읽고 지금 가장 중요한 한마디부터 보여 주고, 누르면 다음 한마디로 넘어간다(계산만)
   homeScene()?.setRestLines(
-    chatLines({ records, stageProgress: save.stageProgress, skills: save.skills, now, lastSeen: visitSeen }).map((l) => l.text),
+    chatLines({ records, stageProgress: save.stageProgress, skills: save.skills, now, lastSeen: visitSeen, pledge }).map((l) => l.text),
   )
   homeScene()?.setMood(live === null ? 'rest' : liveFull ? 'full' : live)
   homeScene()?.setBubbleAway(achievementShown)

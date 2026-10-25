@@ -110,3 +110,81 @@ test('이미 상한까지 채운 활동은 고를 시간이 없고 다짐할 수
   await page.getByTestId('pledge-save').click()
   await expect(page.getByTestId('pledge-text')).toHaveText('✍️ 독서 10분 · 0 / 10')
 })
+
+test('다짐을 채우는 순간 지킴 배지를 한 번 띄우고, 그 전엔 말랑이가 남은 분을 말한다', async ({ page }) => {
+  // 새로고침을 두 번 해서 함께 도는 테스트가 많으면 기본 30초가 빠듯하다
+  test.setTimeout(60_000)
+  await page.clock.install({ time: new Date('2026-10-26T20:00:00+09:00') })
+  await page.goto('./')
+  // 오늘 목표·미션(운동 20분)은 이미 채웠고(도장도 찍음) 독서 5분 / 다짐 10분
+  const seven = at('2026-10-26T07:00:00')
+  const eight = at('2026-10-26T08:00:00')
+  const save = {
+    ...base,
+    records: [
+      { id: 'ex-1', activity: 'exercise', startedAt: seven, endedAt: seven + 30 * 60_000 },
+      { id: 'rd-1', activity: 'reading', startedAt: eight, endedAt: eight + 5 * 60_000 },
+    ],
+  }
+  await page.evaluate((s) => {
+    localStorage.setItem('growth-game:save', JSON.stringify(s))
+    localStorage.setItem('growth-game:save:pledge', JSON.stringify({ day: '2026-10-26', activity: 'reading', minutes: 10 }))
+    localStorage.setItem('growth-game:save:stamp-day', '2026-10-26')
+    localStorage.setItem('growth-game:save:mission-day', '2026-10-26')
+  }, save)
+  await page.reload()
+  const host = page.getByTestId('scene')
+  await expect(host).toHaveAttribute('data-bubble', '✍️ 다짐까지 독서 5분!')
+  const badge = page.getByTestId('pledge-stamp')
+  await expect(badge).toBeHidden()
+
+  await page.getByTestId('tab-reading').click()
+  await page.getByTestId('toggle').click()
+  await page.clock.fastForward('04:30')
+  await expect(badge).toBeHidden()
+  await page.clock.fastForward('00:40')
+  await expect(badge).toBeVisible({ timeout: 8000 })
+  await expect(badge).toHaveText('✍️ 다짐 지켰어요!')
+  await expect(page.getByTestId('pledge-text')).toHaveText('✅ 지켰어요 · 독서 10분')
+  await page.waitForTimeout(500)
+
+  // 폰 화면 안에 들어오고 시작 버튼·다짐 줄·탭을 가리지 않으며 글자가 잘리지 않는다
+  const b = await box(badge)
+  expect(b.x).toBeGreaterThanOrEqual(0)
+  expect(b.x + b.width).toBeLessThanOrEqual(390)
+  for (const id of ['toggle', 'pledge', 'tab-reading']) {
+    const r = await box(page.getByTestId(id))
+    expect(b.y + b.height <= r.y || b.y >= r.y + r.height).toBe(true)
+  }
+  expect(await badge.evaluate((el) => el.scrollWidth <= el.clientWidth)).toBe(true)
+  await page.screenshot({ path: 'test-results/screens/pledge-kept.png' })
+
+  // 마치면 다짐 한마디는 더 없고, 다시 열어도 배지를 또 띄우지 않는다
+  await page.getByTestId('toggle').click()
+  await expect(host).toHaveAttribute('data-mood', 'rest')
+  await expect(host).not.toHaveAttribute('data-bubble', /^✍️/)
+  await page.reload()
+  await expect(page.getByTestId('pledge-text')).toHaveText('✅ 지켰어요 · 독서 10분')
+  await page.clock.fastForward('00:02')
+  await expect(badge).toBeHidden()
+})
+
+test('아침에 다짐이 없으면 말랑이가 다짐을 정해 보자고 한다', async ({ page }) => {
+  await page.clock.install({ time: new Date('2026-10-26T08:00:00+09:00') })
+  await page.goto('./')
+  const host = page.getByTestId('scene')
+  await expect(host).toHaveAttribute('data-bubble', '👋 안녕! 타이머 켜 볼까?')
+  await page.waitForTimeout(300)
+  // 말풍선을 눌러 넘기다 보면 다짐 한마디가 나온다
+  const seen: string[] = []
+  for (let i = 0; i < 8; i++) {
+    const text = (await host.getAttribute('data-bubble'))!
+    seen.push(text)
+    if (text === '✍️ 오늘의 다짐 정해 볼까?') break
+    const [x, y, w, h] = (await host.getAttribute('data-bubble-tap'))!.split(',').map(Number)
+    const canvas = await box(host.locator('canvas'))
+    await page.mouse.click(canvas.x + x + w / 2, canvas.y + y + h / 2)
+    await expect(host).toHaveAttribute('data-chat-hops', String(i + 1))
+  }
+  expect(seen).toContain('✍️ 오늘의 다짐 정해 볼까?')
+})

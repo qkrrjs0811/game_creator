@@ -3,6 +3,7 @@ import { winnableStages } from './coach'
 import { todayGoal } from './goal'
 import { dayMinutes } from './history'
 import { todayMission } from './mission'
+import { pledgeProgress, type Pledge } from './pledge'
 import { computeProgress, dayKey } from './progression'
 import { restedYesterday, restStreak } from './rest'
 import { upcomingRewards, type RewardKind, type UpcomingReward } from './rewards'
@@ -20,7 +21,7 @@ export const CHAT_MAX_CHARS = 18
 /** 마지막으로 본 뒤 이만큼 지났으면 "보고 싶었어" */
 export const MISSED_MS = 24 * 60 * 60_000
 
-export type ChatKind = 'rested' | 'welcome' | 'missed' | 'goal' | 'mission' | 'allDone' | 'reward' | 'best' | 'winnable' | 'streak' | 'week' | 'cheer'
+export type ChatKind = 'rested' | 'welcome' | 'missed' | 'goal' | 'pledge' | 'mission' | 'pledgeAsk' | 'allDone' | 'reward' | 'best' | 'winnable' | 'streak' | 'week' | 'cheer'
 
 export interface ChatLine {
   kind: ChatKind
@@ -34,7 +35,12 @@ export interface ChatInput {
   now: number
   /** 마지막으로 본 시각(보조 키 last-seen). 모르면 null */
   lastSeen: number | null
+  /** 오늘의 다짐(보조 키). 없으면 null */
+  pledge?: Pledge | null
 }
+
+/** 다짐이 없으면 이 시각(로컬) 전까지 다짐을 정해 보자고 한다 */
+export const PLEDGE_ASK_BEFORE_HOUR = 12
 
 /** 곧 받을 보상은 진척이 이보다 클 때만 한마디로 말한다 */
 export const REWARD_CHAT_RATIO = 0.5
@@ -86,7 +92,7 @@ export function bestChatText(records: ActivityRecord[], now: number): string | n
 /** 늘 마지막에 오는 기본 한마디 */
 export const CHEER_LINE: ChatLine = { kind: 'cheer', text: '💪 오늘도 같이 크는 중!' }
 
-export function chatLines({ records, stageProgress, skills, now, lastSeen }: ChatInput): ChatLine[] {
+export function chatLines({ records, stageProgress, skills, now, lastSeen, pledge = null }: ChatInput): ChatLine[] {
   const lines: ChatLine[] = []
   const goal = todayGoal(records, now)
   const mission = todayMission(records, now)
@@ -102,6 +108,11 @@ export function chatLines({ records, stageProgress, skills, now, lastSeen }: Cha
   }
 
   if (!goal.done) lines.push({ kind: 'goal', text: `🎯 오늘 목표까지 ${goal.goal - goal.minutes}분!` })
+  // 내가 고른 다짐은 오늘 목표 바로 뒤에 남은 분을 말한다(채우면 말하지 않는다)
+  const promise = pledgeProgress(pledge, records, now)
+  if (promise && !promise.done) {
+    lines.push({ kind: 'pledge', text: `✍️ 다짐까지 ${ACTIVITIES[promise.activity].label} ${promise.remaining}분!` })
+  }
   if (!mission.done) {
     lines.push({
       kind: 'mission',
@@ -111,6 +122,8 @@ export function chatLines({ records, stageProgress, skills, now, lastSeen }: Cha
           : `📜 오늘은 ${missionLabel} ${mission.goal}분 어때?`,
     })
   }
+  // 아침에 다짐이 없으면 하루를 시작하며 정해 보자고 한다
+  if (!pledge && new Date(now).getHours() < PLEDGE_ASK_BEFORE_HOUR) lines.push({ kind: 'pledgeAsk', text: '✍️ 오늘의 다짐 정해 볼까?' })
   if (goal.done) lines.push({ kind: 'allDone', text: '🌟 오늘 도장 고마워!' })
 
   const reward = upcomingRewards({ records, stageProgress, skills, now })
