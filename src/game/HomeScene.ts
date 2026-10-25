@@ -8,6 +8,7 @@ import { keepChatIndex, nextChatIndex } from '../core/chatter'
 import { stepSound } from '../core/sound'
 import { playSound } from '../ui/sound'
 import { contactAt, finishDelay, hitImpact, hpTrail, isFinalBlow, type Impact } from '../core/impact'
+import { skillFxSize, skillFxTiming, stepSkillFx, type SkillFxKind, type SkillStyle } from '../core/skillfx'
 
 const MASCOT = 0xffd7a8
 const MASCOT_SHADE = 0xf7b97a
@@ -428,11 +429,16 @@ export class HomeScene extends Phaser.Scene {
     next: number
     /** 걸음 사이 시간(ms). 한 번의 타격 연출을 이 안에 맞춘다 */
     delay: number
+    /** 말랑이가 배운 스킬과 회피가 오는 곳. 걸음마다 스킬 연출을 고른다 */
+    style: SkillStyle
     timer?: Phaser.Time.TimerEvent
     /** [말랑이, 몬스터] 머리 위 HP 막대. 이긴 쪽 막대는 주인과 같이 뛴다 */
     bars: [Phaser.GameObjects.Graphics, Phaser.GameObjects.Graphics]
-    /** 이긴 쪽이 뛰는 동안 머리끝이 가장 높이 간 곳, 막대와 가장 가까웠던 틈, 막대가 가장 높이 간 곳(e2e용) */
-    peak?: number
+    /**
+     * 이긴 쪽이 뛰는 동안 머리끝이 제자리보다 가장 높이 간 만큼(위가 음수), 막대와 가장 가까웠던 틈, 막대가 가장 높이 간 곳(e2e용).
+     * 높이는 제자리 기준으로 재서, 뛰고 난 뒤 장면 크기가 바뀌어도 어긋나지 않는다
+     */
+    lift?: number
     gap?: number
     barPeak?: number
     /** 지금 보이는 HP 비율 [말랑이, 몬스터] */
@@ -647,7 +653,7 @@ export class HomeScene extends Phaser.Scene {
   }
 
   /** 전투 기록을 한 걸음씩 재생한다. 끝나면 onEnd(이겼는지)를 부른다 */
-  playBattle(timeline: Timeline, delay: number, foe: Monster, onEnd: (win: boolean) => void) {
+  playBattle(timeline: Timeline, delay: number, foe: Monster, style: SkillStyle, onEnd: (win: boolean) => void) {
     this.endBattle()
     this.setMonster(foe)
     this.jump?.stop()
@@ -662,6 +668,7 @@ export class HomeScene extends Phaser.Scene {
       win: timeline.win,
       next: 0,
       delay,
+      style,
       bars: [this.add.graphics(), this.add.graphics()],
       hp: [1, 1],
       trail: [1, 1],
@@ -671,6 +678,7 @@ export class HomeScene extends Phaser.Scene {
     }
     this.game.canvas.parentElement?.setAttribute('data-final', '0')
     this.game.canvas.parentElement?.setAttribute('data-fainted', '')
+    this.game.canvas.parentElement?.setAttribute('data-skill-fx', '')
     this.layout(this.scale.width, this.scale.height)
     this.battle.timer = this.time.addEvent({ delay, loop: true, startAt: delay * 0.4, callback: () => this.playStep() })
   }
@@ -1015,6 +1023,12 @@ export class HomeScene extends Phaser.Scene {
     const fx = hitImpact(s.kind, !!s.crit, b.delay, final)
     const home = { attacker: attacker.x, target: target.x }
     const live = () => this.battle === b && !b.ended
+    // 배운 스킬이 보이는 연출(주먹 궤적·방패·잔상·번개). 모두 이 걸음의 타격 연출 안에 끝난다
+    const skills = stepSkillFx(s, b.style, b.next - 1)
+    for (const k of skills) {
+      const t = skillFxTiming(k, fx)
+      this.time.delayedCall(t.start, () => live() && this.skillFx(k, t.duration, fx, dir))
+    }
     this.markImpact('windup')
     // 예비 동작: 살짝 뒤로 움츠렸다가 앞으로 튀어 나간다
     this.tweens.add({ targets: attacker, x: home.attacker - fx.pull * dir, scaleX: 0.92, scaleY: 1.06, duration: fx.windup, ease: 'Sine.easeOut' })
@@ -1033,7 +1047,8 @@ export class HomeScene extends Phaser.Scene {
         this.markImpact('back')
         recover()
         this.tweens.add({ targets: target, x: home.target + 22 * dir, duration: fx.back / 2, yoyo: true, ease: 'Sine.easeOut' })
-        this.floatText(target.x, '휙! 피했다', '#6f93c4', bar)
+        const dodge = skills.includes('blur') ? '휙! 날쌘 발' : skills.includes('calm') ? '스윽~ 집중 회피' : '휙! 피했다'
+        this.floatText(target.x, dodge, skills.includes('calm') ? '#9a7fd6' : '#6f93c4', bar)
         this.drawBars(s.playerHp, s.enemyHp)
         return
       }
@@ -1069,12 +1084,8 @@ export class HomeScene extends Phaser.Scene {
 
   /** 부딪힌 순간: 맞은 쪽이 하얗게 번쩍이고 별·조각이 튄다. 치명타면 화면이 흔들리고 진동한다 */
   private contact(fx: Impact, enemyHit: boolean, dir: number) {
-    const s = this.growth.scale
-    const top = MONSTER_TOP[this.monsterShape]
     // 맞은 쪽 몸 가운데와 반지름(장면 좌표)
-    const body = enemyHit
-      ? { x: this.monster.x, y: this.monster.y + (top + 26) / 2, rx: 42, ry: (26 - top) / 2 + 3 }
-      : { x: this.mascot.x, y: this.mascot.y + FEET * (1 - s), rx: 41 * s, ry: 41 * s }
+    const body = this.bodyOf(enemyHit)
     const host = this.game.canvas.parentElement
     if (fx.flash) {
       const flash = this.add.ellipse(body.x, body.y, body.rx * 2, body.ry * 2, 0xffffff).setAlpha(0.85)
@@ -1118,6 +1129,141 @@ export class HomeScene extends Phaser.Scene {
     }
     host?.setAttribute('data-sparks', String(fx.sparks))
     this.markImpact('stop')
+  }
+
+  /** 말랑이(enemy=false) 또는 몬스터(true)의 몸 가운데와 반지름(장면 좌표) */
+  private bodyOf(enemy: boolean) {
+    const s = this.growth.scale
+    const top = MONSTER_TOP[this.monsterShape]
+    return enemy
+      ? { x: this.monster.x, y: this.monster.y + (top + 26) / 2, rx: 42, ry: (26 - top) / 2 + 3 }
+      : { x: this.mascot.x, y: this.mascot.y + FEET * (1 - s), rx: 41 * s, ry: 41 * s }
+  }
+
+  /**
+   * 배운 스킬이 보이는 연출. 말랑 펀치는 큰 주먹 궤적, 날쌘 발은 튀어 나갈 때 잔상, 지능 치명타는 번개,
+   * 단단한 몸은 맞을 때 방패 반짝임, 피하면 날쌘 발(민트)·집중(보라) 잔상. duration(ms) 안에 사라진다
+   */
+  private skillFx(kind: SkillFxKind, duration: number, fx: Impact, dir: number) {
+    const b = this.battle
+    if (!b) return
+    const host = this.game.canvas.parentElement
+    host?.setAttribute('data-skill-fx', `${host.getAttribute('data-skill-fx') ?? ''} ${kind}`.trim())
+    host?.setAttribute('data-skill-now', kind)
+    const fade = (target: Phaser.GameObjects.GameObject | Phaser.GameObjects.GameObject[], delay: number, time: number) =>
+      this.tweens.add({ targets: target, alpha: 0, delay, duration: Math.max(40, time), ease: 'Quad.easeIn', onComplete: () => [target].flat().forEach((t) => t.destroy()) })
+    // 말랑이 뒤에 깔리는 잔상(말랑이 몸 모양 그대로 옅게)
+    const ghost = (x: number, y: number, r: number, color: number, alpha: number) => {
+      const g = this.add.ellipse(x, y, r * 2, r * 2, color).setAlpha(alpha)
+      this.children.moveBelow(g as Phaser.GameObjects.GameObject, this.mascot as Phaser.GameObjects.GameObject)
+      return g
+    }
+    // 움직인 쪽 반대로 흐르는 둥근 속도 줄
+    const lines = (x: number, y: number, r: number, side: number) => {
+      const g = this.add.graphics()
+      g.lineStyle(4, 0xffffff, 0.9)
+      for (const [dy, len] of [[-r * 0.5, 26], [0, 34], [r * 0.5, 22]]) g.lineBetween(x + side * (r + 6), y + dy, x + side * (r + 6 + len), y + dy)
+      return g
+    }
+
+    switch (kind) {
+      case 'fist': {
+        // 말랑이 앞 위쪽에서 몬스터까지 둥근 호를 그리며 날아가고, 지나간 자리에 노란 궤적이 남는다
+        const z = skillFxSize(b.style.punch)
+        const from = this.bodyOf(false)
+        const to = this.bodyOf(true)
+        const knuckles = [-1, 0, 1].map((k) => this.add.circle(10 * z, k * 7 * z, 5 * z, 0xffe9dc).setStrokeStyle(2, 0xff8a5b))
+        const fist = this.add.container(0, 0, [this.add.circle(0, 0, 14 * z, 0xffe1cf).setStrokeStyle(3, 0xff8a5b), ...knuckles])
+        const start = { x: from.x + from.rx * 0.6, y: from.y - 26 }
+        const end = { x: to.x - to.rx * 0.55, y: to.y }
+        const travel = Math.max(40, fx.lunge)
+        fist.setPosition(start.x, start.y).setScale(0.6)
+        let lastTrail = -1
+        this.tweens.addCounter({
+          from: 0,
+          to: 1,
+          duration: travel,
+          ease: 'Quad.easeIn',
+          onUpdate: (tw) => {
+            const t = tw.getValue() ?? 0
+            fist.setPosition(start.x + (end.x - start.x) * t, start.y + (end.y - start.y) * t - Math.sin(Math.PI * t) * 34).setScale(0.6 + 0.4 * t)
+            if (t - lastTrail < 0.12) return
+            lastTrail = t
+            const dot = this.add.circle(fist.x, fist.y, 10 * z, CROWN).setAlpha(0.6)
+            this.tweens.add({ targets: dot, alpha: 0, scale: 0.3, duration: 160, onComplete: () => dot.destroy() })
+          },
+        })
+        // 부딪히면 주먹이 톡 커지며 사라진다
+        this.tweens.add({ targets: fist, scale: 1.35, delay: travel, duration: 90, ease: 'Back.easeOut' })
+        fade(fist, travel + 60, duration - travel - 60)
+        return
+      }
+      case 'dash': {
+        // 튀어 나가는 동안 지나온 자리에 민트 잔상이 세 번 남는다
+        const z = skillFxSize(b.style.quick)
+        for (let i = 0; i < 3; i++) {
+          this.time.delayedCall((fx.lunge * i) / 3, () => {
+            if (this.battle !== b) return
+            const at = this.bodyOf(false)
+            const g = ghost(at.x - dir * 6 * i, at.y, at.rx * (0.9 + 0.05 * z), 0x9be3c4, 0.5 - i * 0.08)
+            fade(g, 0, duration * 0.55)
+          })
+        }
+        const at = this.bodyOf(false)
+        fade(lines(at.x, at.y, at.rx, -dir), fx.lunge * 0.3, duration * 0.5)
+        return
+      }
+      case 'bolt': {
+        // 노란 번개가 몬스터에게 내리꽂힌다. HP 막대·치명타 글자를 가리지 않게 막대 바로 아래에서 시작한다
+        const t = this.bodyOf(true)
+        const top = barY(this.scale.height) + 18
+        const k = Math.min(1, Math.max(0.4, (t.y - t.ry + 18 - top) / 96))
+        const g = this.add.graphics({ x: t.x + 6, y: top })
+        const pts = [[-8, 0], [12, 0], [4, 36], [18, 36], [-10, 96], [-2, 52], [-16, 52]].map(([x, y]) => new Phaser.Math.Vector2(x, y))
+        g.fillStyle(CROWN, 1).fillPoints(pts, true)
+        g.lineStyle(3, 0xffffff, 1).strokePoints(pts, true)
+        // 짧아져도 가늘어 안 보이지 않게 가로는 덜 줄인다
+        g.setScale(Math.max(0.8, k), 0)
+        this.tweens.add({ targets: g, scaleY: k, duration: Math.min(60, fx.lunge), ease: 'Quad.easeIn' })
+        const ring = this.add.circle(t.x, t.y - t.ry * 0.3, 10).setStrokeStyle(4, CROWN).setAlpha(0)
+        this.tweens.add({ targets: ring, alpha: { from: 1, to: 0 }, scale: 4, delay: Math.min(60, fx.lunge), duration: duration * 0.6, onComplete: () => ring.destroy() })
+        fade(g, duration * 0.45, duration * 0.55)
+        return
+      }
+      case 'shield': {
+        // 몬스터 쪽 몸 앞에 하늘색 방패가 반짝 서서 막는다
+        const z = skillFxSize(b.style.tough)
+        const me = this.bodyOf(false)
+        const g = this.add.graphics({ x: me.x + me.rx * 0.85, y: me.y })
+        const h = me.ry * 1.9
+        g.fillStyle(0xa8d4ff, 0.65).fillEllipse(0, 0, 24 * z, h)
+        g.lineStyle(3, 0xffffff, 1).strokeEllipse(0, 0, 24 * z, h)
+        g.fillStyle(0xffffff, 0.8).fillEllipse(-3, -h * 0.22, 6, h * 0.3)
+        g.setScale(0.5)
+        this.tweens.add({ targets: g, scale: 1, duration: 110, ease: 'Back.easeOut' })
+        const stars = [-0.45, 0, 0.45].map((k, i) =>
+          this.add.star(me.x + me.rx * 0.85 + (i - 1) * 12, me.y + k * h, 4, 2, 7, i === 1 ? CROWN : 0xffffff).setAngle(i * 20),
+        )
+        this.tweens.add({ targets: stars, scale: { from: 0.4, to: 1.3 }, angle: '+=90', duration: duration * 0.5, yoyo: true })
+        fade([g, ...stars], duration * 0.5, duration * 0.5)
+        return
+      }
+      case 'blur':
+      case 'calm': {
+        // 피한 자리에 옅은 잔상이 남는다. 집중은 보라 잔상과 고요한 물결
+        const me = this.bodyOf(false)
+        const color = kind === 'blur' ? 0x9be3c4 : 0xc9a7ff
+        const ghosts = [0, 1].map((i) => ghost(me.x + 8 * i, me.y, me.rx, color, 0.5 - i * 0.18))
+        fade(ghosts, duration * 0.2, duration * 0.8)
+        if (kind === 'blur') {
+          fade(lines(me.x, me.y, me.rx, -dir), 0, duration * 0.7)
+          return
+        }
+        const ring = this.add.circle(me.x, me.y, me.rx).setStrokeStyle(3, color).setAlpha(0.9)
+        this.tweens.add({ targets: ring, scale: 1.5, alpha: 0, duration, ease: 'Sine.easeOut', onComplete: () => ring.destroy() })
+        return
+      }
+    }
   }
 
   /** e2e가 한 번의 타격이 어느 단계인지(움츠림·튀어 나감·멈춤·밀림·제자리), 몇 번 부딪혔는지 볼 수 있게 남긴다 */
@@ -1310,11 +1456,11 @@ export class HomeScene extends Phaser.Scene {
     const top = winner.y + winner.scaleY * headTop
     // 막대 바깥 흰 테두리 위끝과 아래끝
     const barTop = (b.win ? this.mascotBarY(this.scale.height) : barY(this.scale.height)) - 3 + bar.y
-    b.peak = Math.min(b.peak ?? top, top)
+    b.lift = Math.min(b.lift ?? top - rest, top - rest)
     b.gap = Math.min(b.gap ?? Infinity, top - (barTop + 16))
     b.barPeak = Math.min(b.barPeak ?? barTop, barTop)
     box.setAttribute('data-winner-rest', String(Math.round(rest)))
-    box.setAttribute('data-winner-peak', String(Math.round(b.peak)))
+    box.setAttribute('data-winner-peak', String(Math.round(rest + b.lift)))
     box.setAttribute('data-hop-gap', String(Math.round(b.gap)))
     box.setAttribute('data-bar-peak-top', String(Math.round(b.barPeak)))
   }

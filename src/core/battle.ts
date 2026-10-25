@@ -38,7 +38,9 @@ export const MAX_ROUNDS = 30
 const MAX_DODGE = 0.5
 const MAX_CRIT = 0.3
 /** 집중으로 얻는 회피의 끝. 발 스킬 회피와 더해도 MAX_DODGE 를 넘지 않는다 */
-const MAX_FOCUS_DODGE = 0.2
+export const MAX_FOCUS_DODGE = 0.2
+/** 날쌘 발 한 단계마다 붙는 회피 */
+export const QUICK_DODGE = 0.05
 /** 치명타는 이만큼 곱해 아프다 */
 const CRIT_MULTIPLIER = 1.5
 
@@ -62,7 +64,7 @@ export function playerFighter(stats: Record<StatId, number>, skills: string[]): 
     atk: stats.str + r.punch * 2 + Math.floor(knack / 2),
     def: Math.floor(stats.vit / 2) + r.tough * 2 + Math.ceil(knack / 4),
     spd: 5 + r.quick * 2,
-    dodge: Math.min(MAX_DODGE, r.quick * 0.05 + Math.min(MAX_FOCUS_DODGE, calm * 0.01)),
+    dodge: Math.min(MAX_DODGE, r.quick * QUICK_DODGE + Math.min(MAX_FOCUS_DODGE, calm * 0.01)),
     crit: Math.min(MAX_CRIT, smart * 0.01),
   }
 }

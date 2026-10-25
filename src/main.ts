@@ -27,6 +27,7 @@ import { createDex } from './ui/dex'
 import { dexShadows, monsterDex, newDexMonsters } from './core/dex'
 import { createBattleBar } from './ui/battle'
 import { enemyDamagePercent, playerFighter, simulateBattle } from './core/battle'
+import { skillStyle } from './core/skillfx'
 import { AUTO_RUN_GAP, autoStepDelay, battleTimeline, stepDelay } from './core/replay'
 import { applyBattleResult, type BattleOutcome } from './core/result'
 import { cosmeticCatalog, ownedCosmetics, ownedPropIds, parseSeenProps, propsNow, toggleWear, wornCosmetics } from './core/cosmetics'
@@ -380,6 +381,7 @@ function startAutoRun() {
   }
   // 결과는 이미 저장했고, 장면에서는 판마다 빠르게 이어 싸우는 모습만 보여 준다(연출일 뿐)
   const me = playerFighter(p.stats, save.skills)
+  const style = skillStyle(p.stats, save.skills)
   const total = run.battles.length
   const play = (i: number) => {
     if (done) return
@@ -391,7 +393,7 @@ function startAutoRun() {
     const scene = homeScene()
     if (!scene) return finish()
     const timeline = battleTimeline(me, s.enemy, b.result)
-    scene.playBattle(timeline, autoStepDelay(timeline.steps.length), s.monster, () => {
+    scene.playBattle(timeline, autoStepDelay(timeline.steps.length), s.monster, style, () => {
       if (i + 1 < total) setTimeout(() => play(i + 1), AUTO_RUN_GAP)
       else finish()
     })
@@ -455,7 +457,7 @@ const stages = createStages(app, {
       if (outcome.newChapter !== null) homeScene()?.celebrateChapter()
     }
     const scene = homeScene()
-    if (scene) scene.playBattle(timeline, stepDelay(timeline.steps.length), foe, end)
+    if (scene) scene.playBattle(timeline, stepDelay(timeline.steps.length), foe, skillStyle(p.stats, save.skills), end)
     else end()
   },
 })
