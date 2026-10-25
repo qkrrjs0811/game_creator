@@ -103,9 +103,10 @@ test('자리 비운 동안 카드: 레벨·도장이 그대로면 칩 없음, �
 })
 
 test('자리 비운 동안 카드의 모험 안내: 이길 만한 스테이지 수, 없으면 다음 스테이지까지 운동 N분', () => {
-  expect(awayAdventure(1, 0)).toBe('🍀 이길 만한 스테이지 1개')
-  expect(awayAdventure(3, 0)).toBe('🍀 이길 만한 스테이지 3개')
-  expect(awayAdventure(WINNABLE_MAX, 0)).toBe(`🍀 이길 만한 스테이지 ${WINNABLE_MAX}개 이상`)
+  // 버튼 두 개 옆에 들어가게 짧게 쓴다
+  expect(awayAdventure(1, 0)).toBe('🍀 이길 만한 곳 1개')
+  expect(awayAdventure(3, 0)).toBe('🍀 이길 만한 곳 3개')
+  expect(awayAdventure(WINNABLE_MAX, 0)).toBe(`🍀 이길 만한 곳 ${WINNABLE_MAX}개 이상`)
   expect(awayAdventure(0, 70)).toBe('💪 다음 스테이지까지 운동 1시간 10분 더')
   expect(awayAdventure(0, null)).toBe('💪 운동으로 더 키워서 와요')
 })

@@ -49,6 +49,7 @@ export function createHud(
   onAdventure: () => void,
   onDress: () => void,
   onSelect: (activity: ActivityId) => void,
+  onAutoRun: () => void,
 ) {
   root.innerHTML = `
     <header class="top">
@@ -79,7 +80,8 @@ export function createHud(
         <div class="away-chips" data-testid="away-chips"></div>
         <div class="away-adventure">
           <span data-testid="away-adventure"></span>
-          <button type="button" data-testid="away-go">⚔️ 모험 가기</button>
+          <button type="button" class="away-auto" data-testid="away-auto">⏩ 자동 진행</button>
+          <button type="button" class="away-go" data-testid="away-go">⚔️ 모험</button>
         </div>
         <button type="button" class="toast-close" data-testid="away-close" aria-label="닫기">✕</button>
       </div>
@@ -170,6 +172,12 @@ export function createHud(
     hideAway()
     onAdventure()
   })
+  // 돌아오자마자 이길 만한 스테이지를 줄줄이 깬다(모험 지도의 자동 진행과 같다)
+  const awayAuto = q('away-auto')
+  awayAuto.addEventListener('click', () => {
+    hideAway()
+    onAutoRun()
+  })
 
   return {
     sceneHost: q('scene'),
@@ -248,6 +256,7 @@ export function createHud(
       levelUp.hidden = true
       q('away-adventure').textContent = c.adventure
       awayGo.hidden = !c.canGo
+      awayAuto.hidden = !c.canGo
       q('away-title').textContent = c.title
       const did = q('away-did')
       did.textContent = c.did

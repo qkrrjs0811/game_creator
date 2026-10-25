@@ -69,8 +69,9 @@ function formatAway(ms: number): string {
  * toWin = 그게 없을 때 다음 스테이지까지 운동 몇 분 더(null이면 찾는 범위 밖)
  */
 export function awayAdventure(winnable: number, toWin: number | null): string {
-  if (winnable >= WINNABLE_MAX) return `🍀 이길 만한 스테이지 ${WINNABLE_MAX}개 이상`
-  if (winnable > 0) return `🍀 이길 만한 스테이지 ${winnable}개`
+  // 자동 진행·모험 버튼 옆에 들어가게 짧게 쓴다. 두 줄이 되면 "이길 만한"이 갈라지지 않게 붙인다
+  if (winnable >= WINNABLE_MAX) return `🍀 이길 만한 곳 ${WINNABLE_MAX}개 이상`
+  if (winnable > 0) return `🍀 이길 만한 곳 ${winnable}개`
   if (toWin === null) return '💪 운동으로 더 키워서 와요'
   return `💪 다음 스테이지까지 운동 ${formatMinutes(toWin)} 더`
 }

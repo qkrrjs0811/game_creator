@@ -94,6 +94,7 @@ const hud = createHud(
     selected = activity
     render()
   },
+  () => startAutoRun(),
 )
 
 // 설정 창은 HUD 뒤에 붙인다(HUD가 #app 내용을 새로 채우기 때문)
@@ -208,71 +209,74 @@ const battleBar = createBattleBar(hud.sceneHost, {
   },
 })
 
+// 다음 스테이지부터 처음 질 때까지(최대 10판) 이어 싸운다. 바뀌는 건 깬 스테이지 수와 꾸미기뿐이다(autoRun)
+// 모험 지도와 자리 비운 동안 카드의 "⏩ 자동 진행"이 함께 쓴다
+function startAutoRun() {
+  pullSave()
+  const p = currentProgress()
+  const run = autoRun(save, p.stats, save.skills)
+  if (run.save !== save) {
+    save = run.save
+    persist()
+  }
+  const lost = run.stoppedAt === null ? null : run.battles[run.battles.length - 1]
+  const toWin = run.stoppedAt === null ? null : stageMinutesToWin(p.creditedMinutes, save.skills, run.stoppedAt)
+  const card = autoRunCard(run, toWin)
+  // 장 보스를 넘었으면 마지막으로 열린 장을 배지로 알린다
+  const chapter = Math.floor(run.to / STAGES_PER_CHAPTER) > Math.floor(run.from / STAGES_PER_CHAPTER)
+    ? Math.floor(run.to / STAGES_PER_CHAPTER) + 1
+    : null
+  const foe = lost ? endlessStage(lost.no) : null
+  stages.close()
+  hud.hideToasts()
+  render()
+  let done = false
+  const finish = () => {
+    if (done) return
+    done = true
+    skipAutoRun = null
+    battleBar.end({
+      ...card,
+      rounds: 0,
+      status: `${run.battles.filter((b) => b.win).length}판 이겼어요`,
+      heading: '⏩ 자동 진행',
+      // 한 판도 못 깼으면 진 상대를 얼마나 깎았는지 보여 준다
+      foe: foe?.monster.name ?? '',
+      damage: foe && lost ? enemyDamagePercent(foe.enemy, lost.result) : 0,
+      chapter,
+    })
+    if (chapter !== null) homeScene()?.celebrateChapter()
+  }
+  // 결과는 이미 저장했고, 장면에서는 판마다 빠르게 이어 싸우는 모습만 보여 준다(연출일 뿐)
+  const me = playerFighter(p.stats, save.skills)
+  const total = run.battles.length
+  const play = (i: number) => {
+    if (done) return
+    const b = run.battles[i]
+    const s = endlessStage(b.no)
+    battleBar.start(`자동 진행 ${i + 1}/${total} · ${stageLabel(s)}`, s.monster.name)
+    const scene = homeScene()
+    if (!scene) return finish()
+    const timeline = battleTimeline(me, s.enemy, b.result)
+    scene.playBattle(timeline, autoStepDelay(timeline.steps.length), s.monster, () => {
+      if (i + 1 < total) setTimeout(() => play(i + 1), AUTO_RUN_GAP)
+      else finish()
+    })
+  }
+  // "건너뛰기"는 남은 판을 모두 건너뛰고 바로 결과 카드를 띄운다
+  skipAutoRun = () => {
+    homeScene()?.skipBattle()
+    finish()
+  }
+  play(0)
+}
+
 const stages = createStages(app, {
   progress: () => save.stageProgress,
   // 다음 스테이지를 운동 몇 분 더 하면 이길 만한지(화면에 보여 줄 값일 뿐)
   advice: () => nextStageAdvice(currentProgress().creditedMinutes, save.skills, save.stageProgress),
   winnable: () => winnableStages(currentProgress().creditedMinutes, save.skills, save.stageProgress),
-  // 다음 스테이지부터 처음 질 때까지(최대 10판) 이어 싸운다. 바뀌는 건 깬 스테이지 수와 꾸미기뿐이다(autoRun)
-  onAutoRun() {
-    pullSave()
-    const p = currentProgress()
-    const run = autoRun(save, p.stats, save.skills)
-    if (run.save !== save) {
-      save = run.save
-      persist()
-    }
-    const lost = run.stoppedAt === null ? null : run.battles[run.battles.length - 1]
-    const toWin = run.stoppedAt === null ? null : stageMinutesToWin(p.creditedMinutes, save.skills, run.stoppedAt)
-    const card = autoRunCard(run, toWin)
-    // 장 보스를 넘었으면 마지막으로 열린 장을 배지로 알린다
-    const chapter = Math.floor(run.to / STAGES_PER_CHAPTER) > Math.floor(run.from / STAGES_PER_CHAPTER)
-      ? Math.floor(run.to / STAGES_PER_CHAPTER) + 1
-      : null
-    const foe = lost ? endlessStage(lost.no) : null
-    stages.close()
-    hud.hideToasts()
-    render()
-    let done = false
-    const finish = () => {
-      if (done) return
-      done = true
-      skipAutoRun = null
-      battleBar.end({
-        ...card,
-        rounds: 0,
-        status: `${run.battles.filter((b) => b.win).length}판 이겼어요`,
-        heading: '⏩ 자동 진행',
-        // 한 판도 못 깼으면 진 상대를 얼마나 깎았는지 보여 준다
-        foe: foe?.monster.name ?? '',
-        damage: foe && lost ? enemyDamagePercent(foe.enemy, lost.result) : 0,
-        chapter,
-      })
-      if (chapter !== null) homeScene()?.celebrateChapter()
-    }
-    // 결과는 이미 저장했고, 장면에서는 판마다 빠르게 이어 싸우는 모습만 보여 준다(연출일 뿐)
-    const me = playerFighter(p.stats, save.skills)
-    const total = run.battles.length
-    const play = (i: number) => {
-      if (done) return
-      const b = run.battles[i]
-      const s = endlessStage(b.no)
-      battleBar.start(`자동 진행 ${i + 1}/${total} · ${stageLabel(s)}`, s.monster.name)
-      const scene = homeScene()
-      if (!scene) return finish()
-      const timeline = battleTimeline(me, s.enemy, b.result)
-      scene.playBattle(timeline, autoStepDelay(timeline.steps.length), s.monster, () => {
-        if (i + 1 < total) setTimeout(() => play(i + 1), AUTO_RUN_GAP)
-        else finish()
-      })
-    }
-    // "건너뛰기"는 남은 판을 모두 건너뛰고 바로 결과 카드를 띄운다
-    skipAutoRun = () => {
-      homeScene()?.skipBattle()
-      finish()
-    }
-    play(0)
-  },
+  onAutoRun: () => startAutoRun(),
   onChallenge(no) {
     pullSave()
     const s = endlessStage(no)
