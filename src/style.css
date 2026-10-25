@@ -259,6 +259,30 @@ body {
 .goal-bar i { display: block; height: 100%; width: 0; border-radius: 999px; background: #ffd36b; transition: width 0.4s; }
 .goal.done { color: var(--accent); }
 .goal.done .goal-bar i { background: var(--accent); }
+/* 오늘 목표 줄 끝의 작은 이번 주 칩 */
+.goal-week {
+  flex: none;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: var(--chip);
+  color: var(--ink);
+  font-size: 12px;
+  white-space: nowrap;
+}
+.goal-week.done { background: #ffe1a6; color: var(--accent); }
+/* 주간 도장은 오늘 도장보다 노랗게, 반대로 기운다 */
+.stamp.week-stamp {
+  background: #ffc94d;
+  color: var(--ink);
+  box-shadow: 0 3px 0 #e8a92f;
+  transform: rotate(6deg);
+  animation-name: week-stamp-pop;
+}
+@keyframes week-stamp-pop {
+  0% { transform: rotate(6deg) scale(2.2); opacity: 0; }
+  60% { transform: rotate(6deg) scale(0.9); opacity: 1; }
+  100% { transform: rotate(6deg) scale(1); }
+}
 /* 오늘 목표를 채운 순간 카드 오른쪽 위에 찍히는 도장 */
 .stamp {
   position: absolute;
@@ -949,6 +973,52 @@ body {
 .board .board-day.future { color: var(--ink-soft); background: transparent; }
 .board .board-day.stamped { background: #ffe1a6; font-size: 18px; transform: rotate(-8deg); }
 .board .board-day.today { box-shadow: inset 0 0 0 2px var(--accent); font-weight: 700; }
+/* 이번 주 목표: 월~일 7칸 */
+.week-goal {
+  margin: 0 0 10px;
+  padding: 10px 10px 12px;
+  border-radius: 20px;
+  background: #fff;
+  box-shadow: 0 3px 0 var(--track);
+}
+.week-goal-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+  margin: 0 4px 8px;
+  font-size: 14px;
+}
+.week-goal-head span { font-size: 12px; font-weight: 700; color: var(--ink-soft); }
+.week-goal.done .week-goal-head b { color: var(--accent); }
+.week-row {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 4px;
+  justify-items: center;
+}
+.week-day { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.week-day small { font-size: 11px; font-weight: 700; color: var(--ink-soft); }
+.week-day:last-child small { color: #e98a8a; }
+.week-day span {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--bg);
+  font-size: 13px;
+  color: var(--ink);
+}
+.week-day.future span { color: var(--ink-soft); background: transparent; box-shadow: inset 0 0 0 2px var(--track); }
+.week-day.stamped span { background: #ffe1a6; font-size: 18px; transform: rotate(-8deg); }
+.week-day.now span { box-shadow: inset 0 0 0 2px var(--accent); font-weight: 700; }
+.week-goal.done .week-day.stamped span { background: #ffc94d; }
 /* 도장판으로 나 창이 길어져도 닫기는 언제나 화면 안 아래에 */
 .sheet-foot {
   position: sticky;

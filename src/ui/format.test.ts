@@ -1,6 +1,6 @@
 import { test, expect } from 'vitest'
 import { WINNABLE_MAX } from '../core/coach'
-import { autoRunCard, awayAdventure, awayCard, formatElapsed, formatMinutes, goalText, objectJosa, sessionSummary, topicJosa } from './format'
+import { autoRunCard, awayAdventure, awayCard, formatElapsed, formatMinutes, goalText, objectJosa, weekChip, weekDoneText, weekGoalText, sessionSummary, topicJosa } from './format'
 import { AUTO_RUN_MAX } from '../core/autorun'
 import type { Cosmetic } from '../core/cosmetics'
 import type { AwaySummary } from '../core/away'
@@ -70,6 +70,17 @@ test('오늘 목표 글자: 채우기 전엔 🎯, 채우면 🌟 달성(넘친 
   expect(goalText({ minutes: 12, goal: 30, done: false })).toBe('🎯 오늘 목표 12 / 30분')
   expect(goalText({ minutes: 30, goal: 30, done: true })).toBe('🌟 오늘 목표 달성 30 / 30분')
   expect(goalText({ minutes: 45, goal: 30, done: true })).toBe('🌟 오늘 목표 달성 45 / 30분')
+})
+
+test('이번 주 목표 글자: 도장판 제목·홈 작은 칩·채운 주 수', () => {
+  expect(weekGoalText({ stamped: 3, goal: 5, done: false })).toBe('📅 이번 주 3 / 5일')
+  expect(weekGoalText({ stamped: 5, goal: 5, done: true })).toBe('🏅 이번 주 목표 달성 5 / 5일')
+  expect(weekGoalText({ stamped: 7, goal: 5, done: true })).toBe('🏅 이번 주 목표 달성 7 / 5일')
+  expect(weekChip({ stamped: 0, goal: 5, done: false })).toBe('📅 0/5')
+  expect(weekChip({ stamped: 3, goal: 5, done: false })).toBe('📅 3/5')
+  expect(weekChip({ stamped: 6, goal: 5, done: true })).toBe('🏅 6/5')
+  expect(weekDoneText(0)).toBe('🏅 채운 주 아직 없어요')
+  expect(weekDoneText(4)).toBe('🏅 채운 주 4번')
 })
 
 const away = (over: Partial<AwaySummary> = {}): AwaySummary => ({

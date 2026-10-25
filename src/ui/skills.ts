@@ -1,15 +1,31 @@
 import { SKILLS, type SkillId } from '../core/skills'
 import type { StatRow } from '../core/stats'
 import type { StampCalendar } from '../core/goal'
+import type { WeekGoal } from '../core/week'
+import { weekDoneText, weekGoalText } from './format'
 
 export interface SkillsView {
   points: number
   ranks: Record<SkillId, number>
   stats: StatRow[]
-  board: { calendar: StampCalendar; stamps: number; streak: number }
+  board: { calendar: StampCalendar; stamps: number; streak: number; week: WeekGoal }
 }
 
 const WEEK = ['일', '월', '화', '수', '목', '금', '토']
+/** 주간 목표는 월요일에 시작한다 */
+const MON_FIRST = ['월', '화', '수', '목', '금', '토', '일']
+
+/** 이번 주 월~일 7칸 */
+export function weekRowHtml(w: WeekGoal): string {
+  return w.days
+    .map((d, i) => {
+      // 'today'는 홈의 오늘 분 칩 이름과 겹쳐 'now'로 쓴다
+      const cls = ['week-day', d.stamped && 'stamped', d.today && 'now', d.future && 'future'].filter(Boolean).join(' ')
+      const label = ` aria-label="${MON_FIRST[i]}요일${d.stamped ? ' 도장' : ''}"`
+      return `<li class="${cls}" data-testid="week-day-${i}"${label}><small>${MON_FIRST[i]}</small><span>${d.stamped ? '🌟' : Number(d.key.slice(8))}</span></li>`
+    })
+    .join('')
+}
 
 /** 도장판: 이번 달 달력에 하루 목표를 채운 날을 도장으로 */
 export function boardHtml(cal: StampCalendar): string {
@@ -62,8 +78,15 @@ export function createSkills(root: HTMLElement, h: { view(): SkillsView; onLearn
         <span class="board-chip" data-testid="board-stamps"></span>
         <span class="board-chip" data-testid="board-streak"></span>
       </div>
+      <div class="week-goal" data-testid="week-goal">
+        <div class="week-goal-head">
+          <b data-testid="week-goal-text"></b>
+          <span data-testid="week-done"></span>
+        </div>
+        <ul class="week-row" data-testid="week-row"></ul>
+      </div>
       <ul class="board" data-testid="board"></ul>
-      <p class="sheet-desc">하루 활동 합쳐 30분을 채우면 도장을 찍어요.</p>
+      <p class="sheet-desc">하루 활동 합쳐 30분을 채우면 도장을 찍어요. 한 주(월~일)에 5일 찍으면 이번 주 목표 달성!</p>
       <div class="sheet-foot">
         <button type="button" class="sheet-close" data-testid="skills-close">닫기</button>
       </div>
@@ -76,6 +99,7 @@ export function createSkills(root: HTMLElement, h: { view(): SkillsView; onLearn
   let asking: SkillId | null = null
   let lastStats = ''
   let lastBoard = ''
+  let lastWeek = ''
 
   const draw = () => {
     const v = h.view()
@@ -104,6 +128,15 @@ export function createSkills(root: HTMLElement, h: { view(): SkillsView; onLearn
     if (board !== lastBoard) {
       lastBoard = board
       q('board').innerHTML = board
+    }
+    const week = v.board.week
+    q('week-goal-text').textContent = weekGoalText(week)
+    q('week-done').textContent = weekDoneText(week.doneWeeks)
+    q('week-goal').classList.toggle('done', week.done)
+    const row = weekRowHtml(week)
+    if (row !== lastWeek) {
+      lastWeek = row
+      q('week-row').innerHTML = row
     }
     q('skill-points').innerHTML = `남은 포인트 <b>${v.points}</b>`
     const asked = SKILLS.find((s) => s.id === asking)

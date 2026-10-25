@@ -4,6 +4,7 @@ import { ACTIVITIES } from '../core/activities'
 import type { ActivityId } from '../core/types'
 import type { TodayGoal } from '../core/goal'
 import type { AwaySummary } from '../core/away'
+import type { WeekGoal } from '../core/week'
 import { WINNABLE_MAX } from '../core/coach'
 import { AUTO_RUN_MAX, type AutoRun } from '../core/autorun'
 
@@ -39,6 +40,23 @@ export const topicJosa = (word: string) => (hasBatchim(word) ? '은' : '는')
 /** 홈 타이머 카드의 하루 목표 글자. 30분을 넘겨도 실제 분을 보여 준다 */
 export function goalText(g: TodayGoal): string {
   return g.done ? `🌟 오늘 목표 달성 ${g.minutes} / ${g.goal}분` : `🎯 오늘 목표 ${g.minutes} / ${g.goal}분`
+}
+
+type WeekCount = Pick<WeekGoal, 'stamped' | 'goal' | 'done'>
+
+/** 도장판의 이번 주 제목 */
+export function weekGoalText(w: WeekCount): string {
+  return w.done ? `🏅 이번 주 목표 달성 ${w.stamped} / ${w.goal}일` : `📅 이번 주 ${w.stamped} / ${w.goal}일`
+}
+
+/** 홈 오늘 목표 줄 끝의 작은 이번 주 칩 */
+export function weekChip(w: WeekCount): string {
+  return `${w.done ? '🏅' : '📅'} ${w.stamped}/${w.goal}`
+}
+
+/** 지금까지 이번 주 목표를 채운 주 수 */
+export function weekDoneText(weeks: number): string {
+  return weeks > 0 ? `🏅 채운 주 ${weeks}번` : '🏅 채운 주 아직 없어요'
 }
 
 /**

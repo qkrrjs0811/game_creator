@@ -1,6 +1,7 @@
-import { formatElapsed, goalText, objectJosa, topicJosa } from './format'
+import { formatElapsed, goalText, objectJosa, topicJosa, weekChip } from './format'
 import { ACTIVITIES } from '../core/activities'
 import type { TodayGoal } from '../core/goal'
+import type { WeekGoal } from '../core/week'
 import type { ActivityId } from '../core/types'
 
 export interface HudView {
@@ -22,6 +23,8 @@ export interface HudView {
   saveFailed: boolean
   /** 모든 활동을 합친 오늘 목표 진행 */
   goal: TodayGoal
+  /** 이번 주(월~일) 도장 찍은 날 */
+  week: WeekGoal
 }
 
 /** 활동마다 타이머 카드에 쓰는 안내 */
@@ -102,8 +105,10 @@ export function createHud(
       <div class="goal" data-testid="goal">
         <span class="goal-text" data-testid="goal-text"></span>
         <span class="goal-bar"><i data-testid="goal-bar"></i></span>
+        <span class="goal-week" data-testid="goal-week"></span>
       </div>
       <div class="stamp" data-testid="stamp" role="status" hidden>🌟 오늘 도장 쾅!</div>
+      <div class="stamp week-stamp" data-testid="week-stamp" role="status" hidden>🏅 이번 주 목표 달성!</div>
       <div class="today" data-testid="today"></div>
       <div class="timer-label" data-testid="timer-label"></div>
       <div class="timer" data-testid="timer">00:00</div>
@@ -163,6 +168,17 @@ export function createHud(
   const goalBar = q('goal-bar')
   const stamp = q('stamp')
   let stampTimer: ReturnType<typeof setTimeout> | undefined
+  const weekStamp = q('week-stamp')
+  const goalWeek = q('goal-week')
+  let weekTimer: ReturnType<typeof setTimeout> | undefined
+  const popWeek = () => {
+    stamp.hidden = true
+    weekStamp.hidden = true
+    void weekStamp.offsetWidth
+    weekStamp.hidden = false
+    clearTimeout(weekTimer)
+    weekTimer = setTimeout(() => (weekStamp.hidden = true), 3500)
+  }
   const away = q('away')
   const hideAway = () => (away.hidden = true)
   q('away-close').addEventListener('click', hideAway)
@@ -213,14 +229,26 @@ export function createHud(
       goalLabel.textContent = goalText(v.goal)
       goalBar.style.width = `${Math.min(100, (v.goal.minutes / v.goal.goal) * 100)}%`
       goal.classList.toggle('done', v.goal.done)
+      goalWeek.textContent = weekChip(v.week)
+      goalWeek.classList.toggle('done', v.week.done)
     },
     /** 오늘 목표를 채운 순간 타이머 카드에 도장을 쾅 찍는다 */
     showStamp() {
+      weekStamp.hidden = true
       stamp.hidden = true
       void stamp.offsetWidth
       stamp.hidden = false
       clearTimeout(stampTimer)
       stampTimer = setTimeout(() => (stamp.hidden = true), 3500)
+    },
+    /**
+     * 이번 주 목표(5일)를 채운 순간 같은 자리에 주간 도장을 찍는다.
+     * 오늘 도장과 함께 채우면 오늘 도장을 잠깐 보여 준 뒤 바꿔 찍는다(둘이 겹치지 않게)
+     */
+    showWeekDone() {
+      clearTimeout(weekTimer)
+      if (stamp.hidden) popWeek()
+      else weekTimer = setTimeout(popWeek, 1800)
     },
     /** 하루 상한에 닿았다는 안내를 잠깐 띄운다 */
     showCapToast(activity: ActivityId) {

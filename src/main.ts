@@ -3,6 +3,7 @@ import './style.css'
 import { HomeScene, HOME_READY } from './game/HomeScene'
 import { computeProgress, dayKey, todayStatus } from './core/progression'
 import { goalStreak, stampCalendar, stampCount, todayGoal } from './core/goal'
+import { weekGoal } from './core/week'
 import { levelUpPoints, levelUpTo, restoreShownLevel } from './core/levelup'
 import { liveRecords, startSession, stopSession } from './core/session'
 import { backupFileName, exportBackup, importLosesProgress } from './core/backup'
@@ -145,7 +146,12 @@ const skills = createSkills(app, {
     const capped = (Object.keys(ACTIVITIES) as ActivityId[]).filter((id) => todayStatus(records, id, now).reached)
     const stats = statRows(p, capped)
     // 도장판은 홈의 오늘 목표처럼 켜 둔 타이머의 지금까지도 센다
-    const board = { calendar: stampCalendar(records, now), stamps: stampCount(records), streak: goalStreak(records, now) }
+    const board = {
+      calendar: stampCalendar(records, now),
+      stamps: stampCount(records),
+      streak: goalStreak(records, now),
+      week: weekGoal(records, now),
+    }
     return { points: remainingSkillPoints(p.level, save.skills), ranks: skillRanks(save.skills), stats, board }
   },
   onLearn(id) {
@@ -347,6 +353,19 @@ function rememberStampDay(day: string) {
   }
 }
 
+// 이번 주 목표 달성 연출도 주마다 한 번만(그 주 월요일 키를 남긴다)
+const WEEK_DONE_KEY = `${SAVE_KEY}:week-done`
+let weekDone = readKey(WEEK_DONE_KEY)
+
+function rememberWeekDone(week: string) {
+  weekDone = week
+  try {
+    kv.setItem(WEEK_DONE_KEY, week)
+  } catch {
+    // 못 남기면 다시 열 때 한 번 더 축하할 뿐이다
+  }
+}
+
 // 마지막으로 화면을 본 시각. 한동안 닫아 뒀다가 다시 열면 그 사이 늘어난 것을 한 번 보여 준다
 const LAST_SEEN_KEY = `${SAVE_KEY}:last-seen`
 const storedSeen = Number(readKey(LAST_SEEN_KEY))
@@ -419,6 +438,11 @@ function render() {
     rememberStampDay(dayKey(now))
     hud.showStamp()
   }
+  const week = weekGoal(records, now)
+  if (week.done && weekDone !== week.week) {
+    rememberWeekDone(week.week)
+    hud.showWeekDone()
+  }
   hud.render({
     level: p.level,
     expIntoLevel: p.expIntoLevel,
@@ -433,6 +457,7 @@ function render() {
     skillPoints: remainingSkillPoints(p.level, save.skills),
     saveFailed: !saveOk,
     goal,
+    week,
   })
   skills.refresh()
   homeScene()?.showHomeMonster(homeMonster(save.stageProgress))
