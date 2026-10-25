@@ -103,7 +103,8 @@ test('잠깐 닫았거나 늘어난 게 없으면 띄우지 않음', async ({ co
   page = await context.newPage()
   await page.clock.fastForward('09:00')
   await page.goto('./')
-  await expect(page.getByTestId('timer')).toHaveText(/^09:0\d$/)
+  // 시계가 실제로도 흘러 느린 실행에선 몇십 초 더 지나 있다 — 10분 안이면 된다
+  await expect(page.getByTestId('timer')).toHaveText(/^09:[0-5]\d$/)
   await page.clock.runFor(1500)
   await expect(page.getByTestId('away')).toBeHidden()
 
