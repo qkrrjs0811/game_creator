@@ -4,6 +4,7 @@ import { HomeScene, HOME_READY } from './game/HomeScene'
 import { computeProgress, dayKey, todayStatus } from './core/progression'
 import { stampCalendar, stampCount, todayGoal } from './core/goal'
 import { lastWeekLetter, letterNow, parseSeenLetter } from './core/letter'
+import { personalBests } from './core/best'
 import { parseSeenRests, restEarnedNow, restStreak, restedInMonth, restText } from './core/rest'
 import { weekGoal } from './core/week'
 import { missionStars, todayMission } from './core/mission'
@@ -205,6 +206,10 @@ const skills = createSkills(app, {
       letter: (() => {
         const l = lastWeekLetter(records, now)
         return l ? letterCard(l) : null
+      })(),
+      bests: (() => {
+        const b = personalBests(records, now)
+        return b.day ? b : null
       })(),
     }
   },

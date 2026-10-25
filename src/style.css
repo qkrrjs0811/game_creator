@@ -1415,6 +1415,53 @@ body {
 .hist-totals b { margin-left: auto; font-size: 13px; }
 .hist-dot { flex: none; width: 10px; height: 10px; border-radius: 50%; }
 .hist-best { margin: 0; font-size: 13px; font-weight: 700; color: var(--accent); }
+/* 내 최고 기록: 나와 겨루는 기록. 금빛 크림 카드 */
+.best-title { margin-top: 18px; }
+.best-card {
+  margin: 6px 0 10px;
+  padding: 12px 10px;
+  border-radius: 20px;
+  background: #fff9e6;
+  text-align: left;
+  box-shadow: 0 3px 0 #f5e2a8;
+}
+.best-cap { display: block; margin: 0 2px 6px; font-size: 12px; color: var(--ink-soft); }
+.best-session {
+  list-style: none;
+  margin: 0 0 10px;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+}
+.best-chip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: #fff;
+  font-size: 13px;
+  color: var(--ink);
+  white-space: nowrap;
+}
+.best-chip b { margin-left: auto; font-size: 13px; }
+.best-chip.none b { color: var(--ink-soft); font-weight: 400; }
+.best-rows { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.best-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: 16px;
+  background: #fff;
+  font-size: 13px;
+  color: var(--ink);
+}
+.best-icon { flex: none; font-size: 18px; }
+.best-name { display: flex; flex-direction: column; min-width: 0; }
+.best-name small { font-size: 12px; color: var(--ink-soft); }
+.best-row b { margin-left: auto; flex: none; font-size: 14px; color: var(--accent); }
 /* 업적: 현실 활동으로만 닿는 이정표 칸. 먼 것은 흐리게, 닿은 것은 노랗게 */
 .ach-title { margin-top: 18px; }
 .ach-list { list-style: none; margin: 6px 0 12px; padding: 0; display: flex; flex-direction: column; gap: 8px; }

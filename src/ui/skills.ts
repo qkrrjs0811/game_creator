@@ -7,6 +7,7 @@ import { ACTIVITIES } from '../core/activities'
 import type { ActivityId } from '../core/types'
 import type { AchievementKind, AchievementProgress } from '../core/achievements'
 import type { UpcomingReward } from '../core/rewards'
+import type { PersonalBests } from '../core/best'
 import { achievementValueText, bestDayText, dayDetail, farAchievementIds, formatMinutes, pageRangeText, weekDoneText, weekGoalText, weekTotalText, type letterCard } from './format'
 
 export interface SkillsView {
@@ -28,6 +29,8 @@ export interface SkillsView {
   rewards: UpcomingReward[]
   /** 도장판에서 다시 여는 지난주 편지 글자(letterCard). 지난주 기록이 없으면 null */
   letter: ReturnType<typeof letterCard> | null
+  /** 내 최고 기록(personalBests). 인정 분 기록이 없으면 null */
+  bests: PersonalBests | null
 }
 
 const WEEK = ['일', '월', '화', '수', '목', '금', '토']
@@ -147,6 +150,39 @@ export function rewardsHtml(list: UpcomingReward[]): string {
     .join('')
 }
 
+const BEST_ICONS: Record<ActivityId, string> = { exercise: '🏃', study: '✏️', reading: '📚', relax: '🍵' }
+
+/** 주 최고의 월~일 날짜(key = 그 주 월요일). 달이 넘어가면 달을 다시 적는다 */
+export function bestWeekRange(key: string): string {
+  const [y, m, d] = key.split('-').map(Number)
+  const end = new Date(y, m - 1, d + 6)
+  const m2 = end.getMonth() + 1
+  return m2 === m ? `${m}월 ${d}일~${end.getDate()}일` : `${m}월 ${d}일~${m2}월 ${end.getDate()}일`
+}
+
+const dateText = (key: string) => {
+  const [, m, d] = key.split('-').map(Number)
+  return `${m}월 ${d}일`
+}
+
+/** 내 최고 기록 칸: 활동별 한 번 최고(2칸 격자), 하루·주 최고와 날짜, 가장 길게 이어 온 날 */
+export function bestsHtml(b: PersonalBests): string {
+  const session = ACTIVITY_IDS.map(
+    (id) =>
+      `<li class="best-chip${b.session[id] > 0 ? '' : ' none'}" data-testid="best-session-${id}"><span aria-hidden="true">${BEST_ICONS[id]}</span>${ACTIVITIES[id].label} <b>${b.session[id] > 0 ? formatMinutes(b.session[id]) : '아직'}</b></li>`,
+  ).join('')
+  const row = (testid: string, icon: string, name: string, when: string, value: string) =>
+    `<li class="best-row" data-testid="${testid}"><span class="best-icon" aria-hidden="true">${icon}</span><span class="best-name">${name}${when ? `<small>${when}</small>` : ''}</span><b>${value}</b></li>`
+  const rows = [
+    b.day && row('best-day', '📅', '하루 최고', dateText(b.day.key), formatMinutes(b.day.minutes)),
+    b.week && row('best-week', '🗓️', '한 주 최고', bestWeekRange(b.week.key), formatMinutes(b.week.minutes)),
+    row('best-streak', '🔥', '가장 길게 이어 온 날', '', `${b.streak}일`),
+  ]
+    .filter(Boolean)
+    .join('')
+  return `<small class="best-cap">한 번에 가장 길게</small><ul class="best-session">${session}</ul><ul class="best-rows">${rows}</ul>`
+}
+
 /** 받침이 있으면 '을', 없으면 '를' */
 export function objectParticle(word: string): string {
   const code = word.charCodeAt(word.length - 1) - 0xac00
@@ -221,6 +257,10 @@ export function createSkills(root: HTMLElement, h: { view(): SkillsView; onLearn
           <p class="hist-best" data-testid="hist-best"></p>
         </div>
       </div>
+      <div class="bests" data-testid="bests" hidden>
+        <h3 class="sheet-sub best-title">🥇 내 최고 기록</h3>
+        <div class="best-card" data-testid="best-card"></div>
+      </div>
       <h3 class="sheet-sub ach-title" data-testid="ach-title"></h3>
       <p class="ach-hint" data-testid="ach-hint" hidden>🏅 칭호를 하나 골라 이름 옆에 달아요. 다시 누르면 떼요</p>
       <ul class="ach-list" data-testid="achievements"></ul>
@@ -243,6 +283,7 @@ export function createSkills(root: HTMLElement, h: { view(): SkillsView; onLearn
   let lastAch = ''
   let lastRewards = ''
   let lastLetter = ''
+  let lastBests = ''
   /** 도장판에서 지난주 편지를 펼쳤는지 */
   let letterOpen = false
   /** 내 기록에서 보고 있는 7일 쪽과 누른 날 */
@@ -343,6 +384,12 @@ export function createSkills(root: HTMLElement, h: { view(): SkillsView; onLearn
         lastTotals = totals
         q('hist-totals').innerHTML = totals
       }
+    }
+    const bests = v.bests ? bestsHtml(v.bests) : ''
+    q('bests').hidden = bests === ''
+    if (bests !== lastBests) {
+      lastBests = bests
+      q('best-card').innerHTML = bests
     }
     const done = v.achievements.filter((a) => a.done).length
     q('ach-title').textContent = `🏆 업적 ${done} / ${v.achievements.length}`
