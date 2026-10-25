@@ -1,7 +1,7 @@
 import { stampCount } from './goal'
 import { missionStars } from './mission'
 import { activityTotals } from './history'
-import type { ActivityId, SaveData } from './types'
+import type { ActivityId, ActivityRecord, SaveData } from './types'
 import { doneWeeks } from './week'
 
 export type CosmeticKind = 'hat' | 'color' | 'prop'
@@ -83,7 +83,36 @@ export const PROP_COSMETICS: Cosmetic[] = [
   ...props('relax', [['찻잔', '🍵'], ['쿠션', '🛋️'], ['화분', '🪴']]),
 ]
 
-const HAT_SHAPES: { shape: HatShape; name: string; icon: string }[] = [
+/** 기록으로 얻은 소품 id(목록 순서). 활동별 누적 인정 분(상한 안)만 센다 */
+export function ownedPropIds(records: ActivityRecord[]): string[] {
+  const totals = activityTotals(records)
+  return PROP_COSMETICS.filter((c) => totals[c.activity!] >= c.minutes!).map((c) => c.id)
+}
+
+/** 알린 소품 id 보조 키 값. 없거나 깨졌으면 null(처음 여는 창으로 본다) */
+export function parseSeenProps(raw: string | null): string[] | null {
+  if (raw === null) return null
+  try {
+    const list: unknown = JSON.parse(raw)
+    return Array.isArray(list) ? list.filter((id): id is string => typeof id === 'string') : null
+  } catch {
+    return null
+  }
+}
+
+/**
+ * 새로 얻은 소품을 한 번만 알린다. 처음 여는 창(본 소품 없음)은 가진 소품을 기억만 한다.
+ * remember 가 null 이 아니면 그 목록을 보조 키에 남긴다(본 목록은 줄이지 않는다)
+ */
+export function propsNow(owned: string[], seen: string[] | null): { fresh: Cosmetic[]; remember: string[] | null } {
+  if (seen === null) return { fresh: [], remember: owned }
+  const known = new Set(seen)
+  const fresh = owned.filter((id) => !known.has(id))
+  if (fresh.length === 0) return { fresh: [], remember: null }
+  return { fresh: fresh.map((id) => cosmeticById(id)!), remember: [...seen, ...fresh] }
+}
+
+const HAT_SHAPES:{ shape: HatShape; name: string; icon: string }[] = [
   { shape: 'cone', name: '고깔모자', icon: '🥳' },
   { shape: 'beret', name: '베레모', icon: '🎨' },
   { shape: 'flower', name: '꽃핀', icon: '🌼' },

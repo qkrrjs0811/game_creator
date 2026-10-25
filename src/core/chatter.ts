@@ -45,6 +45,7 @@ const REWARD_TAIL: Record<RewardKind, string> = {
   week: '새 색!',
   chapter: '새 모자!',
   achievement: '새 칭호!',
+  prop: '새 소품!',
   growth: '쑥 자라!',
 }
 

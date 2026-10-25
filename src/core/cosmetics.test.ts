@@ -9,6 +9,9 @@ import {
   cosmeticById,
   cosmeticCatalog,
   ownedCosmetics,
+  ownedPropIds,
+  parseSeenProps,
+  propsNow,
   stageReward,
   toggleWear,
   wornCosmetics,
@@ -426,5 +429,36 @@ describe('소품 놓기', () => {
   test('놓기는 기록·스테이지·가진 꾸미기를 바꾸지 않음', () => {
     const next = toggleWear(save, 'prop-study-1')
     expect({ ...next, worn: save.worn }).toEqual(save)
+  })
+})
+
+describe('새 소품 알림', () => {
+  test('보조 키 값을 읽음. 없거나 깨졌으면 null, 글자 아닌 것은 건너뜀', () => {
+    expect(parseSeenProps(null)).toBeNull()
+    expect(parseSeenProps('{')).toBeNull()
+    expect(parseSeenProps('"a"')).toBeNull()
+    expect(parseSeenProps('["prop-study-1", 3]')).toEqual(['prop-study-1'])
+  })
+
+  test('처음 여는 창(본 소품 없음)은 가진 소품을 기억만 함', () => {
+    const r = propsNow(['prop-study-1', 'prop-relax-1'], null)
+    expect(r.fresh).toEqual([])
+    expect(r.remember).toEqual(['prop-study-1', 'prop-relax-1'])
+  })
+
+  test('새로 얻은 소품만 알리고, 본 것과 합쳐 기억함', () => {
+    const r = propsNow(['prop-study-1', 'prop-relax-1'], ['prop-study-1'])
+    expect(r.fresh.map((c) => c.name)).toEqual(['찻잔'])
+    expect(r.remember).toEqual(['prop-study-1', 'prop-relax-1'])
+  })
+
+  test('새 것이 없으면 아무것도 안 함. 본 목록에만 있는 것(기록이 줄어든 백업)은 지우지 않음', () => {
+    expect(propsNow(['prop-study-1'], ['prop-study-1', 'prop-study-5'])).toEqual({ fresh: [], remember: null })
+    expect(propsNow(['prop-study-1', 'prop-relax-1'], ['prop-study-5', 'prop-study-1']).remember).toEqual(['prop-study-5', 'prop-study-1', 'prop-relax-1'])
+  })
+
+  test('가진 소품 id는 기록의 활동별 누적 인정 분으로 정함', () => {
+    expect(ownedPropIds([])).toEqual([])
+    expect(ownedPropIds([...daysOf('study', 3, 120), ...daysOf('relax', 2, 30)])).toEqual(['prop-study-1', 'prop-study-5', 'prop-relax-1'])
   })
 })

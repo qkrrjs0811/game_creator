@@ -1,14 +1,15 @@
 import { ACTIVITIES } from './activities'
 import { achievementProgress, ACHIEVEMENTS, type Achievement } from './achievements'
 import { stageMinutesToWin } from './coach'
-import { chapterCosmetic, MISSION_COSMETICS, STAMP_COSMETICS, WEEK_COSMETICS, type Cosmetic } from './cosmetics'
+import { chapterCosmetic, MISSION_COSMETICS, PROP_COSMETICS, STAMP_COSMETICS, WEEK_COSMETICS, type Cosmetic } from './cosmetics'
 import { STAGES_PER_CHAPTER } from './endless'
 import { stampCount } from './goal'
+import { activityTotals } from './history'
 import { GROWTH_STAGES, growthStage } from './look'
 import { missionStars } from './mission'
 import { computeProgress, EXP_PER_MINUTE, expToNext } from './progression'
 import { restStreak } from './rest'
-import type { ActivityRecord } from './types'
+import type { ActivityId, ActivityRecord } from './types'
 import { doneWeeks } from './week'
 
 /**
@@ -16,7 +17,7 @@ import { doneWeeks } from './week'
  * 기록·깬 스테이지 수에서 계산만 하고 저장 형식·경험치·능력치는 바꾸지 않는다.
  */
 
-export type RewardKind = 'stamp' | 'mission' | 'week' | 'chapter' | 'achievement' | 'growth'
+export type RewardKind = 'stamp' | 'mission' | 'week' | 'chapter' | 'achievement' | 'prop' | 'growth'
 
 export interface UpcomingReward {
   kind: RewardKind
@@ -87,6 +88,32 @@ function nearestAchievement(records: ActivityRecord[], now: number): UpcomingRew
   return best
 }
 
+/** 활동마다 다음 소품 중 가장 가까운 하나. 진척이 같으면 활동 순서(운동·공부·독서·휴식). 다 받았으면 null */
+function nearestProp(records: ActivityRecord[]): UpcomingReward | null {
+  const totals = activityTotals(records)
+  let best: UpcomingReward | null = null
+  for (const id of Object.keys(ACTIVITIES) as ActivityId[]) {
+    const list = PROP_COSMETICS.filter((c) => c.activity === id)
+    const i = list.findIndex((c) => c.minutes! > totals[id])
+    if (i < 0) continue
+    const c = list[i]
+    const value = totals[id]
+    const goal = c.minutes!
+    const base = i > 0 ? list[i - 1].minutes! : 0
+    const r: UpcomingReward = {
+      kind: 'prop',
+      icon: c.icon,
+      name: c.name,
+      value,
+      goal,
+      need: `${ACTIVITIES[id].label} ${leftMinutesText(goal - value)} 더`,
+      ratio: progressRatio(value, base, goal),
+    }
+    if (!best || r.ratio > best.ratio) best = r
+  }
+  return best
+}
+
 /** 레벨 1에서 level 이 되는 데 드는 경험치 */
 const expAt = (level: number) => {
   let sum = 0
@@ -132,6 +159,7 @@ export function upcomingRewards({ records, stageProgress, skills, now }: RewardI
     nextTier('week', WEEK_COSMETICS, 'weeks', doneWeeks(records), (left) => `주간 목표 ${left}번 더`),
     nextChapterHat(records, stageProgress, skills),
     nearestAchievement(records, now),
+    nearestProp(records),
     nextGrowth(records),
   ].filter((r): r is UpcomingReward => r !== null)
   return list.sort((a, b) => b.ratio - a.ratio)

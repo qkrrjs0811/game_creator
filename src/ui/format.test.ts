@@ -1,6 +1,6 @@
 import { test, expect } from 'vitest'
 import { WINNABLE_MAX } from '../core/coach'
-import { autoRunCard, awayAdventure, awayCard, formatElapsed, formatMinutes, goalText, objectJosa, weekChip, weekDoneText, weekGoalText, sessionSummary, topicJosa, weekTotalText, bestDayText, dayDetail, pageRangeText, dexShadowText, dexNewText, missionChip, achievementValueText, farAchievementIds, achievementToast, focusText, focusChipLabel, focusDoneText, letterCard, bestBrokenText } from './format'
+import { autoRunCard, awayAdventure, awayCard, formatElapsed, formatMinutes, goalText, objectJosa, weekChip, weekDoneText, weekGoalText, sessionSummary, topicJosa, weekTotalText, bestDayText, dayDetail, pageRangeText, dexShadowText, dexNewText, missionChip, achievementValueText, farAchievementIds, achievementToast, focusText, focusChipLabel, focusDoneText, letterCard, bestBrokenText, newPropText } from './format'
 import { ACHIEVEMENTS, achievementProgress } from '../core/achievements'
 import { AUTO_RUN_MAX } from '../core/autorun'
 import type { Cosmetic } from '../core/cosmetics'
@@ -312,4 +312,11 @@ test('최고 기록 갱신 배지는 하루 → 주 → 활동 한 번 → 이�
   expect(bestBrokenText(['streak', 'study'], v)).toBe('🥇 최고 기록 갱신! · 공부 한 번 40분')
   expect(bestBrokenText(['streak'], v)).toBe('🥇 최고 기록 갱신! · 12일 이어 옴')
   expect(bestBrokenText([], v)).toBe('🥇 최고 기록 갱신!')
+})
+
+test('새 소품 배지는 이름, 여럿이면 외 N개', () => {
+  const c = (name: string) => ({ id: name, name, icon: '✏️', kind: 'prop' }) as Cosmetic
+  expect(newPropText([])).toBeNull()
+  expect(newPropText([c('연필꽂이')])).toBe('🎁 새 소품: 연필꽂이')
+  expect(newPropText([c('연필꽂이'), c('찻잔'), c('아령')])).toBe('🎁 새 소품: 연필꽂이 외 2개')
 })

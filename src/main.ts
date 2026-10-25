@@ -29,11 +29,11 @@ import { createBattleBar } from './ui/battle'
 import { enemyDamagePercent, playerFighter, simulateBattle } from './core/battle'
 import { AUTO_RUN_GAP, autoStepDelay, battleTimeline, stepDelay } from './core/replay'
 import { applyBattleResult, type BattleOutcome } from './core/result'
-import { cosmeticCatalog, ownedCosmetics, toggleWear, wornCosmetics } from './core/cosmetics'
+import { cosmeticCatalog, ownedCosmetics, ownedPropIds, parseSeenProps, propsNow, toggleWear, wornCosmetics } from './core/cosmetics'
 import { createCosmetics } from './ui/cosmetics'
 import { statRows } from './core/stats'
 import { nextStageAdvice, stageMinutesToWin, winnableStages } from './core/coach'
-import { achievementToast, autoRunCard, awayAdventure, awayCard, bestBrokenText, dexNewText, formatMinutes, letterCard, sessionSummary } from './ui/format'
+import { achievementToast, autoRunCard, awayAdventure, awayCard, bestBrokenText, dexNewText, formatMinutes, letterCard, newPropText, sessionSummary } from './ui/format'
 import { autoRun } from './core/autorun'
 import { awaySummary, shouldShowAway } from './core/away'
 import { sessionGain } from './core/gain'
@@ -167,6 +167,8 @@ const settings = createSettings(app, {
     if (letter) writeKey(SEEN_LETTER_KEY, letter.week)
     // 백업으로 들어온 최고 기록도 갱신으로 알리지 않고 기억만 한다
     writeKey(SEEN_BESTS_KEY, JSON.stringify(bestValues(personalBests(save.records, Date.now()))))
+    // 백업으로 들어온 소품도 새로 얻은 것으로 알리지 않고 기억만 한다
+    rememberProps(ownedPropIds(save.records))
     render()
   },
 })
@@ -550,6 +552,22 @@ function checkAchievements(records: ActivityRecord[]) {
   if (toast) hud.showAchievement(toast)
 }
 
+// 이미 알린 소품 id. 처음 여는 창이면 지금 가진 소품을 기억만 한다
+const SEEN_PROPS_KEY = `${SAVE_KEY}:seen-props`
+
+function rememberProps(owned: string[]) {
+  const seen = parseSeenProps(readKey(SEEN_PROPS_KEY)) ?? []
+  writeKey(SEEN_PROPS_KEY, JSON.stringify([...new Set([...seen, ...owned])]))
+}
+
+/** 활동 시간으로 새 소품을 얻었으면 배지를 한 번 띄운다(다른 창이 먼저 알렸으면 건너뛰게 저장소에서 읽는다) */
+function checkProps(records: ActivityRecord[]) {
+  const r = propsNow(ownedPropIds(records), parseSeenProps(readKey(SEEN_PROPS_KEY)))
+  if (r.remember !== null) writeKey(SEEN_PROPS_KEY, JSON.stringify(r.remember))
+  const text = newPropText(r.fresh)
+  if (text) hud.showNewProp(text)
+}
+
 // 마지막으로 화면을 본 시각. 한동안 닫아 뒀다가 다시 열면 그 사이 늘어난 것을 한 번 보여 준다
 const LAST_SEEN_KEY = `${SAVE_KEY}:last-seen`
 const storedSeen = Number(readKey(LAST_SEEN_KEY))
@@ -655,6 +673,7 @@ function render() {
   if (restEarned.show) hud.showRestEarned()
   checkAchievements(records)
   checkBests(now)
+  checkProps(records)
   const focus = save.active
     ? focusProgress(focusTargetFor(parseFocusGoal(readKey(FOCUS_GOAL_KEY)), save.active), save.active.startedAt, now)
     : null

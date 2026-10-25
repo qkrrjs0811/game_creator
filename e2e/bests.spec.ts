@@ -93,8 +93,8 @@ test('타이머를 마쳐 하루 최고를 넘으면 배지를 한 번, 새로�
   // 켜 둔 동안은 아직 알리지 않는다
   await expect(best).toBeHidden()
   await page.getByTestId('toggle').click()
-  // 같은 자리에 자람 배지 등이 먼저 떠 있으면 그게 사라진 뒤에 찍힌다
-  for (let i = 0; i < 30 && (await best.isHidden()); i++) await page.clock.runFor(300)
+  // 같은 자리에 자람 배지 등이 먼저 떠 있으면 그게 사라진 뒤에 찍힌다(운동 누적 1시간이 넘어 새 소품 배지도 앞에 선다)
+  for (let i = 0; i < 60 && (await best.isHidden()); i++) await page.clock.runFor(300)
   await expect(best).toBeVisible()
   await expect(page.locator('.stamp:not([hidden])')).toHaveCount(1)
   await expect(best).toHaveText('🥇 최고 기록 갱신! · 하루 45분')

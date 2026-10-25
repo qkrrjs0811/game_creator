@@ -13,6 +13,7 @@ import { ACHIEVEMENTS, type AchievementProgress } from '../core/achievements'
 import type { FocusProgress } from '../core/focus'
 import { LETTER_ICONS, type WeekLetter } from '../core/letter'
 import type { BestKind, SeenBests } from '../core/best'
+import type { Cosmetic } from '../core/cosmetics'
 
 const pad =(n: number) => String(n).padStart(2, '0')
 
@@ -46,6 +47,12 @@ export function dexShadowText(toWin: number | null): string {
 /** 결과 카드에 다는 도감 알림. 새로 모은 몬스터가 없으면 null(숨김) */
 export function dexNewText(count: number): string | null {
   return count > 0 ? `📚 도감에 새 몬스터 +${count}` : null
+}
+
+/** 새로 얻은 소품 배지 글. 여럿이면 첫 소품 외 N개, 없으면 null */
+export function newPropText(fresh: Cosmetic[]): string | null {
+  if (fresh.length === 0) return null
+  return fresh.length === 1 ? `🎁 새 소품: ${fresh[0].name}` : `🎁 새 소품: ${fresh[0].name} 외 ${fresh.length - 1}개`
 }
 
 function hasBatchim(word: string): boolean {

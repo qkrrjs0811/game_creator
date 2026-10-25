@@ -601,6 +601,8 @@ body {
 .stamp.rest-stamp { background: #6cbbe8; box-shadow: 0 3px 0 #4a9bcb; }
 /* 최고 기록 갱신 배지는 나 창 최고 기록 칸처럼 금빛 */
 .stamp.best-stamp { background: #f5b83d; box-shadow: 0 3px 0 #d39722; white-space: nowrap; }
+/* 새 소품 배지는 선물 상자 같은 딸기 분홍 */
+.stamp.prop-stamp { background: #f78fb3; box-shadow: 0 3px 0 #d96e93; white-space: nowrap; }
 /* 나 창 위쪽 능력치 칸: 운동으로 오른 힘·체력, 공부로 오른 지능, 독서로 오른 집중(2 × 2) */
 .stat-list { list-style: none; margin: 4px 0 16px; padding: 0; display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
 .stat {
