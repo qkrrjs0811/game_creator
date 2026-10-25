@@ -56,8 +56,6 @@ test('전투 중에는 도전한 스테이지의 장 배경, 끝나면 다시 �
 })
 
 test('장마다 장면 뒤 장식이 다르게 그려짐(장식·땅 띠)', async ({ page }) => {
-  // 장 8개를 하나씩 다시 열어 보므로 느린 실행에서는 기본 30초가 모자라다
-  test.setTimeout(90_000)
   const scene = page.getByTestId('scene')
   const decors = ['clouds', 'hills', 'stars', 'bubbles', 'flowers', 'sun', 'snow', 'leaves']
   for (let chapter = 1; chapter <= 8; chapter++) {
