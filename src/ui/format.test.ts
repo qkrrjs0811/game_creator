@@ -22,24 +22,30 @@ test('분은 한 시간 미만이면 N분, 이상이면 N시간 M분', () => {
 })
 
 test('운동 마침 요약은 한 시간·얻은 경험치·오른 능력치를 보여 줌', () => {
-  const g = { minutes: 32, exp: 320, stats: { str: 3, vit: 3, int: 0 } }
+  const g = { minutes: 32, exp: 320, stats: { str: 3, vit: 3, int: 0, focus: 0 } }
   expect(sessionSummary(g, false)).toEqual({ title: '🎉 운동 32분 했어요!', detail: 'EXP +320 · 💪 힘 +3 · ❤️ 체력 +3' })
-  expect(sessionSummary({ ...g, exp: 40, stats: { str: 0, vit: 0, int: 0 } }, false).detail).toBe('EXP +40')
+  expect(sessionSummary({ ...g, exp: 40, stats: { str: 0, vit: 0, int: 0, focus: 0 } }, false).detail).toBe('EXP +40')
 })
 
 test('공부 마침 요약은 공부 이름과 오른 지능을 보여 줌', () => {
-  const g = { minutes: 25, exp: 250, stats: { str: 0, vit: 0, int: 5 } }
+  const g = { minutes: 25, exp: 250, stats: { str: 0, vit: 0, int: 5, focus: 0 } }
   expect(sessionSummary(g, false, 'study')).toEqual({ title: '🎉 공부 25분 했어요!', detail: 'EXP +250 · 🧠 지능 +5' })
   expect(sessionSummary({ ...g, minutes: 0, exp: 0 }, false, 'study').title).toBe('🎉 공부를 마쳤어요!')
 })
 
+test('독서 마침 요약은 독서 이름과 오른 집중을 보여 줌', () => {
+  const g = { minutes: 15, exp: 150, stats: { str: 0, vit: 0, int: 0, focus: 3 } }
+  expect(sessionSummary(g, false, 'reading')).toEqual({ title: '🎉 독서 15분 했어요!', detail: 'EXP +150 · 🎯 집중 +3' })
+  expect(sessionSummary({ ...g, minutes: 0, exp: 0 }, false, 'reading').title).toBe('🎉 독서를 마쳤어요!')
+})
+
 test('받침에 맞춰 을/를, 은/는을 고른다', () => {
-  expect(['운동', '공부'].map(objectJosa)).toEqual(['을', '를'])
-  expect(['운동', '공부'].map(topicJosa)).toEqual(['은', '는'])
+  expect(['운동', '공부', '독서'].map(objectJosa)).toEqual(['을', '를', '를'])
+  expect(['운동', '공부', '독서'].map(topicJosa)).toEqual(['은', '는', '는'])
 })
 
 test('경험치를 못 얻었으면 까닭을 알려 줌', () => {
-  const none = { str: 0, vit: 0, int: 0 }
+  const none = { str: 0, vit: 0, int: 0, focus: 0 }
   expect(sessionSummary({ minutes: 20, exp: 0, stats: none }, true)).toEqual({
     title: '🎉 운동 20분 했어요!',
     detail: '상한을 채워서 경험치는 내일 쌓여요',

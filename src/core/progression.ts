@@ -66,7 +66,7 @@ export function todayStatus(records: ActivityRecord[], activity: ActivityId, now
 /** 활동별 인정 분으로 정해지는 능력치. 없는 활동은 0분으로 본다 */
 export function statsFromMinutes(minutes: Partial<Record<ActivityId, number>>): Record<StatId, number> {
   const ids = Object.keys(ACTIVITIES) as ActivityId[]
-  const stats: Record<StatId, number> = { str: BASE_STAT, vit: BASE_STAT, int: BASE_STAT }
+  const stats: Record<StatId, number> = { str: BASE_STAT, vit: BASE_STAT, int: BASE_STAT, focus: BASE_STAT }
   for (const id of ids) {
     const gained = Math.floor((minutes[id] ?? 0) / ACTIVITIES[id].minutesPerStat)
     for (const stat of ACTIVITIES[id].stats) stats[stat] += gained

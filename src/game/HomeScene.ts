@@ -101,14 +101,15 @@ const BODY_COLORS: Record<string, [number, number]> = {
   'color-cotton': [0xffc6de, 0xf5a3c6],
 }
 const CONFETTI =[0xff8a5b, 0xffd36b, 0x9be3c4, 0xa8d4ff, 0xffa8c8, 0xc9a7ff]
-/** 말랑이 기분: 쉬는 중, 같이 운동 중, 같이 공부 중, 오늘 상한을 채워 쉬어도 되는 중 */
-export type Mood = 'rest' | 'exercise' | 'study' | 'full'
+/** 말랑이 기분: 쉬는 중, 같이 운동·공부·독서 중, 오늘 상한을 채워 쉬어도 되는 중 */
+export type Mood = 'rest' | 'exercise' | 'study' | 'reading' | 'full'
 /** 장면이 다 준비됐을 때 game.events로 보내는 신호 */
 export const HOME_READY = 'home-ready'
 const BUBBLES: Record<Mood, string> = {
   rest: '💪 오늘도 같이 크는 중!',
   exercise: '🔥 말랑이도 같이 운동 중!',
   study: '📖 말랑이도 같이 공부 중!',
+  reading: '📚 말랑이도 같이 책 읽는 중!',
   full: '😊 오늘은 충분해요! 쉬어도 돼요',
 }
 
@@ -452,13 +453,20 @@ export class HomeScene extends Phaser.Scene {
     this.tweens.add({ targets: this.monsterBody, y: -6, duration: 1200, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' })
   }
 
-  /** 쉬는 중(상한을 채운 뒤도)에는 느리게 숨 쉬고, 운동 중에는 빠르게 꾹꾹, 공부 중에는 갸웃갸웃 고개를 기울인다 */
+  /**
+   * 쉬는 중(상한을 채운 뒤도)에는 느리게 숨 쉬고, 운동 중에는 빠르게 꾹꾹, 공부 중에는 갸웃갸웃 고개를 기울이고,
+   * 독서 중에는 책장을 넘기듯 한쪽으로 천천히 숙였다 돌아온다
+   */
   private moveMascot() {
     this.breathe?.stop()
     this.mascot.setScale(1).setAngle(0)
     if (this.mood === 'study') {
       this.mascot.setAngle(-6)
       this.breathe = this.tweens.add({ targets: this.mascot, angle: 6, duration: 1100, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' })
+      return
+    }
+    if (this.mood === 'reading') {
+      this.breathe = this.tweens.add({ targets: this.mascot, angle: 5, scaleY: 0.96, duration: 1600, yoyo: true, hold: 500, repeat: -1, ease: 'Sine.easeInOut' })
       return
     }
     this.breathe = this.mood === 'exercise'

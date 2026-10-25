@@ -2,14 +2,14 @@ import { describe, test, expect } from 'vitest'
 import { MAX_ROUNDS, enemyDamagePercent, playerFighter, simulateBattle, type Fighter } from './battle'
 import { BASE_STAT } from './progression'
 
-const base = { str: BASE_STAT, vit: BASE_STAT, int: BASE_STAT }
+const base = { str: BASE_STAT, vit: BASE_STAT, int: BASE_STAT, focus: BASE_STAT }
 const slime: Fighter = { name: '슬라임', hp: 20, atk: 4, def: 0, spd: 3, dodge: 0 }
 const giant: Fighter = { name: '거인', hp: 999, atk: 99, def: 99, spd: 99, dodge: 0 }
 
 describe('playerFighter', () => {
   test('힘은 공격, 체력은 HP와 방어가 된다', () => {
     const weak = playerFighter(base, [])
-    const strong = playerFighter({ str: 15, vit: 15, int: 5 }, [])
+    const strong = playerFighter({ str: 15, vit: 15, int: 5, focus: 5 }, [])
     expect(strong.atk).toBeGreaterThan(weak.atk)
     expect(strong.hp).toBeGreaterThan(weak.hp)
     expect(strong.def).toBeGreaterThan(weak.def)
@@ -36,7 +36,7 @@ describe('playerFighter', () => {
 
 describe('지능의 전투 역할', () => {
   test('기본값 지능(5)은 효과가 없어 운동만 한 말랑이는 예전과 같다', () => {
-    const me = playerFighter({ str: 23, vit: 23, int: 5 }, ['punch', 'tough', 'quick', 'punch'])
+    const me = playerFighter({ str: 23, vit: 23, int: 5, focus: 5 }, ['punch', 'tough', 'quick', 'punch'])
     expect(me).toEqual({ name: '말랑이', hp: 112, atk: 27, def: 13, spd: 7, dodge: 0.05, crit: 0 })
   })
 
@@ -73,10 +73,43 @@ describe('지능의 전투 역할', () => {
   test('지능이 높으면 같은 몬스터를 더 많이 깎는다', () => {
     const wall: Fighter = { ...giant, hp: 2000, atk: 40, def: 5, spd: 1 }
     const left = (int: number) => {
-      const me = playerFighter({ str: 30, vit: 30, int }, ['punch', 'tough'])
+      const me = playerFighter({ str: 30, vit: 30, int, focus: 5 }, ['punch', 'tough'])
       return Array.from({ length: 20 }, (_, i) => simulateBattle(me, wall, i + 1).enemyHp).reduce((a, b) => a + b, 0)
     }
     expect(left(45)).toBeLessThan(left(5))
+  })
+})
+
+describe('집중의 전투 역할', () => {
+  test('기본값 집중(5)은 효과가 없어 예전 기록은 그대로다', () => {
+    const me = playerFighter({ str: 23, vit: 23, int: 5, focus: 5 }, ['punch', 'tough', 'quick', 'punch'])
+    expect(me).toEqual({ name: '말랑이', hp: 112, atk: 27, def: 13, spd: 7, dodge: 0.05, crit: 0 })
+  })
+
+  test('집중이 오르면 회피가 1마다 1% 오르고, 집중 회피는 20%까지다', () => {
+    expect(playerFighter({ ...base, focus: 15 }, []).dodge).toBeCloseTo(0.1)
+    expect(playerFighter({ ...base, focus: 500 }, []).dodge).toBeCloseTo(0.2)
+    // 발 스킬 회피와 더하고, 모두 합쳐도 절반을 넘지 않는다
+    expect(playerFighter({ ...base, focus: 15 }, ['quick']).dodge).toBeCloseTo(0.15)
+    expect(playerFighter({ ...base, focus: 500 }, Array(50).fill('quick')).dodge).toBe(0.5)
+  })
+
+  test('집중은 끈기: 넘은 2마다 공격 +1, 4마다 방어 +1(올림), 1마다 HP +2이고 치명타는 없다', () => {
+    const plain = playerFighter(base, ['punch', 'tough'])
+    const calm = playerFighter({ ...base, focus: 15 }, ['punch', 'tough'])
+    expect(calm.atk).toBe(plain.atk + 5)
+    expect(calm.def).toBe(plain.def + 3)
+    expect(calm.hp).toBe(plain.hp + 20)
+    expect(calm.crit).toBe(0)
+  })
+
+  test('집중이 높으면 같은 몬스터에게 덜 맞는다', () => {
+    const wall: Fighter = { ...giant, hp: 2000, atk: 40, def: 5, spd: 1 }
+    const hits = (focus: number) => {
+      const me = playerFighter({ str: 30, vit: 30, int: 5, focus }, ['punch', 'tough'])
+      return Array.from({ length: 20 }, (_, i) => simulateBattle(me, wall, i + 1).log.filter((e) => e.actor === 'enemy' && e.kind === 'miss').length).reduce((a, b) => a + b, 0)
+    }
+    expect(hits(25)).toBeGreaterThan(hits(5))
   })
 })
 
@@ -87,7 +120,7 @@ describe('simulateBattle', () => {
   })
 
   test('훨씬 강하면 이기고, 훨씬 약하면 진다', () => {
-    const me = playerFighter({ str: 30, vit: 30, int: 5 }, [])
+    const me = playerFighter({ str: 30, vit: 30, int: 5, focus: 5 }, [])
     expect(simulateBattle(me, slime, 1).win).toBe(true)
     expect(simulateBattle(playerFighter(base, []), giant, 1).win).toBe(false)
   })
@@ -155,7 +188,7 @@ describe('enemyDamagePercent', () => {
   test('강해질수록 같은 몬스터를 더 많이 깎는다', () => {
     const tough: Fighter = { ...giant, atk: 30, def: 0 }
     const weak = enemyDamagePercent(tough, simulateBattle(playerFighter(base, []), tough, 7))
-    const strong = enemyDamagePercent(tough, simulateBattle(playerFighter({ str: 40, vit: 40, int: 5 }, []), tough, 7))
+    const strong = enemyDamagePercent(tough, simulateBattle(playerFighter({ str: 40, vit: 40, int: 5, focus: 5 }, []), tough, 7))
     expect(strong).toBeGreaterThan(weak)
   })
 })

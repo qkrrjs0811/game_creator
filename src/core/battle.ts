@@ -37,6 +37,8 @@ export interface BattleResult {
 export const MAX_ROUNDS = 30
 const MAX_DODGE = 0.5
 const MAX_CRIT = 0.3
+/** 집중으로 얻는 회피의 끝. 발 스킬 회피와 더해도 MAX_DODGE 를 넘지 않는다 */
+const MAX_FOCUS_DODGE = 0.2
 /** 치명타는 이만큼 곱해 아프다 */
 const CRIT_MULTIPLIER = 1.5
 
@@ -45,18 +47,22 @@ const CRIT_MULTIPLIER = 1.5
  * 지능 → 치명타(1마다 1%)와 요령(2마다 공격 +1, 4마다 방어 +1, 1마다 HP +2: 두루 조금씩).
  * 공부 10분(지능 +2)이 운동 10분(힘·체력 +1)만큼 되게 맞췄고, 치명타만큼 조금 더 낫다.
  * 스킬 단계와 곱하지 않아 오래 공부해도 운동보다 훨씬 앞서 가지 않는다.
- * 지능은 기본값을 넘은 만큼만 쳐서 운동만 한 말랑이는 예전 값 그대로다
+ * 집중(독서)은 요령 대신 끈기로 같은 만큼 두루 오르고, 치명타 대신 회피(1마다 1%, 집중으로는 최대 20%)가 붙는다.
+ * 지능·집중은 기본값을 넘은 만큼만 쳐서 운동만 한 말랑이는 예전 값 그대로다
  */
 export function playerFighter(stats: Record<StatId, number>, skills: string[]): Fighter {
   const r = skillRanks(skills)
   const smart = Math.max(0, stats.int - BASE_STAT)
+  const calm = Math.max(0, stats.focus - BASE_STAT)
+  // 요령과 끈기는 같은 규칙이라 합쳐서 센다(나눠 내림하면 섞을 때 손해를 본다)
+  const knack = smart + calm
   return {
     name: '말랑이',
-    hp: 20 + stats.vit * 4 + smart * 2,
-    atk: stats.str + r.punch * 2 + Math.floor(smart / 2),
-    def: Math.floor(stats.vit / 2) + r.tough * 2 + Math.ceil(smart / 4),
+    hp: 20 + stats.vit * 4 + knack * 2,
+    atk: stats.str + r.punch * 2 + Math.floor(knack / 2),
+    def: Math.floor(stats.vit / 2) + r.tough * 2 + Math.ceil(knack / 4),
     spd: 5 + r.quick * 2,
-    dodge: Math.min(MAX_DODGE, r.quick * 0.05),
+    dodge: Math.min(MAX_DODGE, r.quick * 0.05 + Math.min(MAX_FOCUS_DODGE, calm * 0.01)),
     crit: Math.min(MAX_CRIT, smart * 0.01),
   }
 }

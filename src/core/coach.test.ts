@@ -8,8 +8,8 @@ const me = (minutes: number, skills: string[] = []) => playerFighter(statsFromMi
 
 describe('statsFromMinutes', () => {
   test('운동 10분마다 힘·체력이 1 오른다(computeProgress와 같은 값)', () => {
-    expect(statsFromMinutes({ exercise: 0 })).toEqual({ str: 5, vit: 5, int: 5 })
-    expect(statsFromMinutes({ exercise: 37 })).toEqual({ str: 8, vit: 8, int: 5 })
+    expect(statsFromMinutes({ exercise: 0 })).toEqual({ str: 5, vit: 5, int: 5, focus: 5 })
+    expect(statsFromMinutes({ exercise: 37 })).toEqual({ str: 8, vit: 8, int: 5, focus: 5 })
   })
 })
 

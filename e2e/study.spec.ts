@@ -76,9 +76,10 @@ test('공부는 하루 2시간까지, 다 채우면 안내하고 운동은 따�
   await expect(page.getByTestId('stat-next-int')).toHaveText('내일 공부 5분 더')
 })
 
-test('아래 탭: 운동·공부는 누를 수 있고 독서만 준비 중', async ({ page }) => {
+test('아래 탭: 운동·공부·독서 모두 누를 수 있음', async ({ page }) => {
   await page.goto('./')
   await expect(page.getByTestId('tab-exercise')).toHaveAttribute('aria-pressed', 'true')
   await expect(page.getByTestId('tab-study')).toBeEnabled()
-  await expect(page.locator('nav.tabs .tab:disabled')).toHaveText(['독서준비 중'])
+  await expect(page.getByTestId('tab-reading')).toBeEnabled()
+  await expect(page.locator('nav.tabs .tab:disabled')).toHaveCount(0)
 })

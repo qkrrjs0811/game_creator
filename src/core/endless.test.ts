@@ -155,7 +155,7 @@ describe('스테이지로 찾기', () => {
   })
 
   test('처음 시작한 말랑이도 1스테이지는 이기고 3스테이지는 아직 어렵다', () => {
-    const me = playerFighter({ str: BASE_STAT, vit: BASE_STAT, int: BASE_STAT }, [])
+    const me = playerFighter({ str: BASE_STAT, vit: BASE_STAT, int: BASE_STAT, focus: BASE_STAT }, [])
     for (let seed = 0; seed < 300; seed++) {
       expect(simulateBattle(me, stageEnemy(1), seed).win).toBe(true)
       expect(simulateBattle(me, stageEnemy(3), seed).win).toBe(false)

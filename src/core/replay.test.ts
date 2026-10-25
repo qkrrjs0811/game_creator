@@ -4,7 +4,7 @@ import { BASE_STAT } from './progression'
 import { stageEnemy } from './endless'
 import { battleTimeline, stepDelay } from './replay'
 
-const base = { str: BASE_STAT, vit: BASE_STAT, int: BASE_STAT }
+const base = { str: BASE_STAT, vit: BASE_STAT, int: BASE_STAT, focus: BASE_STAT }
 
 describe('battleTimeline', () => {
   test('기록 한 줄마다 장면 한 걸음, 양쪽 HP 비율이 따라간다', () => {

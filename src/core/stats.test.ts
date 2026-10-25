@@ -10,12 +10,20 @@ const exercise = (minutes: number): ActivityRecord[] => [
 ]
 
 describe('statRows', () => {
-  test('처음에는 힘·체력·지능 모두 기본값이고, 운동 10분이면 힘·체력이 1 오른다', () => {
+  test('처음에는 힘·체력·지능·집중 모두 기본값이고, 운동 10분이면 힘·체력이 1 오른다', () => {
     expect(statRows(computeProgress([])).map((r) => [r.id, r.value, r.toNext])).toEqual([
       ['str', 5, 10],
       ['vit', 5, 10],
       ['int', 5, 5],
+      ['focus', 5, 5],
     ])
+  })
+
+  test('집중은 독서로 5분마다 1씩 오른다', () => {
+    const read: ActivityRecord[] = [{ id: 'r', activity: 'reading', startedAt: T0, endedAt: T0 + 12 * MIN }]
+    const rows = statRows(computeProgress(read), ['reading'])
+    expect(rows.find((r) => r.id === 'focus')).toMatchObject({ value: 7, toNext: 3, source: '독서', name: '집중', tomorrow: true })
+    expect(rows.find((r) => r.id === 'int')).toMatchObject({ value: 5, toNext: 5, source: '공부', tomorrow: false })
   })
 
   test('다음 +1까지 남은 분은 오른 활동의 인정 분으로 센다', () => {
@@ -37,6 +45,7 @@ describe('statRows', () => {
       ['str', '공격'],
       ['vit', 'HP·방어'],
       ['int', '치명타·두루'],
+      ['focus', '회피·두루'],
     ])
   })
 

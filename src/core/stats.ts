@@ -20,6 +20,7 @@ export const STAT_INFO: { id: StatId; name: string; icon: string; role: string }
   { id: 'str', name: '힘', icon: '💪', role: '공격' },
   { id: 'vit', name: '체력', icon: '❤️', role: 'HP·방어' },
   { id: 'int', name: '지능', icon: '🧠', role: '치명타·두루' },
+  { id: 'focus', name: '집중', icon: '🎯', role: '회피·두루' },
 ]
 
 /** 화면에 보여 줄 능력치 줄. 값은 computeProgress 결과를 그대로 쓴다. cappedToday = 오늘 상한을 채운 활동 */

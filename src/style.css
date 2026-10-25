@@ -198,6 +198,8 @@ body {
   flex: 1;
   border: 0;
   padding: 9px 0;
+  /* "⏱ 켜짐"이 붙어 두 줄이 돼도 탭 높이가 그대로이게 두 줄 높이로 둔다 */
+  min-height: 52px;
   border-radius: 14px;
   background: var(--chip);
   color: var(--ink);
@@ -305,8 +307,8 @@ body {
   box-shadow: 0 2px 0 #e9764a;
 }
 .tab-badge[hidden] { display: none; }
-/* 나 창 위쪽 능력치 칸: 운동으로 오른 힘·체력, 아직 없는 지능 */
-.stat-list { list-style: none; margin: 4px 0 16px; padding: 0; display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+/* 나 창 위쪽 능력치 칸: 운동으로 오른 힘·체력, 공부로 오른 지능, 독서로 오른 집중(2 × 2) */
+.stat-list { list-style: none; margin: 4px 0 16px; padding: 0; display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
 .stat {
   display: flex;
   flex-direction: column;

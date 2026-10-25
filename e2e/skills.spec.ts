@@ -101,7 +101,8 @@ test('나 창 능력치 칸에 전투에서 하는 일이 보이고 칸 안에 �
   await expect(page.getByTestId('stat-role-str')).toHaveText('공격')
   await expect(page.getByTestId('stat-role-vit')).toHaveText('HP·방어')
   await expect(page.getByTestId('stat-role-int')).toHaveText('치명타·두루')
-  for (const id of ['str', 'vit', 'int']) {
+  await expect(page.getByTestId('stat-role-focus')).toHaveText('회피·두루')
+  for (const id of ['str', 'vit', 'int', 'focus']) {
     const role = (await page.getByTestId(`stat-role-${id}`).boundingBox())!
     const card = (await page.getByTestId(`stat-${id}`).boundingBox())!
     expect(role.x).toBeGreaterThanOrEqual(card.x)

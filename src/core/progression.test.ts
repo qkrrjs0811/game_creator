@@ -12,7 +12,7 @@ describe('progression', () => {
     expect(p.level).toBe(3)
     expect(p.expIntoLevel).toBe(50)
     expect(p.expForNextLevel).toBe(200)
-    expect(p.stats).toEqual({ str: 8, vit: 8, int: 5 })
+    expect(p.stats).toEqual({ str: 8, vit: 8, int: 5, focus: 5 })
     expect(p.skillPoints).toBe(2)
   })
 
@@ -75,8 +75,8 @@ describe('공부', () => {
 
   test('공부 5분마다 지능이 1 오르고 힘·체력은 그대로, 경험치는 함께 쌓인다', () => {
     const p = computeProgress([study('2026-10-24T19:00:00', '2026-10-24T19:30:00')])
-    expect(p.creditedMinutes).toEqual({ exercise: 0, study: 30 })
-    expect(p.stats).toEqual({ str: 5, vit: 5, int: 11 })
+    expect(p.creditedMinutes).toEqual({ exercise: 0, study: 30, reading: 0 })
+    expect(p.stats).toEqual({ str: 5, vit: 5, int: 11, focus: 5 })
     expect(p.exp).toBe(300)
   })
 
@@ -86,12 +86,36 @@ describe('공부', () => {
     expect(creditedMinutes(rs, 'exercise')).toBe(60)
     expect(todayStatus(rs, 'study', kst('2026-10-24T20:00:00'))).toEqual({ minutes: 120, cap: 120, reached: true })
     expect(todayStatus(rs, 'exercise', kst('2026-10-24T20:00:00'))).toEqual({ minutes: 60, cap: 180, reached: false })
-    expect(computeProgress(rs).stats).toEqual({ str: 11, vit: 11, int: 29 })
+    expect(computeProgress(rs).stats).toEqual({ str: 11, vit: 11, int: 29, focus: 5 })
   })
 
   test('운동만 한 기록은 예전과 같다', () => {
     const p = computeProgress([rec('2026-10-24T19:00:00', '2026-10-24T21:00:00')])
-    expect(p.stats).toEqual({ str: 17, vit: 17, int: 5 })
+    expect(p.stats).toEqual({ str: 17, vit: 17, int: 5, focus: 5 })
     expect(p.exp).toBe(1200)
+  })
+})
+
+describe('독서', () => {
+  const read = (a: string, b: string, id = a) => ({ id, activity: 'reading' as const, startedAt: kst(a), endedAt: kst(b) })
+
+  test('독서 5분마다 집중이 1 오르고 지능·힘·체력은 그대로, 경험치는 함께 쌓인다', () => {
+    const p = computeProgress([read('2026-10-24T19:00:00', '2026-10-24T19:30:00')])
+    expect(p.creditedMinutes).toEqual({ exercise: 0, study: 0, reading: 30 })
+    expect(p.stats).toEqual({ str: 5, vit: 5, int: 5, focus: 11 })
+    expect(p.exp).toBe(300)
+  })
+
+  test('독서 하루 상한은 120분이고 공부·운동 상한과 따로 센다', () => {
+    const rs = [
+      read('2026-10-24T08:00:00', '2026-10-24T11:00:00'),
+      { id: 's', activity: 'study' as const, startedAt: kst('2026-10-24T12:00:00'), endedAt: kst('2026-10-24T12:30:00') },
+      rec('2026-10-24T13:00:00', '2026-10-24T14:00:00'),
+    ]
+    expect(creditedMinutes(rs, 'reading')).toBe(120)
+    expect(todayStatus(rs, 'reading', kst('2026-10-24T20:00:00'))).toEqual({ minutes: 120, cap: 120, reached: true })
+    expect(todayStatus(rs, 'study', kst('2026-10-24T20:00:00'))).toEqual({ minutes: 30, cap: 120, reached: false })
+    expect(computeProgress(rs).stats).toEqual({ str: 11, vit: 11, int: 11, focus: 29 })
+    expect(computeProgress(rs).exp).toBe(2100)
   })
 })

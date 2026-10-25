@@ -50,6 +50,34 @@ describe('여러 활동을 섞어도 불리하지 않음', () => {
     const solo = reach(freshFighter(1200))
     expect(reach(freshMixFighter({ exercise: 0, study: 1200 }))).toBeLessThanOrEqual(solo + 3)
   })
+
+  test('같은 시간이면 독서를 섞어도(셋을 섞어도) 운동만 한 것보다 이길 만한 스테이지가 줄지 않는다', () => {
+    for (const total of [20, 40, 60, 120, 300, 600, 1200, 3000]) {
+      const tenth = (share: number) => Math.round((total * share) / 10) * 10
+      const mixes = [
+        { exercise: total - tenth(0.5), reading: tenth(0.5) },
+        { exercise: total - tenth(0.25), reading: tenth(0.25) },
+        { exercise: total - tenth(0.75), reading: tenth(0.75) },
+        { exercise: total - tenth(0.3) - tenth(0.3), study: tenth(0.3), reading: tenth(0.3) },
+      ]
+      const solo = freshFighter(total)
+      for (const mix of mixes) {
+        const mixed = freshMixFighter(mix)
+        for (let n = 1; n <= 60; n++) {
+          if (likelyWin(solo, stageEnemy(n))) expect(likelyWin(mixed, stageEnemy(n)), `${JSON.stringify(mix)}, ${n}스테이지`).toBe(true)
+        }
+      }
+    }
+  })
+
+  test('독서만 오래 해도 운동만 한 것보다 훨씬 앞서 가지 않는다', () => {
+    const reach = (f: ReturnType<typeof freshFighter>) => {
+      let best = 0
+      for (let n = 1; n <= 100; n++) if (likelyWin(f, stageEnemy(n))) best = n
+      return best
+    }
+    expect(reach(freshMixFighter({ reading: 1200 }))).toBeLessThanOrEqual(reach(freshFighter(1200)) + 3)
+  })
 })
 
 describe('freshMinutesToWin', () => {

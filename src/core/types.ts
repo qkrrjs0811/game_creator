@@ -1,5 +1,5 @@
-export type ActivityId = 'exercise' | 'study'
-export type StatId = 'str' | 'vit' | 'int'
+export type ActivityId = 'exercise' | 'study' | 'reading'
+export type StatId = 'str' | 'vit' | 'int' | 'focus'
 
 /** 시각은 모두 epoch ms */
 export interface ActivityRecord {
