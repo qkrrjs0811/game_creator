@@ -136,13 +136,15 @@ test('단계가 오르는 순간 "말랑이가 자랐어요!" 한 번, 처음 �
   await expect(grow).toHaveText('✨ 말랑이가 자랐어요! · 어린이')
   await page.clock.runFor(450)
   await page.waitForTimeout(600)
-  await page.screenshot({ path: 'test-results/screens/look-grown.png' })
   // 레벨업 배지(장면 위)·시작 버튼과 겹치지 않는다
+  // 시계가 실제로도 흐르므로 둘 다 3.5초 안에 사라진다 — 느린 스크린샷 전에 자리를 먼저 잰다
+  const up = (await page.getByTestId('levelup').boundingBox())!
   const g = (await grow.boundingBox())!
   const toggle = (await page.getByTestId('toggle').boundingBox())!
-  const up = (await page.getByTestId('levelup').boundingBox())!
+  expect(up).not.toBeNull()
   expect(g.y + g.height).toBeLessThanOrEqual(toggle.y)
   expect(up.y + up.height).toBeLessThanOrEqual(g.y)
+  await page.screenshot({ path: 'test-results/screens/look-grown.png' })
 
   await page.clock.runFor(4000)
   await expect(grow).toBeHidden()
