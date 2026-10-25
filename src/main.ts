@@ -23,7 +23,8 @@ import { cosmeticCatalog, ownedCosmetics, toggleWear, wornCosmetics } from './co
 import { createCosmetics } from './ui/cosmetics'
 import { statRows } from './core/stats'
 import { nextStageAdvice, stageMinutesToWin } from './core/coach'
-import { formatMinutes, sessionSummary } from './ui/format'
+import { awayCard, formatMinutes, sessionSummary } from './ui/format'
+import { awaySummary, shouldShowAway } from './core/away'
 import { sessionGain } from './core/gain'
 
 declare global {
@@ -278,6 +279,31 @@ function rememberStampDay(day: string) {
   }
 }
 
+// 마지막으로 화면을 본 시각. 한동안 닫아 뒀다가 다시 열면 그 사이 늘어난 것을 한 번 보여 준다
+const LAST_SEEN_KEY = `${SAVE_KEY}:last-seen`
+const storedSeen = Number(readKey(LAST_SEEN_KEY))
+let lastSeen: number | null = Number.isFinite(storedSeen) && storedSeen > 0 ? storedSeen : null
+// 자리 비운 동안 카드에 레벨업을 함께 띄웠으면 그 레벨은 따로 배지를 띄우지 않는다(같은 자리)
+let awayLevel: number | null = null
+
+function rememberLastSeen(now: number) {
+  lastSeen = now
+  try {
+    kv.setItem(LAST_SEEN_KEY, String(now))
+  } catch {
+    // 못 남기면 다음에 열 때 요약을 건너뛸 뿐이다
+  }
+}
+
+/** 다시 열거나 다시 돌아왔을 때 자리 비운 동안 늘어난 게 있으면 카드를 띄운다(화면에 보여 줄 값일 뿐) */
+function checkAway(now: number) {
+  if (lastSeen === null) return
+  const a = awaySummary(save, lastSeen, now)
+  if (!shouldShowAway(a)) return
+  hud.showAway(awayCard(a))
+  if (a.levelAfter > a.levelBefore) awayLevel = a.levelAfter
+}
+
 function rememberShownLevel(level: number) {
   try {
     kv.setItem(SEEN_LEVEL_KEY, String(level))
@@ -304,9 +330,12 @@ function render() {
   if (shownLevel !== p.level) rememberShownLevel(p.level)
   shownLevel = p.level
   if (up !== null) {
-    hud.showLevelUp(up, points)
+    if (up !== awayLevel) hud.showLevelUp(up, points)
     celebratePending = true
   }
+  awayLevel = null
+  // 보고 있는 동안만 마지막으로 본 시각을 남긴다(뒤로 가 있는 동안 도는 타이머는 세지 않는다)
+  if (document.visibilityState === 'visible') rememberLastSeen(now)
   // 처음 열 때는 장면이 아직 준비 중일 수 있어, 준비되면 그때 말랑이가 폴짝 뛴다
   if (celebratePending && homeScene()) {
     celebratePending = false
@@ -356,6 +385,7 @@ new ResizeObserver(() => {
   if (game.scale.getParentBounds()) game.scale.refresh()
 }).observe(hud.sceneHost)
 
+checkAway(Date.now())
 render()
 setInterval(render, 1000)
 // 설치한 앱과 브라우저 탭을 함께 열어도 오래된 창이 새 기록을 덮어쓰지 않게 저장을 따라간다
@@ -364,6 +394,8 @@ window.addEventListener('storage', (e) => {
 })
 document.addEventListener('visibilitychange', () => {
   pullSave()
+  // 앱을 끄지 않고 뒤로 보냈다가 돌아와도 자리 비운 동안을 보여 준다
+  if (document.visibilityState === 'visible') checkAway(Date.now())
   render()
 })
 window.__debug = { getSave: () => save }

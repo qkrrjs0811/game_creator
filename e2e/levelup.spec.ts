@@ -61,19 +61,20 @@ test('앱을 닫아 둔 사이 레벨이 오르면 다시 열 때 축하함', as
   let page = await context.newPage()
   await page.goto('./')
   await page.getByTestId('toggle').click()
-  await page.clock.fastForward('05:00')
+  await page.clock.fastForward('09:00')
   await expect(page.getByTestId('level')).toHaveText('Lv.1')
 
-  // 운동하러 가며 앱을 닫는다. 25분 뒤(모두 30분 = 300 EXP) 다시 열면 Lv.3
+  // 운동하러 가며 앱을 닫는다. 9분 뒤(모두 18분 = 180 EXP) 다시 열면 Lv.2.
+  // 10분 넘게 닫아 두면 자리 비운 동안 카드가 레벨업을 대신 알려 주므로(away.spec) 그보다 짧게 닫는다
   await page.close()
   page = await context.newPage()
-  await page.clock.fastForward('25:00')
+  await page.clock.fastForward('09:00')
   await page.goto('./')
-  await expect(page.getByTestId('level')).toHaveText('Lv.3')
+  await expect(page.getByTestId('level')).toHaveText('Lv.2')
   await expect(page.getByTestId('levelup')).toBeVisible()
-  await expect(page.getByTestId('levelup-level')).toHaveText('Lv.3 달성!')
-  // Lv.1 → Lv.3 이라 포인트 2개
-  await expect(page.getByTestId('levelup-points')).toHaveText('✨ 스킬 포인트 +2 · 나 탭에서 골라요')
+  await expect(page.getByTestId('away')).toBeHidden()
+  await expect(page.getByTestId('levelup-level')).toHaveText('Lv.2 달성!')
+  await expect(page.getByTestId('levelup-points')).toHaveText('✨ 스킬 포인트 +1 · 나 탭에서 골라요')
   // 장면이 늦게 준비돼도 말랑이가 폴짝 뛰고 색종이가 터진다
   await expect(page.getByTestId('scene')).toHaveAttribute('data-celebrations', '1')
   // 색종이가 퍼진 순간을 찍는다
@@ -85,7 +86,7 @@ test('앱을 닫아 둔 사이 레벨이 오르면 다시 열 때 축하함', as
   await page.clock.runFor(4000)
   await expect(page.getByTestId('levelup')).toBeHidden()
   await page.reload()
-  await expect(page.getByTestId('level')).toHaveText('Lv.3')
+  await expect(page.getByTestId('level')).toHaveText('Lv.2')
   await page.clock.runFor(1500)
   await expect(page.getByTestId('levelup')).toBeHidden()
 })

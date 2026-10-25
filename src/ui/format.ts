@@ -3,6 +3,7 @@ import { STAT_INFO } from '../core/stats'
 import { ACTIVITIES } from '../core/activities'
 import type { ActivityId } from '../core/types'
 import type { TodayGoal } from '../core/goal'
+import type { AwaySummary } from '../core/away'
 
 const pad =(n: number) => String(n).padStart(2, '0')
 
@@ -50,4 +51,32 @@ export function sessionSummary(g: SessionGain, capReached: boolean, activity: Ac
   }
   const stats = STAT_INFO.filter((s) => g.stats[s.id] > 0).map((s) => `${s.icon} ${s.name} +${g.stats[s.id]}`)
   return { title, detail: [`EXP +${g.exp}`, ...stats].join(' · ') }
+}
+
+/** 자리 비운 시간. 하루 넘게 비우면 N일 M시간(분은 뺀다) */
+function formatAway(ms: number): string {
+  const minutes = Math.floor(ms / 60_000)
+  const d = Math.floor(minutes / 1440)
+  if (d === 0) return formatMinutes(minutes)
+  const h = Math.floor((minutes % 1440) / 60)
+  return h === 0 ? `${d}일` : `${d}일 ${h}시간`
+}
+
+/** 다시 열 때 띄우는 "자리 비운 동안" 카드 글자 */
+export function awayCard(a: AwaySummary): { title: string; did: string; gain: string; chips: string[] } {
+  const did = (Object.keys(ACTIVITIES) as ActivityId[])
+    .filter((id) => a.minutes[id] > 0)
+    .map((id) => `${ACTIVITIES[id].label} ${formatMinutes(a.minutes[id])}`)
+  const stats = STAT_INFO.filter((s) => a.stats[s.id] > 0).map((s) => `${s.icon} ${s.name} +${a.stats[s.id]}`)
+  const chips: string[] = []
+  if (a.levelAfter > a.levelBefore) {
+    chips.push(`⬆️ Lv.${a.levelBefore} → Lv.${a.levelAfter}`, `✨ 스킬 포인트 +${a.levelAfter - a.levelBefore}`)
+  }
+  if (a.stampsAfter > a.stampsBefore) chips.push(`🌟 도장 +${a.stampsAfter - a.stampsBefore}`)
+  return {
+    title: `🌙 자리 비운 동안 · ${formatAway(a.awayMs)}`,
+    did: did.length > 0 ? `${did.join(' · ')} 했어요` : '',
+    gain: [`EXP +${a.exp}`, ...stats].join(' · '),
+    chips,
+  }
 }

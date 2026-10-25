@@ -72,6 +72,13 @@ export function createHud(
         <span data-testid="levelup-level"></span>
         <small class="levelup-points" data-testid="levelup-points"></small>
       </div>
+      <div class="away" data-testid="away" role="status" hidden>
+        <b data-testid="away-title"></b>
+        <span data-testid="away-did"></span>
+        <span class="away-gain" data-testid="away-gain"></span>
+        <div class="away-chips" data-testid="away-chips"></div>
+        <button type="button" class="toast-close" data-testid="away-close" aria-label="닫기">✕</button>
+      </div>
       <div class="toast" data-testid="cap-toast" role="status" hidden>
         <b>오늘은 충분히 했어요!</b>
         <span>오늘 경험치는 다 모았어요. 내일 또 만나요</span>
@@ -150,6 +157,9 @@ export function createHud(
   const goalBar = q('goal-bar')
   const stamp = q('stamp')
   let stampTimer: ReturnType<typeof setTimeout> | undefined
+  const away = q('away')
+  const hideAway = () => (away.hidden = true)
+  q('away-close').addEventListener('click', hideAway)
 
   return {
     sceneHost: q('scene'),
@@ -221,9 +231,33 @@ export function createHud(
     hideToasts() {
       hideSummary()
       hideToast()
+      hideAway()
+    },
+    /** 다시 열 때 자리 비운 동안 늘어난 것을 장면 위쪽에 띄운다. 닫기 전까지 남는다(레벨업 배지 자리를 대신 쓴다) */
+    showAway(c: { title: string; did: string; gain: string; chips: string[] }) {
+      levelUp.hidden = true
+      q('away-title').textContent = c.title
+      const did = q('away-did')
+      did.textContent = c.did
+      did.hidden = c.did === ''
+      q('away-gain').textContent = c.gain
+      const chips = q('away-chips')
+      chips.replaceChildren(
+        ...c.chips.map((t) => {
+          const chip = document.createElement('em')
+          chip.textContent = t
+          return chip
+        }),
+      )
+      chips.hidden = c.chips.length === 0
+      away.hidden = true
+      void away.offsetWidth
+      away.hidden = false
     },
     /** 레벨이 오른 순간 축하 배지를 띄우고 레벨 글자를 통통 튀게 한다. 받은 스킬 포인트는 "나" 탭으로 안내한다 */
     showLevelUp(newLevel: number, points: number) {
+      // 같은 자리라 지난 자리 비운 동안 카드는 닫는다
+      hideAway()
       levelUpLevel.textContent = `Lv.${newLevel} 달성!`
       levelUpPoints.textContent = `✨ 스킬 포인트 +${points} · 나 탭에서 골라요`
       // 연달아 오르면 애니메이션을 처음부터 다시 돌린다

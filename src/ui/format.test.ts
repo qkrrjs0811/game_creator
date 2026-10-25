@@ -1,5 +1,6 @@
 import { test, expect } from 'vitest'
-import { formatElapsed, formatMinutes, goalText, objectJosa, sessionSummary, topicJosa } from './format'
+import { awayCard, formatElapsed, formatMinutes, goalText, objectJosa, sessionSummary, topicJosa } from './format'
+import type { AwaySummary } from '../core/away'
 
 test('한 시간 미만은 MM:SS', () => {
   expect(formatElapsed(0)).toBe('00:00')
@@ -66,4 +67,34 @@ test('오늘 목표 글자: 채우기 전엔 🎯, 채우면 🌟 달성(넘친 
   expect(goalText({ minutes: 12, goal: 30, done: false })).toBe('🎯 오늘 목표 12 / 30분')
   expect(goalText({ minutes: 30, goal: 30, done: true })).toBe('🌟 오늘 목표 달성 30 / 30분')
   expect(goalText({ minutes: 45, goal: 30, done: true })).toBe('🌟 오늘 목표 달성 45 / 30분')
+})
+
+const away = (over: Partial<AwaySummary> = {}): AwaySummary => ({
+  awayMs: 125 * 60_000,
+  minutes: { exercise: 30, study: 0, reading: 10, relax: 0 },
+  exp: 400,
+  stats: { str: 3, vit: 3, int: 0, focus: 2 },
+  levelBefore: 1,
+  levelAfter: 3,
+  stampsBefore: 0,
+  stampsAfter: 1,
+  gained: true,
+  ...over,
+})
+
+test('자리 비운 동안 카드: 흐른 시간, 한 활동, 얻은 것, 레벨·스킬 포인트·도장', () => {
+  expect(awayCard(away())).toEqual({
+    title: '🌙 자리 비운 동안 · 2시간 5분',
+    did: '운동 30분 · 독서 10분 했어요',
+    gain: 'EXP +400 · 💪 힘 +3 · ❤️ 체력 +3 · 🎯 집중 +2',
+    chips: ['⬆️ Lv.1 → Lv.3', '✨ 스킬 포인트 +2', '🌟 도장 +1'],
+  })
+})
+
+test('자리 비운 동안 카드: 레벨·도장이 그대로면 칩 없음, 하루 넘게 비우면 N일', () => {
+  const c = awayCard(away({ awayMs: (2 * 1440 + 3 * 60 + 20) * 60_000, levelAfter: 1, stampsAfter: 0 }))
+  expect(c.title).toBe('🌙 자리 비운 동안 · 2일 3시간')
+  expect(c.chips).toEqual([])
+  expect(awayCard(away({ awayMs: 1440 * 60_000 })).title).toBe('🌙 자리 비운 동안 · 1일')
+  expect(awayCard(away({ awayMs: 11 * 60_000 + 59_000 })).title).toBe('🌙 자리 비운 동안 · 11분')
 })

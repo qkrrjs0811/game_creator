@@ -117,6 +117,40 @@ body {
   font-weight: 700;
   white-space: nowrap;
 }
+/* 다시 열 때 자리 비운 동안 늘어난 것. 레벨업 배지 자리(장면 위쪽)에 띄워 말랑이·버튼을 가리지 않는다 */
+.away {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  right: 12px;
+  z-index: 5;
+  padding: 12px 58px 12px 18px;
+  border-radius: 22px;
+  background: #fff;
+  box-shadow: 0 4px 0 var(--track);
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  word-break: keep-all;
+  animation: toast-pop 0.35s ease-out;
+}
+.away[hidden] { display: none; }
+.away b { font-size: 16px; color: #8a6fd1; }
+.away span { font-size: 13px; line-height: 1.4; color: var(--ink-soft); }
+.away span[hidden] { display: none; }
+.away .away-gain { color: var(--ink); font-weight: 700; }
+.away-chips { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 3px; }
+.away-chips[hidden] { display: none; }
+.away-chips em {
+  padding: 2px 10px;
+  border-radius: 999px;
+  background: #fff1c9;
+  color: var(--accent);
+  font-size: 12px;
+  font-style: normal;
+  font-weight: 700;
+  white-space: nowrap;
+}
 @keyframes levelup-pop {
   from { transform: translateX(-50%) scale(0.3); opacity: 0; }
   to { transform: translateX(-50%) scale(1); opacity: 1; }
@@ -583,7 +617,8 @@ body {
 .battle-bar[data-state='done'] .battle-action { background: var(--accent); color: #fff; box-shadow: 0 3px 0 #e9764a; }
 .scene.in-battle .adventure { display: none; }
 /* 전투 중에 상한에 닿아도 안내가 전투 띠 버튼을 덮지 않게 한다(타이머 카드가 이미 알려 준다) */
-.scene.in-battle .toast { display: none; }
+.scene.in-battle .toast,
+.scene.in-battle .away { display: none; }
 .battle-result {
   position: absolute;
   top: 16px;

@@ -25,6 +25,14 @@ export interface AwaySummary {
   gained: boolean
 }
 
+/** 이보다 오래 닫아 둬야 다시 열 때 요약을 띄운다(잠깐 닫았다 연 것까지 띄우면 귀찮다) */
+export const AWAY_MIN_MS = 10 * 60_000
+
+/** 다시 열 때 "자리 비운 동안" 카드를 띄울지: 10분 넘게 닫아 뒀고 경험치나 도장이 늘었을 때 */
+export function shouldShowAway(a: AwaySummary): boolean {
+  return a.awayMs > AWAY_MIN_MS && a.gained
+}
+
 /**
  * 마지막으로 본 시각(lastSeen)과 now 사이에 기록·켜 둔 타이머로 늘어난 것.
  * lastSeen 때의 기록과 now 때의 기록으로 각각 계산한 차이라, 상한을 넘긴 시간은 세지 않는다. 기록만 읽는다.

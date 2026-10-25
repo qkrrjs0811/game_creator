@@ -1,5 +1,5 @@
 import { describe, test, expect } from 'vitest'
-import { awaySummary, recordsUntil } from './away'
+import { awaySummary, recordsUntil, shouldShowAway } from './away'
 import { newSave } from './session'
 import type { ActivityRecord, SaveData } from './types'
 
@@ -80,5 +80,22 @@ describe('awaySummary', () => {
     const s = save(records)
     awaySummary(s, T0 + 10 * MIN, T0 + 60 * MIN)
     expect(s.records).toEqual([rec('exercise', T0, T0 + 30 * MIN)])
+  })
+})
+
+describe('shouldShowAway', () => {
+  const s = save([], { activity: 'exercise', startedAt: T0 })
+  test('10분 넘게 닫아 뒀고 늘어난 게 있으면 띄운다', () => {
+    expect(shouldShowAway(awaySummary(s, T0 + 5 * MIN, T0 + 16 * MIN))).toBe(true)
+  })
+  test('10분 이하로 닫았다 열면 띄우지 않는다', () => {
+    expect(shouldShowAway(awaySummary(s, T0 + 5 * MIN, T0 + 15 * MIN))).toBe(false)
+  })
+  test('오래 닫아 뒀어도 늘어난 게 없으면 띄우지 않는다', () => {
+    expect(shouldShowAway(awaySummary(save([]), T0, T0 + 120 * MIN))).toBe(false)
+  })
+  test('상한을 채운 뒤 켜 둔 시간만 흘렀으면 띄우지 않는다', () => {
+    const full = save([], { activity: 'relax', startedAt: T0 })
+    expect(shouldShowAway(awaySummary(full, T0 + 40 * MIN, T0 + 90 * MIN))).toBe(false)
   })
 })
