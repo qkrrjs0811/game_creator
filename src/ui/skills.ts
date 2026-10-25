@@ -7,7 +7,7 @@ import { ACTIVITIES } from '../core/activities'
 import type { ActivityId } from '../core/types'
 import type { AchievementKind, AchievementProgress } from '../core/achievements'
 import type { UpcomingReward } from '../core/rewards'
-import { achievementValueText, bestDayText, dayDetail, farAchievementIds, formatMinutes, pageRangeText, weekDoneText, weekGoalText, weekTotalText } from './format'
+import { achievementValueText, bestDayText, dayDetail, farAchievementIds, formatMinutes, pageRangeText, weekDoneText, weekGoalText, weekTotalText, type letterCard } from './format'
 
 export interface SkillsView {
   points: number
@@ -26,6 +26,8 @@ export interface SkillsView {
   look: { name: string; next: string }
   /** 아직 못 받은 보상, 가까운 순서(upcomingRewards) */
   rewards: UpcomingReward[]
+  /** 도장판에서 다시 여는 지난주 편지 글자(letterCard). 지난주 기록이 없으면 null */
+  letter: ReturnType<typeof letterCard> | null
 }
 
 const WEEK = ['일', '월', '화', '수', '목', '금', '토']
@@ -60,6 +62,12 @@ export function boardHtml(cal: StampCalendar, rested: number[] = []): string {
 }
 
 const ACTIVITY_IDS = Object.keys(ACTIVITIES) as ActivityId[]
+/** 도장판에서 펼치는 지난주 편지: 합계 한 줄, 칩, 권하는 한 줄 */
+export function letterPanelHtml(c: ReturnType<typeof letterCard>): string {
+  const chips = c.chips.map((t) => `<em>${t}</em>`).join('')
+  return `<span class="away-gain" data-testid="board-letter-total">${c.total}</span><div class="away-chips" data-testid="board-letter-chips">${chips}</div><span class="letter-suggest" data-testid="board-letter-suggest">${c.suggest}</span>`
+}
+
 /** 막대 꼭대기 눈금. 조금만 한 날이 칸을 꽉 채워 보이지 않게 적어도 1시간으로 잡는다 */
 const BAR_MIN_SCALE = 60
 
@@ -193,6 +201,8 @@ export function createSkills(root: HTMLElement, h: { view(): SkillsView; onLearn
         </div>
         <ul class="week-row" data-testid="week-row"></ul>
       </div>
+      <button type="button" class="board-letter-open" data-testid="board-letter-open" aria-expanded="false" hidden>💌 지난주 편지 보기</button>
+      <div class="board-letter" data-testid="board-letter" hidden></div>
       <ul class="board" data-testid="board"></ul>
       <p class="sheet-desc">하루 활동 합쳐 30분을 채우면 도장을 찍어요. 한 주(월~일)에 5일 찍으면 이번 주 목표 달성! 도장 7개마다 얻는 쉼표가 하루 빈 날을 🛟로 지켜 줘요.</p>
       <h3 class="sheet-sub hist-title">📖 내 기록</h3>
@@ -232,6 +242,9 @@ export function createSkills(root: HTMLElement, h: { view(): SkillsView; onLearn
   let lastTotals = ''
   let lastAch = ''
   let lastRewards = ''
+  let lastLetter = ''
+  /** 도장판에서 지난주 편지를 펼쳤는지 */
+  let letterOpen = false
   /** 내 기록에서 보고 있는 7일 쪽과 누른 날 */
   let page = 0
   let picked: string | null = null
@@ -273,6 +286,18 @@ export function createSkills(root: HTMLElement, h: { view(): SkillsView; onLearn
     if (board !== lastBoard) {
       lastBoard = board
       q('board').innerHTML = board
+    }
+    // 지난주 기록이 없으면 편지 버튼을 숨긴다
+    if (!v.letter) letterOpen = false
+    const letterBtn = q('board-letter-open')
+    letterBtn.hidden = !v.letter
+    letterBtn.textContent = letterOpen ? '💌 지난주 편지 접기' : '💌 지난주 편지 보기'
+    letterBtn.setAttribute('aria-expanded', String(letterOpen))
+    q('board-letter').hidden = !letterOpen
+    const letter = v.letter ? letterPanelHtml(v.letter) : ''
+    if (letter !== lastLetter) {
+      lastLetter = letter
+      q('board-letter').innerHTML = letter
     }
     const week = v.board.week
     q('week-goal-text').textContent = weekGoalText(week)
@@ -372,12 +397,17 @@ export function createSkills(root: HTMLElement, h: { view(): SkillsView; onLearn
     picked = null
     draw()
   }
+  q('board-letter-open').addEventListener('click', () => {
+    letterOpen = !letterOpen
+    draw()
+  })
   q('hist-prev').addEventListener('click', () => turn(1))
   q('hist-next').addEventListener('click', () => turn(-1))
   const close = () => {
     asking = null
     page = 0
     picked = null
+    letterOpen = false
     wrap.hidden = true
   }
   q('skills-close').addEventListener('click', close)

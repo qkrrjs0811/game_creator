@@ -202,6 +202,10 @@ const skills = createSkills(app, {
       title: wornTitle({ records, worn: save.worn })?.titleId ?? null,
       look: lookLine(malangLook(records)),
       rewards: upcomingRewards({ records, stageProgress: save.stageProgress, skills: save.skills, now }),
+      letter: (() => {
+        const l = lastWeekLetter(records, now)
+        return l ? letterCard(l) : null
+      })(),
     }
   },
   onLearn(id) {

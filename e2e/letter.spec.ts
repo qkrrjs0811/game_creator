@@ -68,3 +68,39 @@ test('처음 여는 창은 편지를 기억만 하고 띄우지 않음', async (
   await expect(page.getByTestId('letter')).toBeHidden()
   expect(await page.evaluate(() => localStorage.getItem('growth-game:save:seen-letter'))).toBe('2026-10-19')
 })
+
+test('도장판에서 지난주 편지를 다시 펼쳐 봄', async ({ page }) => {
+  await page.clock.install({ time: new Date('2026-10-27T09:00:00+09:00') })
+  // 이미 본 편지라 홈에는 다시 뜨지 않는다
+  await seed(page, '2026-10-19')
+  await page.getByTestId('tab-me').click()
+  const open = page.getByTestId('board-letter-open')
+  await expect(open).toHaveText('💌 지난주 편지 보기')
+  await expect(page.getByTestId('board-letter')).toBeHidden()
+  await open.click()
+  await expect(page.getByTestId('board-letter')).toBeVisible()
+  await expect(open).toHaveText('💌 지난주 편지 접기')
+  await expect(page.getByTestId('board-letter-total')).toHaveText('지난주 3시간 10분 했어! · 지난번보다 +2시간 10분')
+  await expect(page.getByTestId('board-letter-chips')).toContainText('🏅 도장 5일 · 목표 달성')
+  await expect(page.getByTestId('board-letter-suggest')).toHaveText('이번 주엔 📚 독서도 해 볼까?')
+
+  // 버튼은 누르기 충분하고, 편지는 화면 폭 안에 들어간다
+  const b = (await open.boundingBox())!
+  expect(b.height).toBeGreaterThanOrEqual(44)
+  await page.getByTestId('board-letter').scrollIntoViewIfNeeded()
+  const box = (await page.getByTestId('board-letter').boundingBox())!
+  expect(box.x).toBeGreaterThanOrEqual(0)
+  expect(box.x + box.width).toBeLessThanOrEqual(390)
+  await page.screenshot({ path: 'test-results/screens/board-letter.png' })
+
+  await open.click()
+  await expect(page.getByTestId('board-letter')).toBeHidden()
+})
+
+test('지난주 기록이 없으면 도장판에 편지 버튼이 없음', async ({ page }) => {
+  await page.clock.install({ time: new Date('2026-11-09T09:00:00+09:00') })
+  await seed(page, null)
+  await page.getByTestId('tab-me').click()
+  await expect(page.getByTestId('board-title')).toBeVisible()
+  await expect(page.getByTestId('board-letter-open')).toBeHidden()
+})

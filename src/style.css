@@ -1216,6 +1216,39 @@ body {
   background: #fff;
   box-shadow: 0 3px 0 var(--track);
 }
+/* 도장판에서 지난주 편지 다시 보기 */
+.board-letter-open {
+  display: block;
+  width: 100%;
+  min-height: 44px;
+  margin: 0 0 10px;
+  border: 0;
+  border-radius: 999px;
+  background: #ffe4ee;
+  color: #e0709a;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.board-letter-open[hidden] { display: none; }
+/* 펼친 편지: 홈의 편지 카드와 같은 분홍 편지 색 */
+.board-letter {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0 0 10px;
+  padding: 10px 14px 12px;
+  border-radius: 20px;
+  background: #fff7fa;
+  box-shadow: 0 3px 0 #ffd6e3;
+  font-size: 13px;
+  line-height: 1.4;
+  word-break: keep-all;
+}
+.board-letter[hidden] { display: none; }
+.board-letter .away-gain { font-weight: 700; color: var(--ink); }
+.board-letter .letter-suggest { color: #4f9a5c; font-weight: 700; }
 .week-goal-head {
   display: flex;
   justify-content: space-between;
