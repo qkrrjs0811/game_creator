@@ -177,6 +177,13 @@ function monsterLook(chapter: number, index: number): Omit<Monster, 'stats'> {
   }
 }
 
+/** 스테이지 번호의 몬스터 모습(이름·모양·색). 전투 값을 맞추지 않아 가볍다 */
+export function stageMonsterLook(no: number): Omit<Monster, 'stats'> {
+  const n = cleanNo(no)
+  const chapter = Math.ceil(n / STAGES_PER_CHAPTER)
+  return monsterLook(chapter, n - (chapter - 1) * STAGES_PER_CHAPTER)
+}
+
 const cache = new Map<number, EndlessStage>()
 
 /**
