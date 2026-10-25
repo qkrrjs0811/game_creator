@@ -6,7 +6,6 @@ import type { HistoryDay, HistoryPage, RecordSummary } from '../core/history'
 import { ACTIVITIES } from '../core/activities'
 import type { ActivityId } from '../core/types'
 import type { AchievementKind, AchievementProgress } from '../core/achievements'
-import type { UpcomingReward } from '../core/rewards'
 import { achievementValueText, bestDayText, dayDetail, farAchievementIds, formatMinutes, pageRangeText, weekDoneText, weekGoalText, weekTotalText } from './format'
 
 export interface SkillsView {
@@ -24,8 +23,6 @@ export interface SkillsView {
   title: string | null
   /** 지금 모습 이름과 다음 단계까지 남은 레벨(lookLine) */
   look: { name: string; next: string }
-  /** 아직 못 받은 보상, 가까운 순서(upcomingRewards) */
-  rewards: UpcomingReward[]
 }
 
 const WEEK = ['일', '월', '화', '수', '목', '금', '토']
@@ -124,20 +121,6 @@ export function achievementsHtml(list: AchievementProgress[], title: string | nu
     .join('')
 }
 
-/** 곧 받을 보상 칸에 보여 줄 개수 */
-const REWARDS_SHOWN = 3
-
-/** 곧 받을 보상: 가까운 3개를 아이콘·이름·남은 양·진행 막대로. 없으면 빈 글 */
-export function rewardsHtml(list: UpcomingReward[]): string {
-  return list
-    .slice(0, REWARDS_SHOWN)
-    .map((r) => {
-      const pct = (Math.min(Math.max(r.ratio, 0), 1) * 100).toFixed(1)
-      return `<li class="reward" data-testid="reward-${r.kind}"><span class="reward-icon" aria-hidden="true">${r.icon}</span><span class="reward-text"><b data-testid="reward-name-${r.kind}">${r.name}</b><span class="reward-bar"><i style="width:${pct}%"></i></span><small data-testid="reward-need-${r.kind}">${r.need}</small></span></li>`
-    })
-    .join('')
-}
-
 /** 받침이 있으면 '을', 없으면 '를' */
 export function objectParticle(word: string): string {
   const code = word.charCodeAt(word.length - 1) - 0xac00
@@ -156,10 +139,6 @@ export function createSkills(root: HTMLElement, h: { view(): SkillsView; onLearn
       <div class="look-card" data-testid="look-card">
         <b data-testid="look-name"></b>
         <small data-testid="look-next"></small>
-      </div>
-      <div class="rewards" data-testid="rewards" hidden>
-        <h3 class="sheet-sub">🎁 곧 받을 보상</h3>
-        <ul class="reward-list" data-testid="reward-list"></ul>
       </div>
       <ul class="stat-list" data-testid="stats"></ul>
       <h3 class="sheet-sub">스킬</h3>
@@ -229,7 +208,6 @@ export function createSkills(root: HTMLElement, h: { view(): SkillsView; onLearn
   let lastTip = ''
   let lastTotals = ''
   let lastAch = ''
-  let lastRewards = ''
   /** 내 기록에서 보고 있는 7일 쪽과 누른 날 */
   let page = 0
   let picked: string | null = null
@@ -255,12 +233,6 @@ export function createSkills(root: HTMLElement, h: { view(): SkillsView; onLearn
     }
     q('look-name').textContent = v.look.name
     q('look-next').textContent = v.look.next
-    const rewards = rewardsHtml(v.rewards)
-    q('rewards').hidden = rewards === ''
-    if (rewards !== lastRewards) {
-      lastRewards = rewards
-      q('reward-list').innerHTML = rewards
-    }
     const cal = v.board.calendar
     q('board-title').textContent = `🗓️ ${cal.month}월 도장판`
     q('board-stamps').textContent = `🌟 모은 도장 ${v.board.stamps}개`

@@ -559,36 +559,6 @@ body {
 }
 .look-card b { font-size: 15px; color: var(--ink); }
 .look-card small { font-size: 12px; color: #4f9a3f; }
-/* 나 창 곧 받을 보상: 거의 닿은 꾸미기·칭호·모습 3개 */
-.rewards { margin: 0 0 14px; }
-.rewards[hidden] { display: none; }
-.rewards .sheet-sub { margin-top: 0; }
-.reward-list { list-style: none; margin: 6px 0 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
-.reward {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 10px 12px;
-  border-radius: 20px;
-  background: #fff0f5;
-  box-shadow: 0 3px 0 #f8d3e0;
-}
-.reward-icon {
-  flex: none;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  background: #fff;
-  font-size: 20px;
-}
-.reward-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; text-align: left; }
-.reward-text b { font-size: 14px; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.reward-bar { display: block; height: 8px; border-radius: 999px; background: var(--track); overflow: hidden; }
-.reward-bar i { display: block; height: 100%; border-radius: 999px; background: #ff9fbf; }
-.reward-text small { font-size: 12px; color: var(--ink-soft); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 /* 자람 배지는 연두로, 같은 자리에서 다른 도장이 사라진 뒤 찍힌다 */
 .stamp.grow-stamp { background: #7cc96a; box-shadow: 0 3px 0 #58a847; }
 /* 나 창 위쪽 능력치 칸: 운동으로 오른 힘·체력, 공부로 오른 지능, 독서로 오른 집중(2 × 2) */

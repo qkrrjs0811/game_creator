@@ -36,7 +36,6 @@ import { awaySummary, shouldShowAway } from './core/away'
 import { sessionGain } from './core/gain'
 import { GROWTH_STAGES, grownStage, lookLine, malangLook, restoreSeenStage } from './core/look'
 import { chatLines } from './core/chatter'
-import { upcomingRewards } from './core/rewards'
 import { focusCelebrateNow, focusProgress, focusTargetFor, parseFocusDefault, parseFocusGoal, serializeFocusGoal } from './core/focus'
 
 declare global {
@@ -190,7 +189,6 @@ const skills = createSkills(app, {
       achievements: achievementProgress(records),
       title: wornTitle({ records, worn: save.worn })?.titleId ?? null,
       look: lookLine(malangLook(records)),
-      rewards: upcomingRewards({ records, stageProgress: save.stageProgress, skills: save.skills, now }),
     }
   },
   onLearn(id) {
