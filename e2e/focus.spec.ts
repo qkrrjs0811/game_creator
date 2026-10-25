@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test'
+import { test, expect, type Page } from '@playwright/test'
 
 test('켜기 전 집중 목표를 고르면 켜 둔 동안 남은 분과 막대를 보여 주고, 다음에도 그 목표를 먼저 골라 둔다', async ({ page }) => {
   await page.clock.install({ time: new Date('2026-10-25T08:00:00+09:00') })
@@ -73,4 +73,84 @@ test('켜기 전 집중 목표를 고르면 켜 둔 동안 남은 분과 막대�
   await page.getByTestId('toggle').click()
   const records = await page.evaluate(() => window.__debug.getSave().records)
   expect(records.map((r) => Math.floor((r.endedAt - r.startedAt) / 60_000))).toEqual([32, 3])
+})
+
+/** 진동 부름을 세어 둔다(테스트 브라우저에는 진동이 없다) */
+// Phaser가 navigator.vibrate에 다시 넣으므로 쓸 수 있게 둔다
+const countVibrate = {
+  content: `window.__vibrated = 0
+Object.defineProperty(navigator, 'vibrate', { configurable: true, writable: true, value: () => { window.__vibrated++; return true } })`,
+}
+const vibrated = (page: Page) => page.evaluate(() => (window as unknown as { __vibrated: number }).__vibrated)
+
+test('집중 목표에 닿는 순간 배지를 한 번 찍고 진동하며, 타이머는 계속 흐른다', async ({ page }) => {
+  await page.addInitScript(countVibrate)
+  await page.clock.install({ time: new Date('2026-10-25T08:00:00+09:00') })
+  await page.goto('./')
+  await page.getByTestId('focus-15').click()
+  await page.getByTestId('toggle').click()
+  const badge = page.getByTestId('focus-stamp')
+  await page.clock.fastForward('14:00')
+  await expect(page.getByTestId('focus-text')).toHaveText('🎯 15분 중 14분 · 1분 남음')
+  await expect(badge).toBeHidden()
+
+  await page.clock.fastForward('01:30')
+  await expect(badge).toBeVisible()
+  await expect(badge).toHaveText('⏰ 목표 15분 채웠어요!')
+  expect(await vibrated(page)).toBe(1)
+  await expect(page.getByTestId('timer')).toHaveText('15:30')
+  // 배지는 폰 화면 안에 들어가고 시작 버튼·목표 줄을 가리지 않는다(톡 찍히는 연출이 끝난 뒤 잰다)
+  await page.clock.runFor(600)
+  const b = (await badge.boundingBox())!
+  expect(b.x).toBeGreaterThanOrEqual(0)
+  expect(b.x + b.width).toBeLessThanOrEqual(390)
+  const toggle = (await page.getByTestId('toggle').boundingBox())!
+  expect(b.y + b.height).toBeLessThanOrEqual(toggle.y)
+  const live = (await page.getByTestId('focus-live').boundingBox())!
+  expect(b.y + b.height).toBeLessThanOrEqual(live.y)
+  await page.screenshot({ path: 'test-results/screens/focus-done.png' })
+
+  // 잠깐 뒤 사라지고, 다시 열어도 같은 타이머로는 또 찍지 않는다
+  await page.clock.runFor(4000)
+  await expect(badge).toBeHidden()
+  await page.reload()
+  await page.clock.runFor(2000)
+  await expect(page.getByTestId('focus-text')).toHaveText(/^⏰ 목표 15분 채웠어요 · \d+분째$/)
+  await expect(badge).toBeHidden()
+
+  // 새 타이머는 다시 축하한다
+  await page.getByTestId('toggle').click()
+  await page.getByTestId('toggle').click()
+  await page.clock.fastForward('15:00')
+  await expect(badge).toBeVisible()
+})
+
+test('닫아 둔 사이 집중 목표에 닿았으면 다시 열 때 오늘 도장 다음에 한 번 찍는다', async ({ context }) => {
+  await context.addInitScript(countVibrate)
+  await context.clock.install({ time: new Date('2026-10-25T08:00:00+09:00') })
+  let page = await context.newPage()
+  await page.goto('./')
+  await page.getByTestId('focus-25').click()
+  await page.getByTestId('toggle').click()
+  await page.clock.fastForward('00:02')
+  await page.close()
+
+  page = await context.newPage()
+  await page.clock.fastForward('40:00')
+  await page.goto('./')
+  const badge = page.getByTestId('focus-stamp')
+  // 같은 자리의 오늘 도장이 먼저 찍히고, 그게 사라진 뒤 목표 배지가 찍힌다(겹치지 않는다)
+  await expect(page.getByTestId('stamp')).toBeVisible()
+  await expect(badge).toBeHidden()
+  await page.clock.runFor(4500)
+  await expect(page.getByTestId('stamp')).toBeHidden()
+  await expect(badge).toBeVisible()
+  await expect(badge).toHaveText('⏰ 목표 25분 채웠어요!')
+  expect(await vibrated(page)).toBe(1)
+  await page.screenshot({ path: 'test-results/screens/focus-done-away.png' })
+
+  // 목표는 보여 줄 값일 뿐 기록은 실제로 켜 둔 시간만
+  await page.getByTestId('toggle').click()
+  const records = await page.evaluate(() => window.__debug.getSave().records)
+  expect(records.map((r) => Math.floor((r.endedAt - r.startedAt) / 60_000))).toEqual([40])
 })

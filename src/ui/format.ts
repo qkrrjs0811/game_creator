@@ -254,6 +254,11 @@ export function focusText(p: FocusProgress): string {
   return `🎯 ${p.target}분 중 ${p.elapsedMinutes}분 · ${p.remainingMinutes}분 남음`
 }
 
+/** 집중 목표에 닿은 순간 타이머 카드에 찍는 배지 */
+export function focusDoneText(target: number): string {
+  return `⏰ 목표 ${target}분 채웠어요!`
+}
+
 /** 집중 목표 칩 글자 */
 export function focusChipLabel(minutes: number): string {
   return minutes === 0 ? '없음' : `${minutes}분`

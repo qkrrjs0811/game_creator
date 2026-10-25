@@ -1,4 +1,4 @@
-import { focusChipLabel, focusText, formatElapsed, goalText, missionChip, objectJosa, topicJosa, weekChip } from './format'
+import { focusChipLabel, focusDoneText, focusText, formatElapsed, goalText, missionChip, objectJosa, topicJosa, weekChip } from './format'
 import { ACTIVITIES } from '../core/activities'
 import { FOCUS_TARGETS, type FocusProgress } from '../core/focus'
 import type { TodayGoal } from '../core/goal'
@@ -128,6 +128,7 @@ export function createHud(
       <div class="stamp" data-testid="stamp" role="status" hidden>🌟 오늘 도장 쾅!</div>
       <div class="stamp week-stamp" data-testid="week-stamp" role="status" hidden>🏅 이번 주 목표 달성!</div>
       <div class="stamp mission-stamp" data-testid="mission-stamp" role="status" hidden>📜 미션 완료!</div>
+      <div class="stamp focus-stamp" data-testid="focus-stamp" role="status" hidden></div>
       <div class="today-row">
         <span class="today" data-testid="today"></span>
         <span class="mission" data-testid="mission"></span>
@@ -218,6 +219,7 @@ export function createHud(
     weekStamp.hidden = true
     void weekStamp.offsetWidth
     weekStamp.hidden = false
+    yieldFocus()
     clearTimeout(weekTimer)
     weekTimer = setTimeout(() => (weekStamp.hidden = true), 3500)
   }
@@ -232,7 +234,33 @@ export function createHud(
     missionStamp.hidden = true
     void missionStamp.offsetWidth
     missionStamp.hidden = false
+    yieldFocus()
     missionTimer = setTimeout(() => (missionStamp.hidden = true), 3500)
+  }
+  const focusStamp = q('focus-stamp')
+  let focusTimer: ReturnType<typeof setTimeout> | undefined
+  // 띄울(또는 떠 있는) 집중 목표 배지. 같은 자리의 다른 도장이 먼저이고, 그게 사라진 뒤에 찍는다
+  let focusPending = false
+  const popFocus = () => {
+    clearTimeout(focusTimer)
+    if (!focusPending) return
+    if (!stamp.hidden || !weekStamp.hidden || !missionStamp.hidden) {
+      focusTimer = setTimeout(popFocus, 600)
+      return
+    }
+    focusStamp.hidden = true
+    void focusStamp.offsetWidth
+    focusStamp.hidden = false
+    focusTimer = setTimeout(() => {
+      focusPending = false
+      focusStamp.hidden = true
+    }, 3500)
+  }
+  /** 다른 도장이 찍히면 목표 배지는 잠깐 내리고 그게 사라진 뒤 다시 찍는다(겹치지 않게) */
+  const yieldFocus = () => {
+    if (focusStamp.hidden) return
+    focusStamp.hidden = true
+    popFocus()
   }
   const away = q('away')
   const hideAway = () => (away.hidden = true)
@@ -348,6 +376,7 @@ export function createHud(
       stamp.hidden = true
       void stamp.offsetWidth
       stamp.hidden = false
+      yieldFocus()
       clearTimeout(stampTimer)
       stampTimer = setTimeout(() => (stamp.hidden = true), 3500)
     },
@@ -359,6 +388,17 @@ export function createHud(
       clearTimeout(weekTimer)
       if (stamp.hidden) popWeek()
       else weekTimer = setTimeout(popWeek, 1800)
+    },
+    /** 켜 둔 타이머가 집중 목표에 닿은 순간 카드에 배지를 찍고, 되면 진동한다. 타이머는 계속 흐른다 */
+    showFocusDone(target: number) {
+      focusStamp.textContent = focusDoneText(target)
+      focusPending = true
+      popFocus()
+      try {
+        navigator.vibrate?.([120, 80, 120])
+      } catch {
+        // 진동을 못 하는 기기면 배지만 보여 준다
+      }
     },
     /** 하루 상한에 닿았다는 안내를 잠깐 띄운다 */
     showCapToast(activity: ActivityId) {
