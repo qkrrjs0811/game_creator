@@ -5,7 +5,7 @@ import type { Cosmetic, HatLook, HatShape, Worn } from '../core/cosmetics'
 import { chapterBackdrop, type Backdrop } from '../core/backdrop'
 import type { ActivityId } from '../core/types'
 import { keepChatIndex, nextChatIndex } from '../core/chatter'
-import { contactAt, hitImpact, type Impact } from '../core/impact'
+import { contactAt, finishDelay, hitImpact, hpTrail, isFinalBlow, type Impact } from '../core/impact'
 
 const MASCOT = 0xffd7a8
 const MASCOT_SHADE = 0xf7b97a
@@ -27,6 +27,9 @@ function groundY(h: number): number {
   return Phaser.Math.Clamp(h - BELOW_FEET - FEET, h * 0.52, h * 0.68)
 }
 const HP_ENEMY = 0xff9fbf
+/** 깎인 뒤 천천히 따라 줄어드는 옅은 막대. 빈 칸(베이지)과 구별되게 연노랑으로 한다 */
+const HP_PLAYER_TRAIL = 0xffe28f
+const HP_ENEMY_TRAIL = 0xffe28f
 const BAR_W = 78
 /** 이긴 쪽이 폴짝 뛰는 높이. 자기 HP 막대와 같이 뛰며, 막대가 위쪽 결과 카드(질 때 더 길다)에 닿지 않을 만큼만 뛴다 */
 const WIN_HOP = 18
@@ -432,6 +435,11 @@ export class HomeScene extends Phaser.Scene {
     barPeak?: number
     /** 지금 보이는 HP 비율 [말랑이, 몬스터] */
     hp: [number, number]
+    /** HP 막대 뒤 옅은 막대 비율 [말랑이, 몬스터]. 깎이면 천천히 따라 줄어든다 */
+    trail: [number, number]
+    trailTween: [Phaser.Tweens.Tween?, Phaser.Tweens.Tween?]
+    /** 마지막 걸음이 쓰러뜨린 한 방이었는지. 진 쪽을 밀린 자리에서 납작하게 만든다 */
+    knockout?: boolean
     onEnd: (win: boolean) => void
     ended: boolean
   }
@@ -647,7 +655,20 @@ export class HomeScene extends Phaser.Scene {
     for (const body of [this.mascotBody, this.monsterBody]) this.tweens.killTweensOf(body.setY(0))
     this.tweens.killTweensOf(this.bubble)
     this.bubble.setAlpha(0)
-    this.battle = { steps: timeline.steps, win: timeline.win, next: 0, delay, bars: [this.add.graphics(), this.add.graphics()], hp: [1, 1], onEnd, ended: false }
+    this.battle = {
+      steps: timeline.steps,
+      win: timeline.win,
+      next: 0,
+      delay,
+      bars: [this.add.graphics(), this.add.graphics()],
+      hp: [1, 1],
+      trail: [1, 1],
+      trailTween: [undefined, undefined],
+      onEnd,
+      ended: false,
+    }
+    this.game.canvas.parentElement?.setAttribute('data-final', '0')
+    this.game.canvas.parentElement?.setAttribute('data-fainted', '')
     this.layout(this.scale.width, this.scale.height)
     this.battle.timer = this.time.addEvent({ delay, loop: true, startAt: delay * 0.4, callback: () => this.playStep() })
   }
@@ -658,6 +679,7 @@ export class HomeScene extends Phaser.Scene {
     if (!b || b.ended) return
     const last = b.steps[b.steps.length - 1]
     if (last) this.drawBars(last.playerHp, last.enemyHp)
+    b.knockout = false
     b.next = b.steps.length
     this.finish()
   }
@@ -667,6 +689,7 @@ export class HomeScene extends Phaser.Scene {
     const b = this.battle
     if (!b) return
     b.timer?.remove()
+    for (const t of b.trailTween) t?.stop()
     for (const bar of b.bars) {
       this.tweens.killTweensOf(bar)
       bar.destroy()
@@ -676,6 +699,7 @@ export class HomeScene extends Phaser.Scene {
       this.tweens.killTweensOf(who)
       who.setAlpha(1).setScale(1).setAngle(0)
     }
+    this.game.canvas.parentElement?.setAttribute('data-final', '0')
     if (this.homeLook) this.setMonster(this.homeLook)
     this.layout(this.scale.width, this.scale.height)
     this.idle()
@@ -982,7 +1006,11 @@ export class HomeScene extends Phaser.Scene {
     // 지난 걸음의 밀림·찌그러짐이 남지 않게 제자리·제모양으로 돌린다
     for (const who of [this.mascot, this.monster]) this.tweens.killTweensOf(who.setScale(1).setAngle(0).setAlpha(1))
     this.layout(this.scale.width, this.scale.height)
-    const fx = hitImpact(s.kind, !!s.crit, b.delay)
+    // 쓰러뜨리는 마지막 한 방은 느린 동작으로 크게 보여 준다
+    const final = isFinalBlow(s, b.next >= b.steps.length)
+    b.knockout = final
+    if (final) this.game.canvas.parentElement?.setAttribute('data-final', '1')
+    const fx = hitImpact(s.kind, !!s.crit, b.delay, final)
     const home = { attacker: attacker.x, target: target.x }
     const live = () => this.battle === b && !b.ended
     this.markImpact('windup')
@@ -1022,8 +1050,9 @@ export class HomeScene extends Phaser.Scene {
           scaleX: 1 + fx.squash,
           scaleY: 1 - fx.squash,
           angle: 8 * dir,
-          duration: fx.back / 2,
-          yoyo: true,
+          duration: final ? fx.back : fx.back / 2,
+          // 쓰러진 쪽은 밀려난 자리에 남아 그대로 납작해진다
+          yoyo: !final,
           ease: 'Quad.easeOut',
         })
       })
@@ -1031,7 +1060,7 @@ export class HomeScene extends Phaser.Scene {
     this.time.delayedCall(contactAt(fx) + fx.hitstop + fx.back, () => live() && this.markImpact('rest'))
     if (b.next >= b.steps.length) {
       b.timer?.remove()
-      this.time.delayedCall(700, () => this.battle === b && this.finish())
+      this.time.delayedCall(finishDelay(fx), () => this.battle === b && this.finish())
     }
   }
 
@@ -1101,17 +1130,58 @@ export class HomeScene extends Phaser.Scene {
     b.ended = true
     b.timer?.remove()
     for (const who of [this.mascot, this.monster]) this.tweens.killTweensOf(who)
-    this.layout(this.scale.width, this.scale.height)
     const winner = b.win ? this.mascot : this.monster
     const loser = b.win ? this.monster : this.mascot
-    this.tweens.add({ targets: loser, scaleY: 0.6, scaleX: 1.2, alpha: 0.55, duration: 380, ease: 'Back.easeIn' })
+    // 마지막 한 방에 밀려난 쪽은 그 자리에서 쓰러진다
+    const fallenX = loser.x
+    this.layout(this.scale.width, this.scale.height)
+    if (b.knockout) loser.setX(fallenX)
+    const host = this.game.canvas.parentElement
+    // 진 쪽은 납작해지며 사라진다. 진 말랑이는 다음에 다시 서야 하니 사라지지 않고 납작하게 엎드린다
+    const gone = loser === this.monster
+    this.tweens.add({
+      targets: loser,
+      scaleY: gone ? 0.12 : 0.5,
+      scaleX: gone ? 1.5 : 1.3,
+      alpha: gone ? 0 : 0.45,
+      duration: gone ? 420 : 380,
+      ease: 'Back.easeIn',
+      onComplete: () => {
+        host?.setAttribute('data-fainted', b.win ? 'monster' : 'mascot')
+        // 사라진 자리에 작은 연기 방울이 퐁 남는다
+        if (gone && this.battle === b) this.puff(loser.x, loser.y)
+      },
+    })
+    // 사라지는 몬스터의 빈 HP 막대도 같이 사라진다
+    if (gone) this.tweens.add({ targets: b.bars[1], alpha: 0, delay: 200, duration: 300 })
     // 머리 위 막대도 같이 뛰어 머리(모자)가 막대를 뚫고 올라가지 않는다
     const winnerBar = b.bars[b.win ? 0 : 1]
     // 숨쉬기가 멈춘 자리에서 찌그러진 채로 뛰지 않게 모양을 되돌린다
     winner.setScale(1)
     this.tweens.add({ targets: [winner, winnerBar], y: `-=${WIN_HOP}`, duration: 240, yoyo: true, repeat: 2, ease: 'Quad.easeOut' })
-    this.game.canvas.parentElement?.setAttribute('data-winner', b.win ? 'mascot' : 'monster')
+    // 승리 포즈: 뛰면서 좌우로 살랑 흔들고, 머리 위에서 별이 터진다
+    this.tweens.add({ targets: winner, angle: { from: -7, to: 7 }, duration: 240, yoyo: true, repeat: 2, ease: 'Sine.easeInOut', onComplete: () => winner.setAngle(0) })
+    if (b.win) this.burst(winner.x, winner.y - 70, 12)
+    host?.setAttribute('data-winner', b.win ? 'mascot' : 'monster')
     b.onEnd(b.win)
+  }
+
+  /** 쓰러진 몬스터가 사라진 자리에 남는 하얀 연기 방울 */
+  private puff(x: number, y: number) {
+    for (let i = 0; i < 6; i++) {
+      const a = Math.PI + (Math.PI * i) / 5
+      const ball = this.add.circle(x + Math.cos(a) * 14, y + 10, Phaser.Math.Between(7, 11), 0xffffff).setAlpha(0.9)
+      this.tweens.add({
+        targets: ball,
+        x: x + Math.cos(a) * 34,
+        y: y + 10 + Math.sin(a) * 22,
+        scale: { from: 0.6, to: 1.3 },
+        alpha: 0,
+        duration: 520,
+        ease: 'Cubic.easeOut',
+        onComplete: () => ball.destroy(),
+      })
+    }
   }
 
   /** 맞은 쪽 HP 막대 바로 위에서 숫자·글자가 떠오르며 사라진다(막대를 가리지 않게) */
@@ -1139,20 +1209,56 @@ export class HomeScene extends Phaser.Scene {
     })
   }
 
-  /** 두 캐릭터 머리 위의 둥근 HP 바 */
+  /**
+   * 두 캐릭터 머리 위의 둥근 HP 바. 깎이면 앞 막대는 바로 줄고,
+   * 뒤의 옅은 막대가 잠깐 남았다가 천천히 따라 줄어 얼마나 깎였는지 보인다
+   */
   private drawBars(playerHp: number, enemyHp: number) {
     const b = this.battle
     if (!b) return
-    const bar = (g: Phaser.GameObjects.Graphics, cx: number, cy: number, ratio: number, color: number) => {
+    const next: [number, number] = [playerHp, enemyHp]
+    for (const i of [0, 1] as const) {
+      if (next[i] >= b.hp[i]) {
+        if (next[i] > b.trail[i]) b.trail[i] = next[i]
+        continue
+      }
+      // 앞 막대가 줄어든 만큼 옅은 막대가 따라간다(따라가는 중에 또 깎이면 지금 자리에서 다시 따라간다)
+      b.trailTween[i]?.stop()
+      const { wait, duration } = hpTrail(b.trail[i] - next[i])
+      b.trailTween[i] = this.tweens.addCounter({
+        from: b.trail[i],
+        to: next[i],
+        delay: wait,
+        duration,
+        ease: 'Quad.easeIn',
+        onUpdate: (tw) => {
+          if (this.battle !== b) return
+          b.trail[i] = tw.getValue() ?? next[i]
+          this.paintBars()
+        },
+      })
+    }
+    b.hp = next
+    this.paintBars()
+  }
+
+  private paintBars() {
+    const b = this.battle
+    if (!b) return
+    const bar = (g: Phaser.GameObjects.Graphics, cx: number, cy: number, ratio: number, trail: number, color: number, pale: number) => {
       g.clear()
       g.fillStyle(0xffffff).fillRoundedRect(cx - BAR_W / 2 - 3, cy - 3, BAR_W + 6, 16, 8)
       g.fillStyle(0xf3e3d3).fillRoundedRect(cx - BAR_W / 2, cy, BAR_W, 10, 5)
+      if (trail > ratio) g.fillStyle(pale).fillRoundedRect(cx - BAR_W / 2, cy, Math.max(10, BAR_W * trail), 10, 5)
       if (ratio > 0) g.fillStyle(color).fillRoundedRect(cx - BAR_W / 2, cy, Math.max(10, BAR_W * ratio), 10, 5)
     }
     const { width: w, height: h } = this.scale
-    bar(b.bars[0], w * 0.3, this.mascotBarY(h), playerHp, HP_PLAYER)
-    bar(b.bars[1], w * 0.72, barY(h), enemyHp, HP_ENEMY)
-    b.hp = [playerHp, enemyHp]
+    bar(b.bars[0], w * 0.3, this.mascotBarY(h), b.hp[0], b.trail[0], HP_PLAYER, HP_PLAYER_TRAIL)
+    bar(b.bars[1], w * 0.72, barY(h), b.hp[1], b.trail[1], HP_ENEMY, HP_ENEMY_TRAIL)
+    // e2e가 앞 막대와 옅은 막대가 어디까지 왔는지 볼 수 있게 남긴다
+    const host = this.game.canvas.parentElement
+    host?.setAttribute('data-hp', b.hp.map((v) => v.toFixed(2)).join(' '))
+    host?.setAttribute('data-hp-trail', b.trail.map((v) => v.toFixed(2)).join(' '))
   }
 
   /**
