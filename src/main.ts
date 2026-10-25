@@ -257,6 +257,7 @@ function paintBackdrop() {
   const b = stageBackdrop(no)
   hud.sceneHost.style.background = `linear-gradient(${b.sky}, ${b.skyLow})`
   hud.sceneHost.dataset.chapter = String(chapterOf(no))
+  homeScene()?.setBackdrop(b)
 }
 const battleBar = createBattleBar(hud.sceneHost, {
   onSkip: () => (skipAutoRun ? skipAutoRun() : homeScene()?.skipBattle()),

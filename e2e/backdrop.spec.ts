@@ -54,3 +54,34 @@ test('전투 중에는 도전한 스테이지의 장 배경, 끝나면 다시 �
   await expect(scene).toHaveAttribute('data-chapter', '2')
   expect(await sceneBg(page)).toContain('rgb(255, 216, 200)')
 })
+
+test('장마다 장면 뒤 장식이 다르게 그려짐(장식·땅 띠)', async ({ page }) => {
+  const scene = page.getByTestId('scene')
+  const decors = ['clouds', 'hills', 'stars', 'bubbles', 'flowers', 'sun', 'snow', 'leaves']
+  for (let chapter = 1; chapter <= 8; chapter++) {
+    await seed(page, (chapter - 1) * 10)
+    await expect(scene).toHaveAttribute('data-chapter', String(chapter))
+    await expect(scene).toHaveAttribute('data-decor', decors[chapter - 1])
+    if (chapter % 2 === 1) {
+      await page.waitForTimeout(600)
+      await page.screenshot({ path: `test-results/screens/backdrop-decor-${decors[chapter - 1]}.png` })
+    }
+  }
+})
+
+test('전투 중에는 도전한 장의 장식, 끝나면 다시 지금 장 장식', async ({ page }) => {
+  await seed(page, 12)
+  const scene = page.getByTestId('scene')
+  await expect(scene).toHaveAttribute('data-decor', 'hills')
+  await page.getByTestId('open-stages').click()
+  await page.getByTestId('chapter-prev').click()
+  await page.getByTestId('stage-go-1').click()
+  await expect(page.getByTestId('battle')).toHaveAttribute('data-state', 'playing')
+  await expect(scene).toHaveAttribute('data-decor', 'clouds')
+  await page.waitForTimeout(500)
+  await page.screenshot({ path: 'test-results/screens/backdrop-decor-battle.png' })
+  await page.getByTestId('battle-action').click()
+  await expect(page.getByTestId('battle')).toHaveAttribute('data-state', 'done')
+  await page.getByTestId('battle-action').click()
+  await expect(scene).toHaveAttribute('data-decor', 'hills')
+})

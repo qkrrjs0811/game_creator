@@ -2,6 +2,7 @@ import Phaser from 'phaser'
 import type { ReplayStep, Timeline } from '../core/replay'
 import { MONSTERS, type Monster } from '../core/monsters'
 import type { Cosmetic, HatLook, HatShape, Worn } from '../core/cosmetics'
+import { chapterBackdrop, type Backdrop } from '../core/backdrop'
 
 const MASCOT = 0xffd7a8
 const MASCOT_SHADE = 0xf7b97a
@@ -99,6 +100,126 @@ function drawChapterHat(g: Phaser.GameObjects.Graphics, look: HatLook) {
     }
   }
 }
+/** 땅 띠 위끝: 발끝보다 조금 위라 말랑이·몬스터가 띠 위에 서 있다 */
+function groundTop(h: number): number {
+  return groundY(h) + FEET - 14
+}
+
+/** 다섯 꼭짓점 별 */
+function starPoints(cx: number, cy: number, r: number): Phaser.Math.Vector2[] {
+  return Array.from({ length: 10 }, (_, i) => {
+    const a = (i / 10) * Math.PI * 2 - Math.PI / 2
+    const rr = i % 2 === 0 ? r : r * 0.5
+    return new Phaser.Math.Vector2(cx + Math.cos(a) * rr, cy + Math.sin(a) * rr)
+  })
+}
+
+/**
+ * 장 배경: 하늘의 둥근 장식과 땅 띠. 캐릭터·HP 막대보다 뒤에 그리고, 장식은 반투명이라 앞의 것을 가리지 않는다.
+ * 자리는 장면 크기의 비율이라 장면 높이가 바뀌어도 같은 모습이다
+ */
+function drawScenery(g: Phaser.GameObjects.Graphics, b: Backdrop, w: number, h: number) {
+  const col = (hex: string) => Phaser.Display.Color.HexStringToColor(hex)
+  const ground = col(b.ground)
+  const top = groundTop(h)
+  /** 하늘 안의 자리(가로 비율, 땅 위끝까지 세로 비율) */
+  const at = (fx: number, fy: number): [number, number] => [w * fx, top * fy]
+  g.clear()
+
+  // 땅 뒤에 서는 장식(언덕)은 땅보다 먼저 그린다
+  if (b.decor === 'hills') {
+    g.fillStyle(ground.clone().darken(6).color, 0.7)
+    g.fillCircle(w * 0.1, top + 30, 90).fillCircle(w * 0.95, top + 40, 110)
+    g.fillStyle(ground.clone().lighten(4).color, 0.8).fillCircle(w * 0.55, top + 50, 80)
+  }
+
+  // 땅 띠: 위끝을 둥근 언덕처럼 울퉁불퉁하게
+  g.fillStyle(ground.color).fillRect(0, top + 8, w, h - top)
+  for (let x = -20; x < w + 40; x += 56) g.fillCircle(x, top + 18, 22)
+  g.fillStyle(0xffffff, 0.4)
+  for (let x = -20; x < w + 40; x += 56) g.fillEllipse(x - 4, top + 3, 16, 5)
+
+  switch (b.decor) {
+    case 'clouds':
+      g.fillStyle(0xffffff, 0.75)
+      for (const [fx, fy, s] of [[0.14, 0.12, 1], [0.84, 0.22, 0.8], [0.52, 0.42, 0.6]]) {
+        const [x, y] = at(fx, fy)
+        g.fillEllipse(x, y + 6 * s, 64 * s, 22 * s).fillCircle(x - 10 * s, y, 13 * s).fillCircle(x + 9 * s, y - 3 * s, 16 * s)
+      }
+      break
+    case 'hills':
+      g.fillStyle(0xffffff, 0.6)
+      for (const [fx, fy] of [[0.18, 0.16], [0.8, 0.3]]) {
+        const [x, y] = at(fx, fy)
+        g.fillEllipse(x, y, 50, 16).fillCircle(x + 6, y - 5, 10)
+      }
+      break
+    case 'stars':
+      g.fillStyle(0xfff6c8, 0.9)
+      for (const [fx, fy, r] of [[0.1, 0.1, 9], [0.88, 0.14, 11], [0.32, 0.36, 6], [0.7, 0.44, 7], [0.95, 0.5, 5], [0.05, 0.5, 6]]) {
+        const [x, y] = at(fx, fy)
+        g.fillPoints(starPoints(x, y, r), true)
+      }
+      break
+    case 'bubbles':
+      for (const [fx, fy, r] of [[0.1, 0.2, 12], [0.86, 0.12, 15], [0.62, 0.4, 8], [0.22, 0.48, 7], [0.93, 0.46, 9]]) {
+        const [x, y] = at(fx, fy)
+        g.fillStyle(0xffffff, 0.3).fillCircle(x, y, r)
+        g.lineStyle(2, 0xffffff, 0.75).strokeCircle(x, y, r)
+        g.fillStyle(0xffffff, 0.9).fillCircle(x - r * 0.35, y - r * 0.35, r * 0.22)
+      }
+      break
+    case 'flowers':
+      // 땅 띠 위의 작은 꽃들(캐릭터 사이와 양 끝)
+      for (const [fx, c] of [[0.06, 0xffffff], [0.16, 0xfff3a8], [0.51, 0xfff3a8], [0.95, 0xffffff]]) {
+        const x = w * fx
+        const y = top + 30
+        g.fillStyle(c, 0.9)
+        for (let i = 0; i < 5; i++) {
+          const a = (i / 5) * Math.PI * 2
+          g.fillCircle(x + Math.cos(a) * 5, y + Math.sin(a) * 5, 4)
+        }
+        g.fillStyle(0xff9fbf).fillCircle(x, y, 3)
+      }
+      g.fillStyle(0xffffff, 0.55)
+      for (const [fx, fy] of [[0.2, 0.18], [0.82, 0.28]]) {
+        const [x, y] = at(fx, fy)
+        g.fillEllipse(x, y, 46, 14)
+      }
+      break
+    case 'sun': {
+      const [x, y] = at(0.86, 0.16)
+      g.fillStyle(0xffffff, 0.45).fillCircle(x, y, 34)
+      g.fillStyle(0xffe58a, 0.95).fillCircle(x, y, 24)
+      const [cx, cy] = at(0.16, 0.26)
+      g.fillStyle(0xffffff, 0.6).fillEllipse(cx, cy, 54, 16).fillCircle(cx + 6, cy - 6, 11)
+      break
+    }
+    case 'snow':
+      g.fillStyle(0xffffff, 0.85)
+      for (const [fx, fy, r] of [[0.06, 0.12, 4], [0.2, 0.3, 3], [0.36, 0.08, 3], [0.62, 0.22, 4], [0.8, 0.1, 3], [0.94, 0.32, 4], [0.48, 0.46, 3], [0.1, 0.52, 3], [0.88, 0.56, 3]]) {
+        const [x, y] = at(fx, fy)
+        g.fillCircle(x, y, r)
+      }
+      // 땅에 쌓인 눈
+      g.fillStyle(0xffffff, 0.8).fillEllipse(w * 0.08, top + 14, 60, 14).fillEllipse(w * 0.93, top + 16, 50, 12)
+      break
+    case 'leaves': {
+      const leaf = [0xf5a35c, 0xe8c25a, 0xf08a6a]
+      for (const [fx, fy, a, i] of [[0.1, 0.16, 0.5, 0], [0.84, 0.12, -0.6, 1], [0.6, 0.38, 1.1, 2], [0.26, 0.44, -0.3, 1], [0.94, 0.48, 0.8, 0]]) {
+        const [x, y] = at(fx, fy)
+        g.save()
+        g.translateCanvas(x, y)
+        g.rotateCanvas(a)
+        g.fillStyle(leaf[i], 0.85).fillEllipse(0, 0, 18, 9)
+        g.fillStyle(0xffffff, 0.5).fillRect(-7, -0.5, 14, 1)
+        g.restore()
+      }
+      break
+    }
+  }
+}
+
 const MONSTER_TOP: Record<Monster['shape'], number> = { slime: -38, mushroom: -36, drop: -42, cloud: -36, rock: -22, king: -50 }
 
 /** 두 캐릭터 머리 위 HP 막대(높이 10, 흰 테두리 3)의 위쪽 y */
@@ -139,6 +260,9 @@ export class HomeScene extends Phaser.Scene {
   private bubbleText!: Phaser.GameObjects.Text
   private bubbleBg!: Phaser.GameObjects.Graphics
   private bubbleAway = false
+  /** 장 배경(하늘 장식·땅 띠). 캐릭터보다 먼저 만들어 뒤에 그린다 */
+  private scenery!: Phaser.GameObjects.Graphics
+  private backdrop: Backdrop = chapterBackdrop(1)
   private jump?: Phaser.Tweens.Tween
   /** 숨쉬기(쉬는 중) 또는 꾹꾹 누르기(운동 중) 움직임 */
   private breathe?: Phaser.Tweens.Tween
@@ -173,6 +297,7 @@ export class HomeScene extends Phaser.Scene {
   }
 
   create() {
+    this.scenery = this.add.graphics()
     this.mascotBody = this.add.container(0, 0)
     this.mascot = this.add.container(0, 0, [this.mascotBody])
     this.shownLook = undefined
@@ -359,6 +484,13 @@ export class HomeScene extends Phaser.Scene {
     this.layout(this.scale.width, this.scale.height)
     this.idle()
     this.tweens.add({ targets: this.bubble, alpha: this.bubbleAway ? 0 : 1, duration: 300 })
+  }
+
+  /** 장 배경(하늘 장식·땅 띠)을 바꾼다. 그림만 바뀐다 */
+  setBackdrop(b: Backdrop) {
+    if (this.backdrop.decor === b.decor && this.backdrop.ground === b.ground) return
+    this.backdrop = b
+    if (this.scenery) this.layout(this.scale.width, this.scale.height)
   }
 
   /** 말랑이에게 입은 꾸미기(모자·색)를 입힌다. 모습만 바뀐다 */
@@ -678,6 +810,9 @@ export class HomeScene extends Phaser.Scene {
 
   private layout(w: number, h: number) {
     const ground = groundY(h)
+    drawScenery(this.scenery, this.backdrop, w, h)
+    // e2e가 지금 그린 장식을 볼 수 있게 남긴다
+    this.game.canvas.parentElement?.setAttribute('data-decor', this.backdrop.decor)
     this.mascot.setPosition(w * 0.3, ground)
     this.monster.setPosition(w * 0.72, ground + 6)
     this.bubble.setPosition(w / 2, Math.max(28, h * 0.16))
