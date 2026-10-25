@@ -1,4 +1,4 @@
-import { chapterStages } from '../core/endless'
+import { chapterBrowse, chapterStages } from '../core/endless'
 import { formatMinutes } from './format'
 
 /** 다음에 깰 스테이지를 운동 몇 분 더 하면 이길 만한지(nextStageAdvice). 0이면 지금도 이길 만하다 */
@@ -13,7 +13,7 @@ function adviceText(toWin: number | null): string {
 /** 스테이지 이름 앞에 붙는 말: 장 보스는 "보스", 나머지는 "N스테이지" */
 export const stageLabel = (s: { no: number; boss: boolean }) => (s.boss ? '보스' : `${s.no}스테이지`)
 
-/** 스테이지 창: 지금 장의 스테이지 10칸과 깸·도전 가능·잠김 상태 */
+/** 스테이지 창: 지금 장의 스테이지 10칸과 깸·도전 가능·잠김 상태. 앞 장들과 바로 다음 장도 넘겨 볼 수 있다 */
 export function createStages(
   root: HTMLElement,
   h: { progress(): number; advice(): StageAdvice; onChallenge(no: number): void },
@@ -25,7 +25,11 @@ export function createStages(
   wrap.innerHTML = `
     <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="stages-title">
       <h2 id="stages-title">모험 지도</h2>
-      <p class="stage-chapter" data-testid="stage-chapter"></p>
+      <div class="chapter-nav">
+        <button type="button" class="chapter-step" data-testid="chapter-prev" aria-label="앞 장">◀</button>
+        <p class="stage-chapter" data-testid="stage-chapter"></p>
+        <button type="button" class="chapter-step" data-testid="chapter-next" aria-label="다음 장">▶</button>
+      </div>
       <p class="sheet-desc">이기면 다음 스테이지가 열려요.<br />깬 곳도 언제든 다시 도전할 수 있어요.</p>
       <ul class="stage-list" data-testid="stage-list"></ul>
       <p class="sheet-msg" data-testid="stage-msg" role="status"></p>
@@ -37,15 +41,28 @@ export function createStages(
   const list = q('stage-list')
   const msg = q('stage-msg')
 
+  const prev = q('chapter-prev') as HTMLButtonElement
+  const next = q('chapter-next') as HTMLButtonElement
+  /** 보고 있는 장. 열 때마다 지금 장으로 돌아온다 */
+  let viewing: number | undefined
+
   const draw = () => {
     const advice = h.advice()
-    const stages = chapterStages(h.progress())
-    q('stage-chapter').textContent = `${stages[0].chapter}장 · ${stages[0].chapterName}`
+    const view = chapterBrowse(h.progress(), viewing)
+    viewing = view.chapter
+    prev.disabled = !view.prev
+    next.disabled = !view.next
+    const stages = chapterStages(h.progress(), view.chapter)
+    // 아직 안 열린 장은 장 이름과 그 장 스테이지 이름을 비밀로 둔다(스테이지 이름에 장 이름이 들어 있다)
+    const chip = q('stage-chapter')
+    chip.textContent = `${view.chapter}장 · ${view.revealed ? stages[0].chapterName : '???'}`
+    chip.classList.toggle('secret', !view.revealed)
+    const locked = view.revealed ? '앞 스테이지를 깨면 열려요' : '앞 장 보스를 깨면 열려요'
     list.innerHTML = stages
       .map((s) => {
         // 잠긴 곳의 몬스터는 열릴 때까지 비밀로 둔다
         const foe = s.monster.name
-        const tag = s.state === 'cleared' ? `${foe} · 깼어요 ⭐` : s.state === 'open' ? `${foe} · 도전!` : '앞 스테이지를 깨면 열려요'
+        const tag = s.state === 'cleared' ? `${foe} · 깼어요 ⭐` : s.state === 'open' ? `${foe} · 도전!` : locked
         // 아직 못 깬 다음 스테이지에는 얼마나 더 키우면 이길 만한지 알려 준다(도전은 언제든 할 수 있다)
         const hint =
           advice && advice.no === s.no
@@ -61,7 +78,7 @@ export function createStages(
           <li class="stage ${s.state}${s.boss ? ' boss' : ''}" data-testid="stage-${s.no}" data-state="${s.state}">
             <span class="stage-icon" aria-hidden="true">${s.icon}</span>
             <span class="stage-text">
-              <b>${stageLabel(s)} · ${s.name}</b>
+              <b>${stageLabel(s)} · ${view.revealed ? s.name : '???'}</b>
               <span>${tag}</span>${hint}
             </span>
             ${btn}
@@ -76,6 +93,14 @@ export function createStages(
     list.scrollTop = open ? Math.max(0, open.offsetTop - list.clientHeight / 2 + open.offsetHeight / 2) : 0
   }
 
+  const turn = (step: number) => {
+    viewing = (viewing ?? chapterBrowse(h.progress()).chapter) + step
+    draw()
+    showOpen()
+  }
+  prev.addEventListener('click', () => turn(-1))
+  next.addEventListener('click', () => turn(1))
+
   list.addEventListener('click', (e) => {
     const btn = (e.target as HTMLElement).closest<HTMLButtonElement>('.stage-go')
     if (btn) h.onChallenge(Number(btn.dataset.no))
@@ -87,6 +112,7 @@ export function createStages(
   return {
     open() {
       msg.textContent = ''
+      viewing = undefined
       draw()
       wrap.hidden = false
       showOpen()

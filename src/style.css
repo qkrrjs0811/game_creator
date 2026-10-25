@@ -389,9 +389,31 @@ body {
   cursor: pointer;
 }
 .sheet { max-height: 92dvh; overflow-y: auto; }
+.chapter-nav {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin: 0 0 8px;
+}
+.chapter-step {
+  flex: none;
+  width: 44px;
+  height: 44px;
+  border: 0;
+  border-radius: 50%;
+  background: #fff;
+  color: var(--accent);
+  font: inherit;
+  font-size: 16px;
+  box-shadow: 0 3px 0 var(--track);
+  cursor: pointer;
+}
+.chapter-step:disabled { background: #f9efe4; color: var(--track); box-shadow: none; cursor: default; }
+.stage-chapter.secret { background: #f9efe4; color: var(--ink-soft); }
 .stage-chapter {
   display: inline-block;
-  margin: 0 0 8px;
+  margin: 0;
   padding: 4px 14px;
   border-radius: 999px;
   background: var(--chip);
@@ -407,7 +429,7 @@ body {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  max-height: calc(92dvh - 250px);
+  max-height: calc(92dvh - 260px);
   overflow-y: auto;
 }
 .stage {

@@ -1,6 +1,7 @@
 import { describe, test, expect } from 'vitest'
 import {
   STAGES_PER_CHAPTER,
+  chapterBrowse,
   chapterOf,
   chapterStages,
   endlessStage,
@@ -195,5 +196,29 @@ describe('chapterStages', () => {
     expect(chapterStages(Number.NaN)[0].no).toBe(1)
     expect(chapterOf(10)).toBe(1)
     expect(chapterOf(11)).toBe(2)
+  })
+})
+
+describe('chapterBrowse 앞뒤 장 넘겨 보기', () => {
+  test('지금 장에서 앞 장들과 바로 다음 장 하나까지 볼 수 있다', () => {
+    expect(chapterBrowse(17)).toEqual({ chapter: 2, current: 2, prev: true, next: true, revealed: true })
+    expect(chapterBrowse(17, 1)).toEqual({ chapter: 1, current: 2, prev: false, next: true, revealed: true })
+    expect(chapterBrowse(17, 3)).toEqual({ chapter: 3, current: 2, prev: true, next: false, revealed: false })
+  })
+
+  test('처음에는 1장, 다음 장(2장)은 이름이 비밀', () => {
+    expect(chapterBrowse(0)).toEqual({ chapter: 1, current: 1, prev: false, next: true, revealed: true })
+    expect(chapterBrowse(0, 2).revealed).toBe(false)
+  })
+
+  test('범위를 넘거나 이상한 값이면 볼 수 있는 끝으로 맞춘다', () => {
+    expect(chapterBrowse(17, 9).chapter).toBe(3)
+    expect(chapterBrowse(17, 0).chapter).toBe(1)
+    expect(chapterBrowse(17, Number.NaN).chapter).toBe(2)
+    expect(chapterBrowse(Number.NaN, 5).chapter).toBe(2)
+  })
+
+  test('장 보스를 깨면 다음 장이 지금 장이 된다', () => {
+    expect(chapterBrowse(10)).toMatchObject({ chapter: 2, current: 2, revealed: true })
   })
 })

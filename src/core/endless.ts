@@ -231,7 +231,26 @@ export function chapterOf(no: number): number {
   return Math.ceil(cleanNo(no) / STAGES_PER_CHAPTER)
 }
 
-export type StageState = 'cleared' | 'open' | 'locked'
+export interface ChapterBrowse {
+  /** 보여 줄 장 */
+  chapter: number
+  /** 지금 장(다음에 깰 스테이지가 있는 장) */
+  current: number
+  prev: boolean
+  next: boolean
+  /** 열린 장인지. 아직 안 열린 장은 이름을 비밀로 둔다 */
+  revealed: boolean
+}
+
+/** 모험 지도에서 넘겨 볼 장: 1장부터 지금 장 바로 다음 장까지. 장을 고르지 않거나 이상하면 지금 장 */
+export function chapterBrowse(stageProgress: number, chapter?: number): ChapterBrowse {
+  const current = chapterOf(cleared(stageProgress) + 1)
+  const want = chapter === undefined || !Number.isFinite(chapter) ? current : Math.floor(chapter)
+  const c = Math.min(current + 1, Math.max(1, want))
+  return { chapter: c, current, prev: c > 1, next: c <= current, revealed: c <= current }
+}
+
+export type StageState ='cleared' | 'open' | 'locked'
 
 /** 한 장의 스테이지 10칸과 깸·도전 가능·잠김 상태. 장을 고르지 않으면 다음에 깰 스테이지가 있는 장 */
 export function chapterStages(stageProgress: number, chapter?: number): (EndlessStage & { state: StageState })[] {
