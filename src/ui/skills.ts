@@ -21,6 +21,8 @@ export interface SkillsView {
   achievements: AchievementProgress[]
   /** 이름 옆에 단 칭호 id. 없으면 null */
   title: string | null
+  /** 지금 모습 이름과 다음 단계까지 남은 레벨(lookLine) */
+  look: { name: string; next: string }
 }
 
 const WEEK = ['일', '월', '화', '수', '목', '금', '토']
@@ -134,6 +136,10 @@ export function createSkills(root: HTMLElement, h: { view(): SkillsView; onLearn
   wrap.innerHTML = `
     <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="skills-title">
       <h2 id="skills-title">나의 말랑이</h2>
+      <div class="look-card" data-testid="look-card">
+        <b data-testid="look-name"></b>
+        <small data-testid="look-next"></small>
+      </div>
       <ul class="stat-list" data-testid="stats"></ul>
       <h3 class="sheet-sub">스킬</h3>
       <p class="skill-points" data-testid="skill-points"></p>
@@ -225,6 +231,8 @@ export function createSkills(root: HTMLElement, h: { view(): SkillsView; onLearn
       lastStats = stats
       q('stats').innerHTML = stats
     }
+    q('look-name').textContent = v.look.name
+    q('look-next').textContent = v.look.next
     const cal = v.board.calendar
     q('board-title').textContent = `🗓️ ${cal.month}월 도장판`
     q('board-stamps').textContent = `🌟 모은 도장 ${v.board.stamps}개`

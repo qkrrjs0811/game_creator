@@ -85,3 +85,28 @@ export function malangLook(records: ActivityRecord[]): MalangLook {
   const traits = mainTraits(progress.creditedMinutes)
   return { ...info, traits, name: lookName(traits, info.stage) }
 }
+
+/** "나" 창 모습 줄: 지금 이름과 다음 단계까지 남은 레벨 */
+export function lookLine(look: MalangLook): { name: string; next: string } {
+  const next = GROWTH_STAGES[look.index + 1]
+  return {
+    name: `🌱 지금 모습: ${look.name}`,
+    next: next ? `다음 단계(${next.name})까지 Lv ${look.levelsToNext}` : '다 자랐어요 · 하는 활동대로 특징이 바뀌어요',
+  }
+}
+
+/** 보조 키에 남긴 본 단계(GROWTH_STAGES 순서)를 되살린다. 없거나 깨졌으면 null */
+export function restoreSeenStage(stored: string | null): number | null {
+  if (stored === null || !/^\d+$/.test(stored)) return null
+  const index = Number(stored)
+  return index < GROWTH_STAGES.length ? index : null
+}
+
+/**
+ * 자람 연출을 띄울 단계. 본 단계보다 자랐을 때만 지금 단계, 아니면 null.
+ * 본 단계가 없으면(처음 열거나 백업을 가져온 직후) 지금 단계를 본 것으로 두고 띄우지 않는다
+ */
+export function grownStage(seen: number | null, current: number): number | null {
+  if (seen === null) return null
+  return current > seen ? current : null
+}

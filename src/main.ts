@@ -34,7 +34,7 @@ import { achievementToast, autoRunCard, awayAdventure, awayCard, dexNewText, for
 import { autoRun } from './core/autorun'
 import { awaySummary, shouldShowAway } from './core/away'
 import { sessionGain } from './core/gain'
-import { malangLook } from './core/look'
+import { GROWTH_STAGES, grownStage, lookLine, malangLook, restoreSeenStage } from './core/look'
 import { focusCelebrateNow, focusProgress, focusTargetFor, parseFocusDefault, parseFocusGoal, serializeFocusGoal } from './core/focus'
 
 declare global {
@@ -154,6 +154,7 @@ const settings = createSettings(app, {
     save = s
     persist()
     shownLevel = undefined
+    stageQuiet = true
     render()
   },
 })
@@ -186,6 +187,7 @@ const skills = createSkills(app, {
       historyPage: (page: number) => historyPage(records, now, page),
       achievements: achievementProgress(records),
       title: wornTitle({ records, worn: save.worn })?.titleId ?? null,
+      look: lookLine(malangLook(records)),
     }
   },
   onLearn(id) {
@@ -524,6 +526,20 @@ function rememberShownLevel(level: number) {
   }
 }
 
+// 본 성장 단계. 다른 창이 먼저 축하했으면 그 창이 남긴 단계를 읽어 두 번 띄우지 않게 매번 저장소에서 읽는다
+const SEEN_STAGE_KEY = `${SAVE_KEY}:seen-stage`
+// 백업을 가져온 직후에는 자람 연출 없이 지금 단계를 본 것으로 둔다
+let stageQuiet = false
+
+/** 말랑이가 다음 성장 단계가 됐으면 한 번 축하한다. 처음 열 때(본 단계 없음)는 지금 단계를 기억만 한다 */
+function checkGrown(index: number) {
+  const seen = stageQuiet ? null : restoreSeenStage(readKey(SEEN_STAGE_KEY))
+  stageQuiet = false
+  if (seen !== index) writeKey(SEEN_STAGE_KEY, String(index))
+  const grown = grownStage(seen, index)
+  if (grown !== null) hud.showGrown(GROWTH_STAGES[grown].name)
+}
+
 function render() {
   const now = Date.now()
   const records = liveRecords(save, now)
@@ -603,6 +619,7 @@ function render() {
   homeScene()?.dress(wornCosmetics({ ...save, records }))
   // 레벨로 몸이 자라고 많이 한 활동대로 특징이 붙는다(그림만)
   const look = malangLook(records)
+  checkGrown(look.index)
   homeScene()?.grow({ scale: look.stage.scale, traits: look.traits })
   // 상한을 채운 뒤에도 타이머가 켜져 있으면 말랑이가 그만 쉬자고 한다(모습만 바뀜)
   homeScene()?.setMood(live === null ? 'rest' : liveFull ? 'full' : live)

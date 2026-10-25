@@ -1,5 +1,5 @@
 import { describe, test, expect } from 'vitest'
-import { GROWTH_STAGES, growthStage, lookName, mainTraits, malangLook, TRAIT_LABELS } from './look'
+import { GROWTH_STAGES, grownStage, growthStage, lookLine, lookName, mainTraits, malangLook, restoreSeenStage, TRAIT_LABELS } from './look'
 import { computeProgress } from './progression'
 import type { ActivityId, ActivityRecord } from './types'
 
@@ -111,5 +111,40 @@ describe('기록에서 모습', () => {
     const copy = JSON.parse(JSON.stringify(records))
     malangLook(records)
     expect(records).toEqual(copy)
+  })
+})
+
+describe('자람 연출: 본 단계 기억', () => {
+  test('남긴 글자를 단계 순서로 되살린다. 없거나 깨졌으면 null', () => {
+    expect(restoreSeenStage(null)).toBeNull()
+    expect(restoreSeenStage('')).toBeNull()
+    expect(restoreSeenStage('abc')).toBeNull()
+    expect(restoreSeenStage('-1')).toBeNull()
+    expect(restoreSeenStage('1.5')).toBeNull()
+    expect(restoreSeenStage(String(GROWTH_STAGES.length))).toBeNull()
+    expect(restoreSeenStage('0')).toBe(0)
+    expect(restoreSeenStage('3')).toBe(3)
+  })
+
+  test('본 단계보다 자랐을 때만 새 단계, 처음(본 단계 없음)은 띄우지 않는다', () => {
+    expect(grownStage(null, 2)).toBeNull()
+    expect(grownStage(1, 1)).toBeNull()
+    expect(grownStage(2, 1)).toBeNull()
+    expect(grownStage(0, 1)).toBe(1)
+    // 닫아 둔 사이 두 단계를 건너뛰어도 한 번만, 지금 단계로
+    expect(grownStage(0, 2)).toBe(2)
+  })
+})
+
+describe('나 창 모습 줄', () => {
+  test('이름과 다음 단계까지 남은 레벨', () => {
+    expect(lookLine({ ...growthStage(7), traits: ['exercise'], name: '운동파 어린이 말랑이' })).toEqual({
+      name: '🌱 지금 모습: 운동파 어린이 말랑이',
+      next: '다음 단계(청소년)까지 Lv 3',
+    })
+  })
+
+  test('어른이면 다 자랐다고', () => {
+    expect(lookLine({ ...growthStage(25), traits: [], name: '어른 말랑이' }).next).toBe('다 자랐어요 · 하는 활동대로 특징이 바뀌어요')
   })
 })
