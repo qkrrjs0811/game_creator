@@ -41,7 +41,7 @@ test('가진 모자와 색을 입히면 장면의 말랑이가 바뀌고 저장�
   await expect(page.getByTestId('cosmetic-tab-hat')).toContainText('모자 4')
   await expect(page.getByTestId('cosmetic-tab-color')).toContainText('색 2')
   await expect(page.getByTestId('cosmetic-color-sky')).toHaveCount(0)
-  await expect(page.getByTestId('worn-hat')).toContainText('안 입었어요')
+  await expect(page.getByTestId('worn-hat')).toContainText('안 입음')
 
   await page.getByTestId('wear-hat-crown').click()
   await expect(page.getByTestId('worn-hat')).toContainText('꼬마 왕관')
@@ -84,7 +84,7 @@ test('가진 모자와 색을 입히면 장면의 말랑이가 바뀌고 저장�
   await page.getByTestId('open-cosmetics').click()
   await page.getByTestId('cosmetic-tab-color').click()
   await page.getByTestId('wear-color-sky').click()
-  await expect(page.getByTestId('worn-color')).toContainText('안 입었어요')
+  await expect(page.getByTestId('worn-color')).toContainText('안 입음')
   await page.getByTestId('cosmetics-close').click()
   await expect(page.getByTestId('scene')).toHaveAttribute('data-look', 'hat-ribbon')
 })

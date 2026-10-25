@@ -1,4 +1,5 @@
 import type { Cosmetic, CosmeticKind, Worn } from '../core/cosmetics'
+import { ACTIVITIES } from '../core/activities'
 import { endlessStage } from '../core/endless'
 import { stageLabel } from './stages'
 
@@ -12,10 +13,12 @@ export interface CosmeticsView {
 const KINDS: { kind: CosmeticKind; name: string; icon: string }[] = [
   { kind: 'hat', name: '모자', icon: '🎩' },
   { kind: 'color', name: '색', icon: '🎨' },
+  { kind: 'prop', name: '소품', icon: '🧸' },
 ]
 
-/** 아직 없는 꾸미기를 얻는 곳. 장 모자는 "1장 보스", 도장 모자는 "도장 7개", 주간 색은 "주간 목표 4번", 미션 모자는 "미션 별 20개" */
+/** 아직 없는 꾸미기를 얻는 곳. 장 모자는 "1장 보스", 도장 모자는 "도장 7개", 주간 색은 "주간 목표 4번", 미션 모자는 "미션 별 20개", 소품은 "독서 5시간" */
 function where(c: Cosmetic): string {
+  if (c.activity !== undefined) return `${ACTIVITIES[c.activity].label} ${Math.round((c.minutes ?? 0) / 60)}시간`
   if (c.stamps !== undefined) return `도장 ${c.stamps}개`
   if (c.weeks !== undefined) return `주간 목표 ${c.weeks}번`
   if (c.missions !== undefined) return `미션 별 ${c.missions}개`
@@ -28,8 +31,8 @@ function tint(c: Cosmetic): string {
 }
 
 /**
- * 꾸미기 창: 가진 모자·색을 골라 말랑이에게 입힌다. 아직 없는 건 얻는 곳을 알려 준다.
- * 꾸미기가 많아도 고르기 쉽게 모자·색 칸으로 나눠 보고, 지금 입은 것을 위에 보여 준다.
+ * 꾸미기 창: 가진 모자·색을 골라 말랑이에게 입히고, 소품을 골라 장면에 놓는다. 아직 없는 건 얻는 곳을 알려 준다.
+ * 꾸미기가 많아도 고르기 쉽게 모자·색·소품 칸으로 나눠 보고, 지금 입은(놓은) 것을 위에 보여 준다.
  */
 export function createCosmetics(root: HTMLElement, h: { view(): CosmeticsView; onWear(id: string): void }) {
   const wrap = document.createElement('div')
@@ -56,9 +59,9 @@ export function createCosmetics(root: HTMLElement, h: { view(): CosmeticsView; o
 
   const draw = () => {
     const v = h.view()
-    const wornIds = [v.worn.hat?.id, v.worn.color?.id]
+    const wornIds = KINDS.map(({ kind }) => v.worn[kind]?.id)
     q('cosmetics-desc').textContent =
-      v.owned.length > 0 ? `모자 하나, 색 하나를 골라 입혀요 · ${v.owned.length}개 모았어요` : '스테이지를 처음 깨거나 도장·미션 별을 모으면 꾸미기를 받아요.'
+      v.owned.length > 0 ? `모자·색·소품을 하나씩 골라요 · ${v.owned.length}개 모았어요` : '스테이지를 처음 깨거나 도장·미션 별을 모으면 꾸미기를 받아요.'
 
     // 지금 입은 것: 누르면 그 칸으로 가서 보여 준다
     wornBar.hidden = v.owned.length === 0
@@ -67,7 +70,7 @@ export function createCosmetics(root: HTMLElement, h: { view(): CosmeticsView; o
       return `
         <button type="button" class="cosmetic-worn-chip${c ? '' : ' none'}" data-kind="${kind}" data-testid="worn-${kind}">
           <span class="cosmetic-worn-icon" aria-hidden="true"${c ? tint(c) : ''}>${c ? c.icon : '·'}</span>
-          <span class="cosmetic-worn-text"><small>${name}</small><b>${c ? c.name : '안 입었어요'}</b></span>
+          <span class="cosmetic-worn-text"><small>${name}</small><b>${c ? c.name : kind === 'prop' ? '안 놓음' : '안 입음'}</b></span>
         </button>`
     }).join('')
 
@@ -82,15 +85,17 @@ export function createCosmetics(root: HTMLElement, h: { view(): CosmeticsView; o
       const owned = v.owned.some((o) => o.id === c.id)
       const worn = wornIds.includes(c.id)
       const state = worn ? 'worn' : owned ? 'owned' : 'locked'
-      const kind = c.kind === 'hat' ? '모자' : '색'
+      const kind = KINDS.find((k) => k.kind === c.kind)!.name
+      const prop = c.kind === 'prop'
+      const label = prop ? (worn ? '치우기' : '놓기') : worn ? '벗기' : '입기'
       const btn = owned
-        ? `<button type="button" class="cosmetic-wear" data-id="${c.id}" data-testid="wear-${c.id}">${worn ? '벗기' : '입기'}</button>`
+        ? `<button type="button" class="cosmetic-wear" data-id="${c.id}" data-testid="wear-${c.id}">${label}</button>`
         : `<span class="cosmetic-lock">🔒 ${where(c)}</span>`
       return `
         <li class="cosmetic ${state}" data-testid="cosmetic-${c.id}" data-state="${state}">
           <span class="cosmetic-icon" aria-hidden="true"${owned ? tint(c) : ''}>${owned ? c.icon : '❔'}</span>
           <b>${owned ? c.name : '???'}</b>
-          <small>${worn ? `${kind} · 입는 중` : kind}</small>
+          <small>${worn ? `${kind} · ${prop ? '놓는 중' : '입는 중'}` : kind}</small>
           ${btn}
         </li>`
     }).join('')
