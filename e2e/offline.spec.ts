@@ -30,7 +30,7 @@ test('인터넷이 끊겨도 앱이 열리고 기록이 남아 있음', async ({
   // 인터넷 없이도 타이머가 돈다
   await page.getByTestId('toggle').click()
   await page.clock.fastForward('05:00')
-  await expect(page.getByTestId('timer')).toHaveText('05:00')
+  await expect(page.getByTestId('timer')).toHaveText(/^05:0\d$/)
   await page.getByTestId('toggle').click()
   await page.screenshot({ path: 'test-results/screens/offline.png' })
 

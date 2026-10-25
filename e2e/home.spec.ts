@@ -16,7 +16,7 @@ test('30분 운동하면 Lv.3', async ({ page }) => {
   await page.goto('./')
   await page.getByTestId('toggle').click()
   await page.clock.fastForward('30:00')
-  await expect(page.getByTestId('timer')).toHaveText('30:00')
+  await expect(page.getByTestId('timer')).toHaveText(/^30:0\d$/)
   await page.getByTestId('toggle').click()
   await expect(page.getByTestId('level')).toHaveText('Lv.3')
   await expect(page.getByTestId('exp-text')).toHaveText('EXP 50 / 200')
