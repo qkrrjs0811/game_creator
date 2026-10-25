@@ -43,6 +43,19 @@ test('이길 만한 스테이지가 있으면 자동 진행으로 줄줄이 깨�
 
   await auto.click()
   await expect(page.getByTestId('stages')).toBeHidden()
+  // 결과는 바로 저장하고, 장면에서는 판마다 빠르게 이어 싸우는 모습을 보여 준다
+  const bar = page.getByTestId('battle')
+  await expect(bar).toHaveAttribute('data-state', 'playing')
+  await expect(page.getByTestId('battle-title')).toHaveText(/^⚔️ 자동 진행 1\/\d+ · 4스테이지$/)
+  await expect(page.getByTestId('battle-result')).toBeHidden()
+  await expect(page.getByTestId('battle-action')).toHaveText('건너뛰기')
+  // 한 판이 끝나면 저절로 다음 판으로 넘어간다
+  await expect(page.getByTestId('battle-title')).toContainText('자동 진행 2/', { timeout: 10_000 })
+  await page.waitForTimeout(500)
+  await page.screenshot({ path: 'test-results/screens/autorun-play.png' })
+  // 건너뛰기를 누르면 남은 판을 모두 건너뛰고 결과 카드로 간다
+  await page.getByTestId('battle-action').click()
+  await expect(bar).toHaveAttribute('data-state', 'done')
   await expect(page.getByTestId('battle-result')).toBeVisible()
   await expect(page.getByTestId('battle-result-title')).toHaveText('🏁 자동 진행 끝!')
   const detail = await page.getByTestId('battle-result-detail').textContent()
@@ -56,6 +69,7 @@ test('이길 만한 스테이지가 있으면 자동 진행으로 줄줄이 깨�
   )
   await expect(page.getByTestId('battle-result-damage')).toBeHidden()
   await expect(page.getByTestId('battle-action')).toHaveText('돌아가기')
+  await expect(page.getByTestId('battle-title')).toHaveText('⏩ 자동 진행')
   await page.waitForTimeout(600)
   await page.screenshot({ path: 'test-results/screens/autorun-result.png' })
 
@@ -73,6 +87,18 @@ test('이길 만한 스테이지가 있으면 자동 진행으로 줄줄이 깨�
   await page.reload()
   await expect(page.getByTestId('level')).toBeVisible()
   expect(await page.evaluate(() => window.__debug.getSave().stageProgress)).toBe(to)
+})
+
+test('자동 진행은 건너뛰지 않아도 마지막 판이 끝나면 결과 카드를 띄움', async ({ page }) => {
+  test.setTimeout(90_000)
+  await useSave(page, 3, threeDays())
+  await page.getByTestId('open-stages').click()
+  await page.getByTestId('auto-run').click()
+  await expect(page.getByTestId('battle')).toHaveAttribute('data-state', 'playing')
+  const to = await page.evaluate(() => window.__debug.getSave().stageProgress)
+  await expect(page.getByTestId('battle')).toHaveAttribute('data-state', 'done', { timeout: 80_000 })
+  await expect(page.getByTestId('battle-result-title')).toHaveText('🏁 자동 진행 끝!')
+  await expect(page.getByTestId('battle-result-detail')).toHaveText(`3 → ${to}스테이지까지 깼어요`)
 })
 
 test('이길 만한 스테이지가 없으면 자동 진행 버튼을 숨김', async ({ page }) => {

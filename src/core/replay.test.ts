@@ -2,7 +2,7 @@ import { describe, test, expect } from 'vitest'
 import { playerFighter, simulateBattle } from './battle'
 import { BASE_STAT } from './progression'
 import { stageEnemy } from './endless'
-import { battleTimeline, stepDelay } from './replay'
+import { autoStepDelay, battleTimeline, stepDelay } from './replay'
 
 const base = { str: BASE_STAT, vit: BASE_STAT, int: BASE_STAT, focus: BASE_STAT }
 
@@ -44,5 +44,15 @@ describe('stepDelay', () => {
     expect(stepDelay(4)).toBe(800)
     expect(stepDelay(60)).toBe(350)
     expect(stepDelay(20) * 20).toBeLessThanOrEqual(10_000)
+  })
+})
+
+describe('autoStepDelay', () => {
+  test('자동 진행은 한 판보다 빠르게 보여 준다', () => {
+    expect(autoStepDelay(4)).toBe(400)
+    for (const n of [4, 10, 20, 60]) expect(autoStepDelay(n)).toBeLessThan(stepDelay(n))
+    expect(autoStepDelay(5) * 5).toBeLessThanOrEqual(1_600)
+    // 걸음 연출(약 240ms)이 겹치지 않게 너무 빠르지는 않다
+    expect(autoStepDelay(1000)).toBe(250)
   })
 })

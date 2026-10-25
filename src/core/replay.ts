@@ -27,3 +27,11 @@ export function battleTimeline(player: Fighter, enemy: Fighter, result: BattleRe
 export function stepDelay(stepCount: number): number {
   return Math.round(Math.min(800, Math.max(350, 9000 / Math.max(1, stepCount))))
 }
+
+/** 자동 진행의 걸음 사이 시간(ms). 여러 판을 이어 보여 주므로 한 판보다 빠르게 한다 */
+export function autoStepDelay(stepCount: number): number {
+  return Math.round(Math.min(400, Math.max(250, 1600 / Math.max(1, stepCount))))
+}
+
+/** 자동 진행에서 한 판이 끝난 뒤 다음 판을 시작하기까지 쉬는 시간(ms). 이긴 폴짝을 잠깐 보여 준다 */
+export const AUTO_RUN_GAP = 700

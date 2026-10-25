@@ -16,6 +16,8 @@ export interface BattleResultView {
   title?: string
   detail?: string
   status?: string
+  /** 끝난 뒤 띠 제목. 없으면 시작할 때 제목 그대로 둔다 */
+  heading?: string
 }
 
 /** 전투 중 장면 아래쪽 알림 띠(어느 스테이지인지, 건너뛰기·돌아가기 버튼)와 끝난 뒤 결과 카드 */
@@ -88,7 +90,8 @@ export function createBattleBar(scene: HTMLElement, h: { onSkip(): void; onLeave
       else card.dataset.chapter = String(r.chapter)
       card.dataset.win = String(win)
       card.hidden = false
-      status.textContent = r.status ?? (win ? '이겼어요! 🎉' : '아쉽게 졌어요')
+      if (r.heading) title.textContent = r.heading
+      status.textContent = r.status ??(win ? '이겼어요! 🎉' : '아쉽게 졌어요')
       action.textContent = '돌아가기'
       bar.dataset.state = 'done'
       bar.dataset.win = String(win)

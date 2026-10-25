@@ -17,7 +17,7 @@ import { endlessStage, homeMonster, STAGES_PER_CHAPTER } from './core/endless'
 import { createStages, stageLabel } from './ui/stages'
 import { createBattleBar } from './ui/battle'
 import { enemyDamagePercent, playerFighter, simulateBattle } from './core/battle'
-import { battleTimeline, stepDelay } from './core/replay'
+import { AUTO_RUN_GAP, autoStepDelay, battleTimeline, stepDelay } from './core/replay'
 import { applyBattleResult, type BattleOutcome } from './core/result'
 import { cosmeticCatalog, ownedCosmetics, toggleWear, wornCosmetics } from './core/cosmetics'
 import { createCosmetics } from './ui/cosmetics'
@@ -198,8 +198,10 @@ function resultNote(o: BattleOutcome, win: boolean, toWin: number | null): strin
 }
 
 // 전투가 바꾸는 저장은 깬 스테이지 수와 꾸미기뿐이다(applyBattleResult)
+// 자동 진행 연출 중이면 건너뛰기가 남은 판을 모두 건너뛴다
+let skipAutoRun: (() => void) | null = null
 const battleBar = createBattleBar(hud.sceneHost, {
-  onSkip: () => homeScene()?.skipBattle(),
+  onSkip: () => (skipAutoRun ? skipAutoRun() : homeScene()?.skipBattle()),
   onLeave() {
     homeScene()?.endBattle()
     battleBar.hide()
@@ -230,18 +232,46 @@ const stages = createStages(app, {
     const foe = lost ? endlessStage(lost.no) : null
     stages.close()
     hud.hideToasts()
-    battleBar.start('자동 진행', '몬스터들')
-    battleBar.end({
-      ...card,
-      rounds: 0,
-      status: `${run.battles.filter((b) => b.win).length}판 이겼어요`,
-      // 한 판도 못 깼으면 진 상대를 얼마나 깎았는지 보여 준다
-      foe: foe?.monster.name ?? '',
-      damage: foe && lost ? enemyDamagePercent(foe.enemy, lost.result) : 0,
-      chapter,
-    })
-    if (chapter !== null) homeScene()?.celebrateChapter()
     render()
+    let done = false
+    const finish = () => {
+      if (done) return
+      done = true
+      skipAutoRun = null
+      battleBar.end({
+        ...card,
+        rounds: 0,
+        status: `${run.battles.filter((b) => b.win).length}판 이겼어요`,
+        heading: '⏩ 자동 진행',
+        // 한 판도 못 깼으면 진 상대를 얼마나 깎았는지 보여 준다
+        foe: foe?.monster.name ?? '',
+        damage: foe && lost ? enemyDamagePercent(foe.enemy, lost.result) : 0,
+        chapter,
+      })
+      if (chapter !== null) homeScene()?.celebrateChapter()
+    }
+    // 결과는 이미 저장했고, 장면에서는 판마다 빠르게 이어 싸우는 모습만 보여 준다(연출일 뿐)
+    const me = playerFighter(p.stats, save.skills)
+    const total = run.battles.length
+    const play = (i: number) => {
+      if (done) return
+      const b = run.battles[i]
+      const s = endlessStage(b.no)
+      battleBar.start(`자동 진행 ${i + 1}/${total} · ${stageLabel(s)}`, s.monster.name)
+      const scene = homeScene()
+      if (!scene) return finish()
+      const timeline = battleTimeline(me, s.enemy, b.result)
+      scene.playBattle(timeline, autoStepDelay(timeline.steps.length), s.monster, () => {
+        if (i + 1 < total) setTimeout(() => play(i + 1), AUTO_RUN_GAP)
+        else finish()
+      })
+    }
+    // "건너뛰기"는 남은 판을 모두 건너뛰고 바로 결과 카드를 띄운다
+    skipAutoRun = () => {
+      homeScene()?.skipBattle()
+      finish()
+    }
+    play(0)
   },
   onChallenge(no) {
     pullSave()
