@@ -921,7 +921,12 @@ export class HomeScene extends Phaser.Scene {
     this.tweens.add({ targets: t, y: y - 26, duration: 760, ease: 'Quad.easeOut' })
     this.tweens.add({ targets: t, alpha: 0, delay: 460, duration: 300, ease: 'Quad.easeIn', onComplete: () => t.destroy() })
     // e2e가 숫자가 읽을 만큼 오래 또렷한지 볼 수 있게 0.3초 뒤 투명도를 남긴다
-    this.time.delayedCall(300, () => box?.setAttribute('data-hit-alpha-300', t.alpha.toFixed(2)))
+    // 느린 실행에선 한 프레임이 길어 늦게 불릴 수 있으니 실제로 지난 시간도 함께 남긴다
+    const born = this.time.now
+    this.time.delayedCall(300, () => {
+      box?.setAttribute('data-hit-age-300', String(Math.round(this.time.now - born)))
+      box?.setAttribute('data-hit-alpha-300', t.alpha.toFixed(2))
+    })
   }
 
   /** 두 캐릭터 머리 위의 둥근 HP 바 */

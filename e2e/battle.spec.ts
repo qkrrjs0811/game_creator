@@ -68,7 +68,10 @@ test('데미지 숫자는 HP 막대 위에서 떠올라 막대를 가리지 않�
 
   // 숫자는 뜨자마자 흐려지지 않고 0.3초 뒤에도 또렷해서 읽을 수 있다
   await expect(scene).toHaveAttribute('data-hit-alpha-300', /.+/, { timeout: 2_000 })
-  expect(Number(await scene.getAttribute('data-hit-alpha-300'))).toBeGreaterThanOrEqual(0.95)
+  // 느린 실행에서 프레임이 밀려 흐려지기 시작한 0.46초 뒤에 쟀다면 투명도는 따지지 않는다
+  const age = Number(await scene.getAttribute('data-hit-age-300'))
+  expect(age).toBeGreaterThanOrEqual(300)
+  if (age < 460) expect(Number(await scene.getAttribute('data-hit-alpha-300'))).toBeGreaterThanOrEqual(0.95)
   await page.screenshot({ path: 'test-results/screens/battle-hit.png' })
 })
 

@@ -44,3 +44,31 @@ test('도장 5개면 도장 모자가 가장 먼저, 막대와 남은 양이 보
   }
   await page.screenshot({ path: 'test-results/screens/me-rewards.png' })
 })
+
+test('도장 모자가 절반 넘게 가까우면 말랑이 한마디에도 나온다', async ({ page }) => {
+  await page.clock.install({ time: new Date('2026-10-25T20:00:00+09:00') })
+  await page.goto('./')
+  const records = ['2026-10-20', '2026-10-21', '2026-10-22', '2026-10-23', '2026-10-24'].map((d) => rec(d, 30))
+  await page.evaluate((s) => localStorage.setItem('growth-game:save', JSON.stringify(s)), { ...base, records })
+  await page.reload()
+  const host = page.getByTestId('scene')
+  await expect(host).toHaveAttribute('data-bubble', /^🎯 오늘 목표까지/)
+  await page.waitForTimeout(300)
+  const [x, y, w, h] = (await host.getAttribute('data-bubble-tap'))!.split(',').map(Number)
+  const canvas = (await host.locator('canvas').boundingBox())!
+
+  // 오늘 목표·미션 뒤에 가장 가까운 보상이 온다
+  const seen: string[] = []
+  for (let i = 0; i < 8; i++) {
+    const text = (await host.getAttribute('data-bubble'))!
+    if (text === '🎁 도장 2개면 새 모자!') break
+    seen.push(text)
+    await page.mouse.click(canvas.x + x + w / 2, canvas.y + y + h / 2)
+    await expect(host).toHaveAttribute('data-chat-hops', String(i + 1))
+  }
+  await expect(host).toHaveAttribute('data-bubble', '🎁 도장 2개면 새 모자!')
+  expect(seen[0]).toMatch(/^🎯/)
+  expect(seen.some((t) => t.startsWith('📜'))).toBe(true)
+  await page.waitForTimeout(500)
+  await page.screenshot({ path: 'test-results/screens/chatter-reward.png' })
+})

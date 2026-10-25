@@ -126,6 +126,9 @@ test('단계가 오르는 순간 "말랑이가 자랐어요!" 한 번, 처음 �
   const grow = page.getByTestId('grow-stamp')
   await page.clock.runFor(1500)
   await expect(grow).toBeHidden()
+  // 시계가 실제로도 흐르면 느린 실행에서 3.5초짜리 배지가 재기 전에 사라진다 — 멈춰 두고 runFor로만 흘린다
+  const fakeNow = await page.evaluate(() => Date.now())
+  await page.clock.pauseAt(fakeNow + 1000)
 
   // 10분 더 하면 경험치 700 → Lv.5 어린이
   await page.getByTestId('toggle').click()
@@ -134,10 +137,8 @@ test('단계가 오르는 순간 "말랑이가 자랐어요!" 한 번, 처음 �
   await expect(page.getByTestId('scene')).toHaveAttribute('data-grow-scale', '1.1')
   await expect(grow).toBeVisible()
   await expect(grow).toHaveText('✨ 말랑이가 자랐어요! · 어린이')
-  await page.clock.runFor(450)
-  await page.waitForTimeout(600)
+  await page.clock.runFor(1000)
   // 레벨업 배지(장면 위)·시작 버튼과 겹치지 않는다
-  // 시계가 실제로도 흐르므로 둘 다 3.5초 안에 사라진다 — 느린 스크린샷 전에 자리를 먼저 잰다
   const up = (await page.getByTestId('levelup').boundingBox())!
   const g = (await grow.boundingBox())!
   const toggle = (await page.getByTestId('toggle').boundingBox())!

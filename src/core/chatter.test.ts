@@ -1,5 +1,6 @@
 import { describe, test, expect } from 'vitest'
-import { CHAT_MAX_CHARS, chatLines, keepChatIndex, nextChatIndex, type ChatInput } from './chatter'
+import { CHAT_MAX_CHARS, chatLines, keepChatIndex, nextChatIndex, rewardChatText, type ChatInput } from './chatter'
+import type { UpcomingReward } from './rewards'
 import { missionFor } from './mission'
 import type { ActivityId, ActivityRecord } from './types'
 
@@ -139,6 +140,52 @@ describe('말랑이 한마디', () => {
     const copy = JSON.parse(JSON.stringify(records))
     chatLines(input({ records }))
     expect(records).toEqual(copy)
+  })
+})
+
+describe('한마디에 가까운 보상', () => {
+  const reward = (over: Partial<UpcomingReward>): UpcomingReward => ({
+    kind: 'stamp',
+    icon: '🌟',
+    name: '반짝 도장 별핀',
+    value: 5,
+    goal: 7,
+    need: '도장 2개 더',
+    ratio: 0.7,
+    ...over,
+  })
+  /** 월~금 도장 5개(일요일 저녁, 오늘은 아직) → 도장 모자까지 2개 */
+  const fiveStamps = ['2026-10-19', '2026-10-20', '2026-10-21', '2026-10-22', '2026-10-23'].map((d) => exerciseOn(d, 30))
+
+  test('보상 종류마다 짧은 한 줄로 바꾼다', () => {
+    expect(rewardChatText(reward({}))).toBe('🎁 도장 2개면 새 모자!')
+    expect(rewardChatText(reward({ kind: 'mission', need: '미션 별 3개 더' }))).toBe('🎁 미션 별 3개면 새 모자!')
+    expect(rewardChatText(reward({ kind: 'week', need: '주간 목표 1번 더' }))).toBe('🎁 주간 목표 1번이면 새 색!')
+    expect(rewardChatText(reward({ kind: 'chapter', need: '스테이지 2개 더 깨기' }))).toBe('🎁 2곳 더 깨면 새 모자!')
+    expect(rewardChatText(reward({ kind: 'achievement', need: '운동 40분 더' }))).toBe('🎁 운동 40분이면 새 칭호!')
+    expect(rewardChatText(reward({ kind: 'achievement', need: '도장 3개 더' }))).toBe('🎁 도장 3개면 새 칭호!')
+    expect(rewardChatText(reward({ kind: 'achievement', need: '2일 더 이어 하기' }))).toBe('🎁 2일 더 이어 가면 새 칭호!')
+    expect(rewardChatText(reward({ kind: 'achievement', need: '활동 1가지 더 해 보기' }))).toBe('🎁 1가지 더 해 보면 새 칭호!')
+    expect(rewardChatText(reward({ kind: 'growth', need: '활동 30분 더' }))).toBe('🎁 활동 30분이면 쑥 자라!')
+  })
+
+  test('보스를 아직 이기기 어렵거나 글이 말풍선보다 길면 넣지 않는다', () => {
+    expect(rewardChatText(reward({ kind: 'chapter', need: '운동 20분 더 하면 이길 만해요' }))).toBeNull()
+    expect(rewardChatText(reward({ kind: 'growth', need: '활동 12시간 10분 더' }))).toBeNull()
+  })
+
+  test('절반 넘게 다가간 보상을 오늘 목표·미션 뒤에 하나 넣는다', () => {
+    const lines = chatLines(input({ records: fiveStamps }))
+    const k = lines.map((l) => l.kind)
+    expect(k.filter((x) => x === 'reward')).toHaveLength(1)
+    expect(k.indexOf('reward')).toBeGreaterThan(k.indexOf('goal'))
+    expect(k.indexOf('reward')).toBeGreaterThan(k.indexOf('mission'))
+    expect(texts(input({ records: fiveStamps }))).toContain('🎁 도장 2개면 새 모자!')
+  })
+
+  test('절반을 못 넘었으면 보상 한마디가 없다', () => {
+    expect(kinds(input({}))).not.toContain('reward')
+    expect(kinds(input({ records: [exerciseOn('2026-10-24', 30)] }))).not.toContain('reward')
   })
 })
 
