@@ -13,6 +13,9 @@ test('오늘 운동 시간을 보여 주고, 상한에 닿으면 안내', async 
   await page.screenshot({ path: 'test-results/screens/today-42.png' })
 
   await page.clock.fastForward('02:18:00')
+  // 느린 실행에서 재고 찍는 동안 안내가 저절로 닫히지 않게 시계를 멈춘다(아래 fastForward는 그대로 흐른다)
+  // (안내는 6초 떠 있다. 묻고 멈추는 사이에도 시계가 흐르니 1초 뒤로 멈춘다)
+  await page.clock.pauseAt((await page.evaluate(() => Date.now())) + 1000)
   await expect(page.getByTestId('today')).toHaveText('오늘 180분 / 180분')
   await expect(page.getByTestId('cap-toast')).toBeVisible()
   await expect(page.getByTestId('timer-label')).toContainText('오늘은 충분히 했어요')

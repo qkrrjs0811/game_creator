@@ -5,6 +5,7 @@ import type { Cosmetic, HatLook, HatShape, Worn } from '../core/cosmetics'
 import { chapterBackdrop, type Backdrop } from '../core/backdrop'
 import type { ActivityId } from '../core/types'
 import { keepChatIndex, nextChatIndex } from '../core/chatter'
+import { contactAt, hitImpact, type Impact } from '../core/impact'
 
 const MASCOT = 0xffd7a8
 const MASCOT_SHADE = 0xf7b97a
@@ -420,6 +421,8 @@ export class HomeScene extends Phaser.Scene {
     steps: ReplayStep[]
     win: boolean
     next: number
+    /** 걸음 사이 시간(ms). 한 번의 타격 연출을 이 안에 맞춘다 */
+    delay: number
     timer?: Phaser.Time.TimerEvent
     /** [말랑이, 몬스터] 머리 위 HP 막대. 이긴 쪽 막대는 주인과 같이 뛴다 */
     bars: [Phaser.GameObjects.Graphics, Phaser.GameObjects.Graphics]
@@ -644,7 +647,7 @@ export class HomeScene extends Phaser.Scene {
     for (const body of [this.mascotBody, this.monsterBody]) this.tweens.killTweensOf(body.setY(0))
     this.tweens.killTweensOf(this.bubble)
     this.bubble.setAlpha(0)
-    this.battle = { steps: timeline.steps, win: timeline.win, next: 0, bars: [this.add.graphics(), this.add.graphics()], hp: [1, 1], onEnd, ended: false }
+    this.battle = { steps: timeline.steps, win: timeline.win, next: 0, delay, bars: [this.add.graphics(), this.add.graphics()], hp: [1, 1], onEnd, ended: false }
     this.layout(this.scale.width, this.scale.height)
     this.battle.timer = this.time.addEvent({ delay, loop: true, startAt: delay * 0.4, callback: () => this.playStep() })
   }
@@ -976,28 +979,120 @@ export class HomeScene extends Phaser.Scene {
     const attacker = s.actor === 'player' ? this.mascot : this.monster
     const target = s.actor === 'player' ? this.monster : this.mascot
     const dir = s.actor === 'player' ? 1 : -1
+    // 지난 걸음의 밀림·찌그러짐이 남지 않게 제자리·제모양으로 돌린다
+    for (const who of [this.mascot, this.monster]) this.tweens.killTweensOf(who.setScale(1).setAngle(0).setAlpha(1))
     this.layout(this.scale.width, this.scale.height)
-    this.tweens.add({ targets: attacker, x: attacker.x + 34 * dir, duration: 120, yoyo: true, ease: 'Quad.easeOut' })
+    const fx = hitImpact(s.kind, !!s.crit, b.delay)
+    const home = { attacker: attacker.x, target: target.x }
+    const live = () => this.battle === b && !b.ended
+    this.markImpact('windup')
+    // 예비 동작: 살짝 뒤로 움츠렸다가 앞으로 튀어 나간다
+    this.tweens.add({ targets: attacker, x: home.attacker - fx.pull * dir, scaleX: 0.92, scaleY: 1.06, duration: fx.windup, ease: 'Sine.easeOut' })
+    this.time.delayedCall(fx.windup, () => {
+      if (!live()) return
+      this.markImpact('lunge')
+      this.tweens.add({ targets: attacker, x: home.attacker + fx.reach * dir, scaleX: 1.06, scaleY: 0.95, duration: fx.lunge, ease: 'Quad.easeIn' })
+    })
     // 맞은 쪽 HP 막대 위쪽 y
     const bar = s.actor === 'player' ? barY(this.scale.height) : this.mascotBarY(this.scale.height)
-    this.time.delayedCall(120, () => {
-      if (this.battle !== b || b.ended) return
+    const recover = () => this.tweens.add({ targets: attacker, x: home.attacker, scaleX: 1, scaleY: 1, duration: fx.back, ease: 'Quad.easeOut' })
+    this.time.delayedCall(contactAt(fx), () => {
+      if (!live()) return
       if (s.kind === 'miss') {
-        this.tweens.add({ targets: target, x: target.x + 22 * dir, duration: 110, yoyo: true, ease: 'Sine.easeOut' })
+        this.markImpact('back')
+        recover()
+        this.tweens.add({ targets: target, x: home.target + 22 * dir, duration: fx.back / 2, yoyo: true, ease: 'Sine.easeOut' })
         this.floatText(target.x, '휙! 피했다', '#6f93c4', bar)
-      } else {
-        this.tweens.add({ targets: target, alpha: 0.35, duration: 70, yoyo: true, repeat: 1 })
-        this.tweens.add({ targets: target, angle: 8 * dir, duration: 80, yoyo: true, ease: 'Sine.easeOut' })
-        // 치명타(지능)는 노란 글자로 크게 알린다
-        if (s.crit) this.floatText(target.x, `치명타! -${s.damage}`, '#f0a020', bar)
-        else this.floatText(target.x, `-${s.damage}`, s.actor === 'player' ? '#ff8a5b' : '#e0607e', bar)
+        this.drawBars(s.playerHp, s.enemyHp)
+        return
       }
+      this.contact(fx, s.actor === 'player', dir)
+      // 치명타(지능)는 노란 글자로 더 크게 알린다
+      if (s.crit) this.floatText(target.x, `치명타! -${s.damage}`, '#f0a020', bar, 28)
+      else this.floatText(target.x, `-${s.damage}`, s.actor === 'player' ? '#ff8a5b' : '#e0607e', bar)
       this.drawBars(s.playerHp, s.enemyHp)
+      // 히트스톱: 부딪힌 채로 아주 잠깐 멈췄다가, 맞은 쪽이 찌그러지며 밀리고 때린 쪽은 돌아온다
+      this.time.delayedCall(fx.hitstop, () => {
+        if (!live()) return
+        this.markImpact('back')
+        recover()
+        this.tweens.add({
+          targets: target,
+          x: home.target + fx.knock * dir,
+          scaleX: 1 + fx.squash,
+          scaleY: 1 - fx.squash,
+          angle: 8 * dir,
+          duration: fx.back / 2,
+          yoyo: true,
+          ease: 'Quad.easeOut',
+        })
+      })
     })
+    this.time.delayedCall(contactAt(fx) + fx.hitstop + fx.back, () => live() && this.markImpact('rest'))
     if (b.next >= b.steps.length) {
       b.timer?.remove()
       this.time.delayedCall(700, () => this.battle === b && this.finish())
     }
+  }
+
+  /** 부딪힌 순간: 맞은 쪽이 하얗게 번쩍이고 별·조각이 튄다. 치명타면 화면이 흔들리고 진동한다 */
+  private contact(fx: Impact, enemyHit: boolean, dir: number) {
+    const s = this.growth.scale
+    const top = MONSTER_TOP[this.monsterShape]
+    // 맞은 쪽 몸 가운데와 반지름(장면 좌표)
+    const body = enemyHit
+      ? { x: this.monster.x, y: this.monster.y + (top + 26) / 2, rx: 42, ry: (26 - top) / 2 + 3 }
+      : { x: this.mascot.x, y: this.mascot.y + FEET * (1 - s), rx: 41 * s, ry: 41 * s }
+    const host = this.game.canvas.parentElement
+    if (fx.flash) {
+      const flash = this.add.ellipse(body.x, body.y, body.rx * 2, body.ry * 2, 0xffffff).setAlpha(0.85)
+      host?.setAttribute('data-flash', '1')
+      this.tweens.add({
+        targets: flash,
+        alpha: 0,
+        delay: fx.hitstop * 0.6,
+        duration: fx.hitstop * 0.4 + 80,
+        onComplete: () => {
+          flash.destroy()
+          host?.setAttribute('data-flash', '0')
+        },
+      })
+    }
+    // 부딪힌 자리(때린 쪽을 바라보는 몸 가장자리)에서 맞은 쪽 뒤로 부채꼴로 퍼진다
+    const hx = body.x - dir * body.rx * 0.7
+    for (let i = 0; i < fx.sparks; i++) {
+      const spread = (Math.PI * 0.6 * i) / Math.max(1, fx.sparks - 1)
+      const a = -Math.PI / 2 + dir * (Math.PI * 0.15 + spread) + Phaser.Math.FloatBetween(-0.12, 0.12)
+      const dist = Phaser.Math.Between(26, fx.shake ? 64 : 46)
+      const color = fx.shake && i % 2 === 0 ? CROWN : Phaser.Utils.Array.GetRandom(CONFETTI)
+      const bit = i % 2 === 0 ? this.add.star(hx, body.y, 5, 2.5, 6, color) : this.add.circle(hx, body.y, Phaser.Math.Between(2, 4), color)
+      this.tweens.add({
+        targets: bit,
+        x: hx + Math.cos(a) * dist,
+        y: body.y + Math.sin(a) * dist,
+        angle: Phaser.Math.Between(-160, 160),
+        alpha: { from: 1, to: 0 },
+        scale: { from: 1.1, to: 0.4 },
+        delay: fx.hitstop * 0.5,
+        duration: 340,
+        ease: 'Cubic.easeOut',
+        onComplete: () => bit.destroy(),
+      })
+    }
+    if (fx.shake) {
+      this.cameras.main.shake(fx.shake, fx.shakePx / Math.max(1, this.scale.width))
+      navigator.vibrate?.(fx.vibrate)
+      host?.setAttribute('data-shakes', String(Number(host.getAttribute('data-shakes') ?? 0) + 1))
+    }
+    host?.setAttribute('data-sparks', String(fx.sparks))
+    this.markImpact('stop')
+  }
+
+  /** e2e가 한 번의 타격이 어느 단계인지(움츠림·튀어 나감·멈춤·밀림·제자리), 몇 번 부딪혔는지 볼 수 있게 남긴다 */
+  private markImpact(phase: 'windup' | 'lunge' | 'stop' | 'back' | 'rest') {
+    const host = this.game.canvas.parentElement
+    host?.setAttribute('data-impact', phase)
+    if (phase === 'stop') host?.setAttribute('data-impacts', String(Number(host.getAttribute('data-impacts') ?? 0) + 1))
   }
 
   private finish() {
@@ -1020,9 +1115,9 @@ export class HomeScene extends Phaser.Scene {
   }
 
   /** 맞은 쪽 HP 막대 바로 위에서 숫자·글자가 떠오르며 사라진다(막대를 가리지 않게) */
-  private floatText(x: number, text: string, color: string, barTop: number) {
+  private floatText(x: number, text: string, color: string, barTop: number, size = 20) {
     const t = this.add
-      .text(x, 0, text, { fontFamily: FONT, fontSize: '20px', color, fontStyle: 'bold', stroke: '#ffffff', strokeThickness: 5 })
+      .text(x, 0, text, { fontFamily: FONT, fontSize: `${size}px`, color, fontStyle: 'bold', stroke: '#ffffff', strokeThickness: 5 })
       .setOrigin(0.5)
     const y = barTop - 5 - t.height / 2
     t.setY(y)
