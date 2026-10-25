@@ -1030,6 +1030,68 @@ body {
 .week-day.stamped span { background: #ffe1a6; font-size: 18px; transform: rotate(-8deg); }
 .week-day.now span { box-shadow: inset 0 0 0 2px var(--accent); font-weight: 700; }
 .week-goal.done .week-day.stamped span { background: #ffc94d; }
+/* 내 기록: 최근 7일 활동별 색 쌓은 막대와 누적 시간 */
+.act-exercise { background: #ff9f80; }
+.act-study { background: #8cc8ff; }
+.act-reading { background: #8fdba4; }
+.act-relax { background: #c7a8f0; }
+.hist-title { margin-top: 18px; }
+.hist {
+  margin: 6px 0 10px;
+  padding: 12px 10px;
+  border-radius: 20px;
+  background: #fff;
+  box-shadow: 0 3px 0 var(--track);
+}
+.hist-empty { margin: 8px 0; font-size: 13px; color: var(--ink-soft); }
+.hist-body[hidden], .hist-empty[hidden] { display: none; }
+.hist-week { display: block; margin: 0 4px 8px; font-size: 14px; color: var(--ink); }
+.hist-bars {
+  list-style: none;
+  margin: 0 0 10px;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 4px;
+}
+.hist-day { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.hist-star { height: 16px; font-size: 12px; line-height: 16px; }
+.hist-bar {
+  display: flex;
+  flex-direction: column-reverse;
+  justify-content: flex-start;
+  width: 26px;
+  height: 80px;
+  border-radius: 13px;
+  background: var(--bg);
+  overflow: hidden;
+}
+.hist-seg { display: block; flex: none; }
+.hist-day small { font-size: 11px; font-weight: 700; line-height: 18px; color: var(--ink-soft); }
+.hist-day.now small { padding: 0 6px; border-radius: 999px; background: var(--accent); color: #fff; }
+.hist-day.now .hist-bar { box-shadow: inset 0 0 0 2px var(--accent); }
+.hist-totals {
+  list-style: none;
+  margin: 0 0 8px;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+}
+.hist-totals li {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: var(--chip);
+  font-size: 13px;
+  color: var(--ink);
+  white-space: nowrap;
+}
+.hist-totals b { margin-left: auto; font-size: 13px; }
+.hist-dot { flex: none; width: 10px; height: 10px; border-radius: 50%; }
+.hist-best { margin: 0; font-size: 13px; font-weight: 700; color: var(--accent); }
 /* 도장판으로 나 창이 길어져도 닫기는 언제나 화면 안 아래에 */
 .sheet-foot {
   position: sticky;

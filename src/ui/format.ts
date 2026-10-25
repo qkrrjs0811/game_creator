@@ -5,6 +5,7 @@ import type { ActivityId } from '../core/types'
 import type { TodayGoal } from '../core/goal'
 import type { AwaySummary } from '../core/away'
 import type { WeekGoal } from '../core/week'
+import type { BestDay, WeekTotals } from '../core/history'
 import { WINNABLE_MAX } from '../core/coach'
 import { AUTO_RUN_MAX, type AutoRun } from '../core/autorun'
 
@@ -57,6 +58,21 @@ export function weekChip(w: WeekCount): string {
 /** 지금까지 이번 주 목표를 채운 주 수 */
 export function weekDoneText(weeks: number): string {
   return weeks > 0 ? `🏅 채운 주 ${weeks}번` : '🏅 채운 주 아직 없어요'
+}
+
+/** 내 기록의 이번 주 합계. 지난주가 비었으면 견주지 않고, 모자라면 "N분 더"로 북돋운다 */
+export function weekTotalText(w: WeekTotals): string {
+  const head = `이번 주 ${formatMinutes(w.thisWeek)}`
+  if (w.lastWeek === 0) return head
+  if (w.diff > 0) return `${head} · 지난주보다 +${formatMinutes(w.diff)}`
+  if (w.diff === 0) return `${head} · 지난주와 같아요`
+  return `${head} · 지난주까지 ${formatMinutes(-w.diff)} 더`
+}
+
+/** 내 기록의 가장 많이 한 날 */
+export function bestDayText(b: BestDay): string {
+  const [, m, d] = b.key.split('-').map(Number)
+  return `🏆 가장 많이 한 날 · ${m}월 ${d}일 ${formatMinutes(b.minutes)}`
 }
 
 /**

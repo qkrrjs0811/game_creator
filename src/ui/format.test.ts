@@ -1,6 +1,6 @@
 import { test, expect } from 'vitest'
 import { WINNABLE_MAX } from '../core/coach'
-import { autoRunCard, awayAdventure, awayCard, formatElapsed, formatMinutes, goalText, objectJosa, weekChip, weekDoneText, weekGoalText, sessionSummary, topicJosa } from './format'
+import { autoRunCard, awayAdventure, awayCard, formatElapsed, formatMinutes, goalText, objectJosa, weekChip, weekDoneText, weekGoalText, sessionSummary, topicJosa, weekTotalText, bestDayText } from './format'
 import { AUTO_RUN_MAX } from '../core/autorun'
 import type { Cosmetic } from '../core/cosmetics'
 import type { AwaySummary } from '../core/away'
@@ -148,4 +148,16 @@ test('자동 진행 결과 카드: 깬 만큼·얻은 모자·멈춘 곳의 운�
     note: '🍀 지금도 이길 만해요 · 다시 도전해 봐요',
   })
   expect(autoRunCard({ from: 4, to: 6, stoppedAt: 7, rewards: [] }, null).note).toBe('💪 운동으로 더 키워서 다시 와요')
+})
+
+test('내 기록의 이번 주 합계는 지난주와 견준다', () => {
+  expect(weekTotalText({ thisWeek: 190, lastWeek: 150, diff: 40 })).toBe('이번 주 3시간 10분 · 지난주보다 +40분')
+  expect(weekTotalText({ thisWeek: 60, lastWeek: 60, diff: 0 })).toBe('이번 주 1시간 · 지난주와 같아요')
+  expect(weekTotalText({ thisWeek: 20, lastWeek: 90, diff: -70 })).toBe('이번 주 20분 · 지난주까지 1시간 10분 더')
+  // 지난주가 비었으면 견주지 않는다
+  expect(weekTotalText({ thisWeek: 45, lastWeek: 0, diff: 45 })).toBe('이번 주 45분')
+})
+
+test('가장 많이 한 날은 월·일과 시간', () => {
+  expect(bestDayText({ key: '2026-10-21', minutes: 130 })).toBe('🏆 가장 많이 한 날 · 10월 21일 2시간 10분')
 })

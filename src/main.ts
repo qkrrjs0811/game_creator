@@ -4,6 +4,7 @@ import { HomeScene, HOME_READY } from './game/HomeScene'
 import { computeProgress, dayKey, todayStatus } from './core/progression'
 import { goalStreak, stampCalendar, stampCount, todayGoal } from './core/goal'
 import { weekGoal } from './core/week'
+import { recordSummary } from './core/history'
 import { levelUpPoints, levelUpTo, restoreShownLevel } from './core/levelup'
 import { liveRecords, startSession, stopSession } from './core/session'
 import { backupFileName, exportBackup, importLosesProgress } from './core/backup'
@@ -152,7 +153,13 @@ const skills = createSkills(app, {
       streak: goalStreak(records, now),
       week: weekGoal(records, now),
     }
-    return { points: remainingSkillPoints(p.level, save.skills), ranks: skillRanks(save.skills), stats, board }
+    return {
+      points: remainingSkillPoints(p.level, save.skills),
+      ranks: skillRanks(save.skills),
+      stats,
+      board,
+      history: recordSummary(records, now),
+    }
   },
   onLearn(id) {
     pullSave()

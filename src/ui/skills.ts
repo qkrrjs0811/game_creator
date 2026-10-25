@@ -2,13 +2,17 @@ import { SKILLS, type SkillId } from '../core/skills'
 import type { StatRow } from '../core/stats'
 import type { StampCalendar } from '../core/goal'
 import type { WeekGoal } from '../core/week'
-import { weekDoneText, weekGoalText } from './format'
+import type { RecordSummary } from '../core/history'
+import { ACTIVITIES } from '../core/activities'
+import type { ActivityId } from '../core/types'
+import { bestDayText, formatMinutes, weekDoneText, weekGoalText, weekTotalText } from './format'
 
 export interface SkillsView {
   points: number
   ranks: Record<SkillId, number>
   stats: StatRow[]
   board: { calendar: StampCalendar; stamps: number; streak: number; week: WeekGoal }
+  history: RecordSummary
 }
 
 const WEEK = ['일', '월', '화', '수', '목', '금', '토']
@@ -39,6 +43,33 @@ export function boardHtml(cal: StampCalendar): string {
     })
     .join('')
   return head + lead + days
+}
+
+const ACTIVITY_IDS = Object.keys(ACTIVITIES) as ActivityId[]
+/** 막대 꼭대기 눈금. 조금만 한 날이 칸을 꽉 채워 보이지 않게 적어도 1시간으로 잡는다 */
+const BAR_MIN_SCALE = 60
+
+/** 내 기록: 최근 7일 활동별 색을 쌓은 막대(오래된 날부터) */
+export function historyBarsHtml(h: RecordSummary): string {
+  const scale = Math.max(BAR_MIN_SCALE, ...h.days.map((d) => d.total))
+  return h.days
+    .map((d, i) => {
+      const cls = ['hist-day', d.today && 'now', d.total === 0 && 'rest'].filter(Boolean).join(' ')
+      const parts = ACTIVITY_IDS.filter((id) => d.minutes[id] > 0)
+        .map((id) => `<i class="hist-seg act-${id}" style="height:${((d.minutes[id] / scale) * 100).toFixed(1)}%"></i>`)
+        .join('')
+      const label = ` aria-label="${WEEK[d.weekday]}요일 ${formatMinutes(d.total)}${d.stamped ? ' 도장' : ''}"`
+      return `<li class="${cls}" data-testid="hist-day-${i}"${label}><span class="hist-star">${d.stamped ? '🌟' : ''}</span><span class="hist-bar">${parts}</span><small>${d.today ? '오늘' : WEEK[d.weekday]}</small></li>`
+    })
+    .join('')
+}
+
+/** 내 기록: 활동별 누적 시간 */
+export function historyTotalsHtml(h: RecordSummary): string {
+  return ACTIVITY_IDS.map(
+    (id) =>
+      `<li data-testid="hist-total-${id}"><i class="hist-dot act-${id}" aria-hidden="true"></i>${ACTIVITIES[id].label} <b>${formatMinutes(h.totals[id])}</b></li>`,
+  ).join('')
 }
 
 /** 받침이 있으면 '을', 없으면 '를' */
@@ -87,6 +118,16 @@ export function createSkills(root: HTMLElement, h: { view(): SkillsView; onLearn
       </div>
       <ul class="board" data-testid="board"></ul>
       <p class="sheet-desc">하루 활동 합쳐 30분을 채우면 도장을 찍어요. 한 주(월~일)에 5일 찍으면 이번 주 목표 달성!</p>
+      <h3 class="sheet-sub hist-title">📖 내 기록</h3>
+      <div class="hist" data-testid="history">
+        <p class="hist-empty" data-testid="hist-empty">아직 기록이 없어요 · 타이머를 켜면 여기에 쌓여요</p>
+        <div class="hist-body" data-testid="hist-body">
+          <b class="hist-week" data-testid="hist-week"></b>
+          <ul class="hist-bars" data-testid="hist-bars"></ul>
+          <ul class="hist-totals" data-testid="hist-totals"></ul>
+          <p class="hist-best" data-testid="hist-best"></p>
+        </div>
+      </div>
       <div class="sheet-foot">
         <button type="button" class="sheet-close" data-testid="skills-close">닫기</button>
       </div>
@@ -100,6 +141,8 @@ export function createSkills(root: HTMLElement, h: { view(): SkillsView; onLearn
   let lastStats = ''
   let lastBoard = ''
   let lastWeek = ''
+  let lastBars = ''
+  let lastTotals = ''
 
   const draw = () => {
     const v = h.view()
@@ -137,6 +180,23 @@ export function createSkills(root: HTMLElement, h: { view(): SkillsView; onLearn
     if (row !== lastWeek) {
       lastWeek = row
       q('week-row').innerHTML = row
+    }
+    const hist = v.history
+    q('hist-empty').hidden = !hist.empty
+    q('hist-body').hidden = hist.empty
+    if (!hist.empty) {
+      q('hist-week').textContent = weekTotalText(hist.week)
+      q('hist-best').textContent = hist.best ? bestDayText(hist.best) : ''
+      const bars = historyBarsHtml(hist)
+      if (bars !== lastBars) {
+        lastBars = bars
+        q('hist-bars').innerHTML = bars
+      }
+      const totals = historyTotalsHtml(hist)
+      if (totals !== lastTotals) {
+        lastTotals = totals
+        q('hist-totals').innerHTML = totals
+      }
     }
     q('skill-points').innerHTML = `남은 포인트 <b>${v.points}</b>`
     const asked = SKILLS.find((s) => s.id === asking)
