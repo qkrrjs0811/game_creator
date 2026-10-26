@@ -3,10 +3,27 @@ import { test, expect, type Page } from '@playwright/test'
 test('켜기 전 집중 목표를 고르면 켜 둔 동안 남은 분과 막대를 보여 주고, 다음에도 그 목표를 먼저 골라 둔다', async ({ page }) => {
   await page.clock.install({ time: new Date('2026-10-25T08:00:00+09:00') })
   await page.goto('./')
-  // 처음에는 목표 없음이 골라져 있다
+  // 처음에는 칩이 "이번 목표: 없음" 버튼 하나로 접혀 있다
+  const pick = page.getByTestId('focus-pick')
+  await expect(pick).toHaveText('🎯 이번 목표: 없음')
+  await expect(page.getByTestId('focus-chips')).toBeHidden()
+  const pickBox = (await pick.boundingBox())!
+  expect(pickBox.height).toBeGreaterThanOrEqual(44)
+  expect(pickBox.x).toBeGreaterThanOrEqual(14)
+  expect(pickBox.x + pickBox.width).toBeLessThanOrEqual(390 - 14)
+  expect(pickBox.y + pickBox.height).toBeLessThanOrEqual((await page.getByTestId('toggle').boundingBox())!.y)
+  await page.screenshot({ path: 'test-results/screens/focus-folded.png' })
+
+  // 누르면 그 자리에 칩이 펼쳐지고, 목표 없음이 골라져 있다
+  await pick.click()
+  await expect(pick).toBeHidden()
   await expect(page.getByTestId('focus-chips')).toBeVisible()
   await expect(page.getByTestId('focus-0')).toHaveAttribute('aria-pressed', 'true')
   await page.getByTestId('focus-25').click()
+  // 고르면 다시 접히고 버튼에 고른 목표가 보인다
+  await expect(page.getByTestId('focus-chips')).toBeHidden()
+  await expect(pick).toHaveText('🎯 이번 목표: 25분')
+  await pick.click()
   await expect(page.getByTestId('focus-25')).toHaveAttribute('aria-pressed', 'true')
   await expect(page.getByTestId('focus-0')).toHaveAttribute('aria-pressed', 'false')
 
@@ -26,8 +43,10 @@ test('켜기 전 집중 목표를 고르면 켜 둔 동안 남은 분과 막대�
   expect(row.y + row.height).toBeLessThanOrEqual(toggle.y)
   await page.screenshot({ path: 'test-results/screens/focus-pick.png' })
 
+  // 펼친 채로 켜도 칩은 사라진다
   await page.getByTestId('toggle').click()
   await expect(page.getByTestId('focus-chips')).toBeHidden()
+  await expect(pick).toBeHidden()
   await page.clock.fastForward('12:30')
   await expect(page.getByTestId('focus-text')).toHaveText('🎯 25분 중 12분 · 13분 남음')
   const track = (await page.getByTestId('focus-track').boundingBox())!
@@ -57,12 +76,14 @@ test('켜기 전 집중 목표를 고르면 켜 둔 동안 남은 분과 막대�
   await page.reload()
   await expect(page.getByTestId('focus-text')).toHaveText('⏰ 목표 25분 채웠어요 · 32분째')
 
-  // 그만두면 칩이 돌아오고, 고른 25분이 먼저 골라져 있다
+  // 그만두면 접힌 버튼이 돌아오고, 고른 25분이 먼저 골라져 있다
   await page.getByTestId('toggle').click()
-  await expect(page.getByTestId('focus-chips')).toBeVisible()
-  await expect(page.getByTestId('focus-25')).toHaveAttribute('aria-pressed', 'true')
+  await expect(pick).toHaveText('🎯 이번 목표: 25분')
+  await expect(page.getByTestId('focus-chips')).toBeHidden()
 
   // 목표 없이 켜면 이전 타이머의 목표가 붙지 않는다
+  await pick.click()
+  await expect(page.getByTestId('focus-25')).toHaveAttribute('aria-pressed', 'true')
   await page.getByTestId('focus-0').click()
   await page.getByTestId('toggle').click()
   await page.clock.fastForward('03:00')
@@ -88,6 +109,7 @@ test('집중 목표에 닿는 순간 배지를 한 번 찍고 진동하며, 타�
   await page.addInitScript(countVibrate)
   await page.clock.install({ time: new Date('2026-10-25T08:00:00+09:00') })
   await page.goto('./')
+  await page.getByTestId('focus-pick').click()
   await page.getByTestId('focus-15').click()
   await page.getByTestId('toggle').click()
   const badge = page.getByTestId('focus-stamp')
@@ -140,6 +162,7 @@ test('닫아 둔 사이 집중 목표에 닿았으면 다시 열 때 오늘 도�
   await context.clock.install({ time: new Date('2026-10-25T08:00:00+09:00') })
   let page = await context.newPage()
   await page.goto('./')
+  await page.getByTestId('focus-pick').click()
   await page.getByTestId('focus-25').click()
   await page.getByTestId('toggle').click()
   await page.clock.fastForward('00:02')

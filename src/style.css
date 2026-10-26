@@ -472,7 +472,24 @@ body {
 }
 .timer-label { font-size: 13px; color: var(--ink-soft); }
 /* 집중 목표: 켜기 전엔 00:00 자리에 칩, 켜 둔 동안엔 안내 글 자리에 진행 줄. 바꿔 들어서도 카드 높이가 그대로다 */
-.timer[hidden], .timer-label[hidden], .focus-chips[hidden], .focus-live[hidden], .focus-bar[hidden] { display: none; }
+.timer[hidden], .timer-label[hidden], .focus-chips[hidden], .focus-pick[hidden], .focus-live[hidden], .focus-bar[hidden] { display: none; }
+/* 접힌 집중 목표: 칩 줄과 같은 높이라 펼치고 접어도 카드 높이가 그대로다 */
+.focus-pick {
+  display: block;
+  min-width: 180px;
+  height: 44px;
+  margin: 2px auto 6px;
+  padding: 0 18px;
+  border: 2px solid transparent;
+  border-radius: 999px;
+  background: var(--chip);
+  color: var(--ink);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  white-space: nowrap;
+  cursor: pointer;
+}
 .focus-chips { display: flex; align-items: center; justify-content: center; gap: 4px; height: 44px; margin: 2px 0 6px; }
 .focus-head { flex: none; margin-right: 2px; font-size: 13px; font-weight: 700; white-space: nowrap; }
 .focus-chip {

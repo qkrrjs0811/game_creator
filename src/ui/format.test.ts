@@ -1,6 +1,6 @@
 import { test, expect } from 'vitest'
 import { WINNABLE_MAX } from '../core/coach'
-import { autoRunCard, awayAdventure, awayCard, formatElapsed, formatMinutes, goalText, objectJosa, weekChip, weekDoneText, weekGoalText, sessionSummary, topicJosa, weekTotalText, bestDayText, dayDetail, pageRangeText, dexShadowText, dexNewText, missionChip, achievementValueText, farAchievementIds, achievementToast, focusText, focusChipLabel, focusDoneText, letterCard, bestBrokenText, newPropText, pledgeText, weakAdviceText } from './format'
+import { autoRunCard, awayAdventure, awayCard, formatElapsed, formatMinutes, goalText, objectJosa, weekChip, weekDoneText, weekGoalText, sessionSummary, topicJosa, weekTotalText, bestDayText, dayDetail, pageRangeText, dexShadowText, dexNewText, missionChip, achievementValueText, farAchievementIds, achievementToast, focusText, focusChipLabel, focusPickLabel, focusDoneText, letterCard, bestBrokenText, newPropText, pledgeText, weakAdviceText } from './format'
 import { ACHIEVEMENTS, achievementProgress } from '../core/achievements'
 import { AUTO_RUN_MAX } from '../core/autorun'
 import type { Cosmetic } from '../core/cosmetics'
@@ -266,6 +266,11 @@ test('집중 목표 진행 글자: 지난 분·남은 분, 닿으면 채웠다�
 test('집중 목표 칩 글자는 없음 또는 N분', () => {
   expect(focusChipLabel(0)).toBe('없음')
   expect(focusChipLabel(25)).toBe('25분')
+})
+
+test('접힌 집중 목표 버튼은 지금 고른 목표를 보여 준다', () => {
+  expect(focusPickLabel(0)).toBe('🎯 이번 목표: 없음')
+  expect(focusPickLabel(45)).toBe('🎯 이번 목표: 45분')
 })
 
 test('집중 목표 달성 배지 글자', () => {

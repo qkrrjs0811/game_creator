@@ -71,6 +71,7 @@ test('상한을 채운 뒤 그만하면 경험치는 내일 쌓인다고 알려 
 test('집중 목표를 골랐으면 마침 요약에 채웠는지 붙여 줌', async ({ page }) => {
   await page.clock.install({ time: new Date('2026-10-25T08:00:00+09:00') })
   await page.goto('./')
+  await page.getByTestId('focus-pick').click()
   await page.getByTestId('focus-25').click()
   await page.getByTestId('toggle').click()
   await page.clock.fastForward('18:20')
@@ -104,6 +105,7 @@ test('집중 목표를 골랐으면 마침 요약에 채웠는지 붙여 줌', a
 
   // 목표 없이 켜면 평소 제목 그대로
   await page.getByTestId('session-summary-close').click()
+  await page.getByTestId('focus-pick').click()
   await page.getByTestId('focus-0').click()
   await page.getByTestId('toggle').click()
   await page.clock.fastForward('10:20')

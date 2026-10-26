@@ -1,4 +1,4 @@
-import { focusChipLabel, focusDoneText, focusText, formatElapsed, goalText, missionChip, objectJosa, pledgeText, topicJosa, weekChip } from './format'
+import { focusChipLabel, focusDoneText, focusPickLabel, focusText, formatElapsed, goalText, missionChip, objectJosa, pledgeText, topicJosa, weekChip } from './format'
 import type { PledgeProgress } from '../core/pledge'
 import { ACTIVITIES } from '../core/activities'
 import { FOCUS_TARGETS, type FocusProgress } from '../core/focus'
@@ -164,7 +164,8 @@ export function createHud(
         <span class="focus-bar" data-testid="focus-track"><i data-testid="focus-bar"></i></span>
       </div>
       <div class="timer" data-testid="timer">00:00</div>
-      <div class="focus-chips" data-testid="focus-chips" role="group" aria-label="집중 목표" hidden>
+      <button type="button" class="focus-pick" data-testid="focus-pick" aria-expanded="false" aria-controls="focus-chips" hidden></button>
+      <div class="focus-chips" id="focus-chips" data-testid="focus-chips" role="group" aria-label="집중 목표" hidden>
         <span class="focus-head">🎯 목표</span>
         ${FOCUS_TARGETS.map(
           (m) => `<button type="button" class="focus-chip" data-testid="focus-${m}" data-minutes="${m}">${focusChipLabel(m)}</button>`,
@@ -223,8 +224,22 @@ export function createHud(
   q('open-cosmetics').addEventListener('click', onDress)
   const skillBadge = q('skill-badge')
   const focusChips = [...root.querySelectorAll<HTMLElement>('.focus-chip')]
-  for (const chip of focusChips) chip.addEventListener('click', () => onFocus(Number(chip.dataset.minutes)))
+  // 켜기 전 목표는 "🎯 이번 목표" 버튼 하나로 접어 두고, 누르면 그 자리에 칩이 펼쳐진다. 고르면 다시 접힌다
+  let focusOpen = false
   const focusChipRow = q('focus-chips')
+  const focusPick = q('focus-pick')
+  focusPick.addEventListener('click', () => {
+    focusOpen = true
+    focusPick.hidden = true
+    focusChipRow.hidden = false
+    focusPick.setAttribute('aria-expanded', 'true')
+  })
+  for (const chip of focusChips)
+    chip.addEventListener('click', () => {
+      focusOpen = false
+      focusPick.setAttribute('aria-expanded', 'false')
+      onFocus(Number(chip.dataset.minutes))
+    })
   const focusLive = q('focus-live')
   const focusLabel = q('focus-text')
   const focusBar = q('focus-bar')
@@ -479,7 +494,13 @@ export function createHud(
       // 켜기 전에는 00:00 자리에 목표 칩을, 켜 둔 동안에는 안내 글 자리에 목표까지의 진행을 보여 준다
       // (카드 높이가 그대로라 장면이 줄지 않는다). 상한에 닿았으면 그 안내가 먼저다
       timer.hidden = !v.running
-      focusChipRow.hidden = v.running
+      if (v.running) {
+        focusOpen = false
+        focusPick.setAttribute('aria-expanded', 'false')
+      }
+      focusPick.hidden = v.running || focusOpen
+      focusChipRow.hidden = v.running || !focusOpen
+      focusPick.textContent = focusPickLabel(v.focusTarget)
       // 목표 없이 켰으면 평소 안내를 그대로 둔다
       const showFocus = v.running && !v.capReached && v.focus !== null
       focusLive.hidden = !showFocus

@@ -331,3 +331,8 @@ export function pledgeText(p: PledgeProgress | null): string {
 export function focusChipLabel(minutes: number): string {
   return minutes === 0 ? '없음' : `${minutes}분`
 }
+
+/** 접힌 집중 목표 버튼 글자 */
+export function focusPickLabel(minutes: number): string {
+  return `🎯 이번 목표: ${focusChipLabel(minutes)}`
+}
