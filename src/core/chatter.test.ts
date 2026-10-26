@@ -238,35 +238,12 @@ describe('말풍선 눌러 다음 한마디', () => {
   })
 })
 
-describe('말랑이 한마디 · 오늘의 다짐', () => {
-  const pledge = (activity: ActivityId, minutes: number, day = SUN) => ({ day, activity, minutes })
-  const morning = kst(`${SUN}T08:00:00`)
-  const ASK = '✍️ 오늘의 다짐 정해 볼까?'
-
-  test('다짐을 아직 못 채웠으면 남은 분을 오늘 목표 바로 뒤에 말한다', () => {
+describe('말랑이 한마디 · 다짐은 뺐다', () => {
+  test('아침에도 다짐을 정하자고 하지 않고, 다짐 한마디도 없다', () => {
+    const morning = kst(`${SUN}T08:00:00`)
     const records = [rec('study', `${SUN}T10:00:00`, `${SUN}T10:12:00`)]
-    const lines = chatLines(input({ records, pledge: pledge('study', 30) }))
-    const i = lines.findIndex((l) => l.kind === 'pledge')
-    expect(lines[i]).toEqual({ kind: 'pledge', text: '✍️ 다짐까지 공부 18분!' })
-    expect(lines[i - 1].kind).toBe('goal')
-  })
-
-  test('다짐을 채웠으면 다짐 한마디는 없다', () => {
-    const records = [rec('study', `${SUN}T10:00:00`, `${SUN}T10:30:00`)]
-    expect(kinds(input({ records, pledge: pledge('study', 30) }))).not.toContain('pledge')
-  })
-
-  test('다짐이 없으면 아침에만 다짐을 정해 보자고 한다', () => {
-    expect(texts(input({ now: morning, lastSeen: morning }))).toContain(ASK)
-    expect(texts(input({}))).not.toContain(ASK)
-    expect(texts(input({ now: morning, lastSeen: morning, pledge: pledge('study', 30) }))).not.toContain(ASK)
-  })
-
-  test('다짐 한마디도 말풍선 한 줄에 들어간다', () => {
-    const cases: ChatInput[] = [input({ now: morning, lastSeen: morning })]
-    for (const a of ['exercise', 'study', 'reading', 'relax'] as ActivityId[]) cases.push(input({ pledge: pledge(a, a === 'relax' ? 30 : 60) }))
-    for (const c of cases) {
-      for (const line of chatLines(c)) expect(Array.from(line.text).length, line.text).toBeLessThanOrEqual(CHAT_MAX_CHARS)
+    for (const c of [input({ now: morning, lastSeen: morning }), input({ now: morning, lastSeen: morning, records }), input({})]) {
+      for (const line of chatLines(c)) expect(line.text).not.toContain('다짐')
     }
   })
 })

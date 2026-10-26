@@ -14,7 +14,6 @@ import type { FocusProgress } from '../core/focus'
 import { LETTER_ICONS, type WeekLetter } from '../core/letter'
 import type { BestKind, SeenBests } from '../core/best'
 import type { Cosmetic } from '../core/cosmetics'
-import type { PledgeProgress } from '../core/pledge'
 
 const pad =(n: number) => String(n).padStart(2, '0')
 
@@ -317,13 +316,6 @@ export function bestBrokenText(broken: BestKind[], v: SeenBests): string {
   if (id) return `${head} · ${ACTIVITIES[id].label} 한 번 ${formatMinutes(v.session[id])}`
   if (broken.includes('streak')) return `${head} · ${v.streak}일 이어 옴`
   return head
-}
-
-/** 홈 오늘의 다짐 줄 글자. 다짐이 없으면 정하자고, 채웠으면 지켰다고 보여 준다 */
-export function pledgeText(p: PledgeProgress | null): string {
-  if (!p) return '✍️ 오늘의 다짐 정하기'
-  const what = `${ACTIVITIES[p.activity].label} ${p.goal}분`
-  return p.done ? `✅ 지켰어요 · ${what}` : `✍️ ${what} · ${p.minutes} / ${p.goal}`
 }
 
 /** 집중 목표 칩 글자 */

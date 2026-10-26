@@ -348,7 +348,7 @@ body {
   font-size: 12px;
   white-space: nowrap;
 }
-/* 오늘 더 보기: 오늘의 미션·이번 주 칩과 오늘의 다짐. 기본은 접혀 있다 */
+/* 오늘 더 보기: 오늘의 미션 칩. 기본은 접혀 있다 */
 .today-more {
   display: flex;
   flex-direction: column;
@@ -368,49 +368,6 @@ body {
 /* 시작 버튼과 오늘 한 시간 칩을 한 줄에(줄이 하나 줄어 장면이 넓어진다) */
 .toggle-row { display: flex; align-items: center; justify-content: center; gap: 10px; }
 .toggle-row .toggle { flex: none; padding: 12px 22px; }
-/* 오늘의 다짐: 하늘색 알약. 누르면 고르기 창, 진행은 바탕이 차오르고, 채운 뒤엔 누를 수 없다 */
-.pledge-line {
-  --pledge: 0%;
-  min-height: 44px;
-  box-sizing: border-box;
-  padding: 0 8px;
-  border: 2px dashed #a9cdee;
-  border-radius: 999px;
-  background: #eef6ff;
-  color: #3f6f9c;
-  font: inherit;
-  font-size: 13px;
-  font-weight: 700;
-  font-variant-numeric: tabular-nums;
-  cursor: pointer;
-}
-.pledge-line.set {
-  border-style: solid;
-  background: linear-gradient(90deg, #c9e2fb var(--pledge), #eef6ff var(--pledge));
-}
-.pledge-line.done, .pledge-line:disabled { border: 2px solid #8fd0b4; background: #dff5ea; color: #2f8a63; cursor: default; opacity: 1; }
-.pledge-text { white-space: nowrap; }
-/* 다짐 고르기 창 */
-.pledge-label { margin: 4px 0 -4px; font-size: 13px; font-weight: 700; color: var(--ink-soft); text-align: left; }
-.pledge-row { display: flex; gap: 8px; margin: 8px 0; }
-.pledge-pick {
-  flex: 1;
-  min-height: 48px;
-  border: 2px solid transparent;
-  border-radius: 999px;
-  background: #fff;
-  color: var(--ink);
-  font: inherit;
-  font-size: 15px;
-  font-weight: 700;
-  box-shadow: 0 3px 0 var(--track);
-  cursor: pointer;
-}
-.pledge-pick.on { background: #e3f0ff; border-color: #7fb6ea; color: #3f6f9c; }
-.pledge-pick:disabled { opacity: 0.4; cursor: default; }
-.pledge-hint { min-height: 20px; margin: 4px 0 10px; font-weight: 700; color: #3f6f9c; }
-.sheet.pledge .sheet-btn { width: 100%; }
-.sheet.pledge .sheet-btn:disabled { opacity: 0.45; }
 /* 오늘 목표를 채운 순간 카드 오른쪽 위에 찍히는 도장 */
 .stamp {
   position: absolute;
@@ -703,8 +660,6 @@ body {
 .stamp.best-stamp { background: #f5b83d; box-shadow: 0 3px 0 #d39722; white-space: nowrap; }
 /* 새 소품 배지는 선물 상자 같은 딸기 분홍 */
 .stamp.prop-stamp { background: #f78fb3; box-shadow: 0 3px 0 #d96e93; white-space: nowrap; }
-/* 다짐 지킴 배지는 지킨 다짐 줄처럼 민트 */
-.stamp.pledge-stamp { background: #5cc39a; box-shadow: 0 3px 0 #3fa37b; white-space: nowrap; }
 /* 나 창 위쪽 능력치 칸: 운동으로 오른 힘·체력, 공부로 오른 지능, 독서로 오른 집중(2 × 2) */
 .stat-list { list-style: none; margin: 4px 0 16px; padding: 0; display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
 .stat {

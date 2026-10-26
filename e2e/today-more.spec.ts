@@ -4,7 +4,7 @@ async function box(l: Locator) {
   return (await l.boundingBox())!
 }
 
-test('홈 타이머 카드는 시작 버튼·오늘 한 시간·오늘 목표만 두고, 목표 줄을 누르면 미션·다짐이 펼쳐진다', async ({ page }) => {
+test('홈 타이머 카드는 시작 버튼·오늘 한 시간·오늘 목표만 두고, 목표 줄을 누르면 미션이 펼쳐진다', async ({ page }) => {
   // 2026-10-25는 휴식 10분 미션
   await page.clock.install({ time: new Date('2026-10-25T08:00:00+09:00') })
   await page.goto('./')
@@ -14,7 +14,6 @@ test('홈 타이머 카드는 시작 버튼·오늘 한 시간·오늘 목표만
   // 기본은 접혀 있다
   await expect(more).toBeHidden()
   await expect(page.getByTestId('mission')).toBeHidden()
-  await expect(page.getByTestId('pledge')).toBeHidden()
   await expect(goal).toHaveAttribute('aria-expanded', 'false')
   await expect(page.getByTestId('goal-more')).toHaveText('더 보기 ▾')
   // 오늘 한 시간은 시작 버튼 옆 한 줄
@@ -38,13 +37,13 @@ test('홈 타이머 카드는 시작 버튼·오늘 한 시간·오늘 목표만
   await expect(page.getByTestId('mission')).toHaveText('📜 휴식 0 / 10분')
   // 이번 주 목표는 도장판에서만 보여 준다
   await expect(page.getByTestId('goal-week')).toHaveCount(0)
-  await expect(page.getByTestId('pledge-text')).toHaveText('✍️ 오늘의 다짐 정하기')
+  // 오늘의 다짐은 뺐다
+  await expect(page.getByTestId('pledge')).toHaveCount(0)
+  await expect(more).not.toContainText('다짐')
   const m = await box(more)
   const card = await box(page.locator('.timer-card'))
   expect(m.x).toBeGreaterThanOrEqual(card.x)
   expect(m.x + m.width).toBeLessThanOrEqual(card.x + card.width)
-  const p = await box(page.getByTestId('pledge'))
-  expect(p.height).toBeGreaterThanOrEqual(44)
   // 펼친 칸은 시작 버튼 위에 있고 겹치지 않는다
   const t2 = await box(page.getByTestId('toggle'))
   expect(m.y + m.height).toBeLessThanOrEqual(t2.y)
@@ -52,11 +51,6 @@ test('홈 타이머 카드는 시작 버튼·오늘 한 시간·오늘 목표만
   expect(t2.y + t2.height).toBeLessThanOrEqual(tabs.y)
   await page.waitForTimeout(500)
   await page.screenshot({ path: 'test-results/screens/today-more.png' })
-
-  // 다짐 버튼은 펼친 칸에서 고르기 창을 연다
-  await page.getByTestId('pledge').click()
-  await expect(page.getByTestId('pledge-sheet')).toBeVisible()
-  await page.getByTestId('pledge-close').click()
 
   // 다시 누르면 접힌다
   await goal.click()

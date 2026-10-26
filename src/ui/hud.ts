@@ -1,5 +1,4 @@
-import { focusChipLabel, focusDoneText, focusPickLabel, focusText, formatElapsed, goalText, missionChip, objectJosa, pledgeText, topicJosa } from './format'
-import type { PledgeProgress } from '../core/pledge'
+import { focusChipLabel, focusDoneText, focusPickLabel, focusText, formatElapsed, goalText, missionChip, objectJosa, topicJosa } from './format'
 import { ACTIVITIES } from '../core/activities'
 import { FOCUS_TARGETS, type FocusProgress } from '../core/focus'
 import type { TodayGoal } from '../core/goal'
@@ -37,8 +36,6 @@ export interface HudView {
   focusTarget: number
   /** 켜 둔 타이머의 집중 목표 진행. 목표 없이 켰거나 꺼져 있으면 null */
   focus: FocusProgress | null
-  /** 오늘의 다짐 진행. 다짐이 없으면 null */
-  pledge: PledgeProgress | null
 }
 
 /** 활동마다 타이머 카드에 쓰는 안내 */
@@ -71,8 +68,6 @@ export function createHud(
   onAchievementShown: (shown: boolean) => void = () => {},
   /** 켜기 전 집중 목표 칩을 골랐을 때(분, 0 = 없음) */
   onFocus: (minutes: number) => void = () => {},
-  /** 오늘의 다짐 줄을 눌렀을 때(채우기 전에만) */
-  onPledge: () => void = () => {},
 ) {
   root.innerHTML = `
     <header class="top">
@@ -143,9 +138,6 @@ export function createHud(
         <div class="today-more-chips">
           <span class="mission" data-testid="mission"></span>
         </div>
-        <button type="button" class="pledge-line" data-testid="pledge">
-          <span class="pledge-text" data-testid="pledge-text"></span>
-        </button>
       </div>
       <div class="stamp" data-testid="stamp" role="status" hidden>🌟 오늘 도장 쾅!</div>
       <div class="stamp mission-stamp" data-testid="mission-stamp" role="status" hidden>📜 미션 완료!</div>
@@ -154,7 +146,6 @@ export function createHud(
       <div class="stamp rest-stamp" data-testid="rest-stamp" role="status" hidden>🛟 쉼표를 얻었어요!</div>
       <div class="stamp best-stamp" data-testid="best-stamp" role="status" hidden></div>
       <div class="stamp prop-stamp" data-testid="prop-stamp" role="status" hidden></div>
-      <div class="stamp pledge-stamp" data-testid="pledge-stamp" role="status" hidden>✍️ 다짐 지켰어요!</div>
       <div class="timer-label" data-testid="timer-label"></div>
       <div class="focus-live" data-testid="focus-live" hidden>
         <span class="focus-text" data-testid="focus-text"></span>
@@ -241,14 +232,11 @@ export function createHud(
   const focusLive = q('focus-live')
   const focusLabel = q('focus-text')
   const focusBar = q('focus-bar')
-  const pledgeLine = q('pledge') as HTMLButtonElement
-  const pledgeLabel = q('pledge-text')
-  pledgeLine.addEventListener('click', onPledge)
   const activityTabs = [...root.querySelectorAll<HTMLElement>('[data-activity]')]
   for (const tab of activityTabs) tab.addEventListener('click', () => onSelect(tab.dataset.activity as ActivityId))
   const toastDetail = toast.querySelector('span')!
   const goal = q('goal')
-  // 미션·이번 주·다짐은 오늘 목표 줄을 눌러 펼치는 "오늘 더 보기"에 둔다(기본은 접힘)
+  // 미션은 오늘 목표 줄을 눌러 펼치는 "오늘 더 보기"에 둔다(기본은 접힘)
   const todayMore = q('today-more')
   const goalMore = q('goal-more')
   goal.addEventListener('click', () => {
@@ -277,13 +265,12 @@ export function createHud(
     yieldFocus()
     missionTimer = setTimeout(() => (missionStamp.hidden = true), 3500)
   }
-  const pledgeStamp = q('pledge-stamp')
   const growStamp = q('grow-stamp')
   let growTimer: ReturnType<typeof setTimeout> | undefined
   const popGrow = () => {
     clearTimeout(growTimer)
     // 오늘·주간·미션 도장이나 쉼표 배지가 떠 있으면 그게 사라진 뒤에 찍는다(겹치지 않게)
-    if (!stamp.hidden || !missionStamp.hidden || !restStamp.hidden || !bestStamp.hidden || !propStamp.hidden || !pledgeStamp.hidden) {
+    if (!stamp.hidden || !missionStamp.hidden || !restStamp.hidden || !bestStamp.hidden || !propStamp.hidden) {
       growTimer = setTimeout(popGrow, 600)
       return
     }
@@ -298,7 +285,7 @@ export function createHud(
   const popRest = () => {
     clearTimeout(restTimer)
     // 오늘·주간·미션 도장이나 자람 배지가 떠 있으면 그게 사라진 뒤에 찍는다(겹치지 않게)
-    if (!stamp.hidden || !missionStamp.hidden || !growStamp.hidden || !bestStamp.hidden || !propStamp.hidden || !pledgeStamp.hidden) {
+    if (!stamp.hidden || !missionStamp.hidden || !growStamp.hidden || !bestStamp.hidden || !propStamp.hidden) {
       restTimer = setTimeout(popRest, 600)
       return
     }
@@ -313,7 +300,7 @@ export function createHud(
   const popBest = () => {
     clearTimeout(bestTimer)
     // 오늘·주간·미션 도장이나 자람·쉼표 배지가 떠 있으면 그게 사라진 뒤에 찍는다(겹치지 않게)
-    if (!stamp.hidden || !missionStamp.hidden || !growStamp.hidden || !restStamp.hidden || !propStamp.hidden || !pledgeStamp.hidden) {
+    if (!stamp.hidden || !missionStamp.hidden || !growStamp.hidden || !restStamp.hidden || !propStamp.hidden) {
       bestTimer = setTimeout(popBest, 600)
       return
     }
@@ -328,7 +315,7 @@ export function createHud(
   const popProp = () => {
     clearTimeout(propTimer)
     // 같은 자리의 다른 도장·배지가 떠 있으면 그게 사라진 뒤에 찍는다(겹치지 않게)
-    if (!stamp.hidden || !missionStamp.hidden || !growStamp.hidden || !restStamp.hidden || !bestStamp.hidden || !pledgeStamp.hidden) {
+    if (!stamp.hidden || !missionStamp.hidden || !growStamp.hidden || !restStamp.hidden || !bestStamp.hidden) {
       propTimer = setTimeout(popProp, 600)
       return
     }
@@ -338,20 +325,6 @@ export function createHud(
     yieldFocus()
     propTimer = setTimeout(() => (propStamp.hidden = true), 3500)
   }
-  let pledgeTimer: ReturnType<typeof setTimeout> | undefined
-  const popPledge = () => {
-    clearTimeout(pledgeTimer)
-    // 같은 자리의 다른 도장·배지가 떠 있으면 그게 사라진 뒤에 찍는다(겹치지 않게)
-    if (!stamp.hidden || !missionStamp.hidden || !growStamp.hidden || !restStamp.hidden || !bestStamp.hidden || !propStamp.hidden) {
-      pledgeTimer = setTimeout(popPledge, 600)
-      return
-    }
-    pledgeStamp.hidden = true
-    void pledgeStamp.offsetWidth
-    pledgeStamp.hidden = false
-    yieldFocus()
-    pledgeTimer = setTimeout(() => (pledgeStamp.hidden = true), 3500)
-  }
   const focusStamp = q('focus-stamp')
   let focusTimer: ReturnType<typeof setTimeout> | undefined
   // 띄울(또는 떠 있는) 집중 목표 배지. 같은 자리의 다른 도장이 먼저이고, 그게 사라진 뒤에 찍는다
@@ -359,7 +332,7 @@ export function createHud(
   const popFocus = () => {
     clearTimeout(focusTimer)
     if (!focusPending) return
-    if (!stamp.hidden || !missionStamp.hidden || !growStamp.hidden || !restStamp.hidden || !bestStamp.hidden || !propStamp.hidden || !pledgeStamp.hidden) {
+    if (!stamp.hidden || !missionStamp.hidden || !growStamp.hidden || !restStamp.hidden || !bestStamp.hidden || !propStamp.hidden) {
       focusTimer = setTimeout(popFocus, 600)
       return
     }
@@ -513,13 +486,6 @@ export function createHud(
       goal.classList.toggle('done', v.goal.done)
       mission.textContent = missionChip(v.mission)
       mission.classList.toggle('done', v.mission.done)
-      // 다짐은 채우기 전까지만 바꿀 수 있어 채운 뒤엔 누를 수 없게 한다
-      pledgeLabel.textContent = pledgeText(v.pledge)
-      // 진행은 버튼 바탕이 왼쪽부터 차오르는 것으로 보여 준다(줄이 늘지 않게)
-      pledgeLine.style.setProperty('--pledge', `${(v.pledge?.ratio ?? 0) * 100}%`)
-      pledgeLine.classList.toggle('set', v.pledge !== null)
-      pledgeLine.classList.toggle('done', v.pledge?.done ?? false)
-      pledgeLine.disabled = v.pledge?.done ?? false
     },
     /** 홈 몬스터 곁(모험 버튼 위)에 성격과 약점을 작게 붙인다. 약점이 없으면 숨긴다 */
     showMonsterTrait(label: string | null) {
@@ -549,8 +515,6 @@ export function createHud(
       propStamp.textContent = text
       popProp()
     },
-    /** 오늘의 다짐을 채운 순간 같은 자리에 다짐 배지를 찍는다 */
-    showPledgeDone: popPledge,
     /** 오늘의 미션을 채운 순간 같은 자리에 미션 도장을 찍는다 */
     showMissionDone: popMission,
     /** 오늘 목표를 채운 순간 타이머 카드에 도장을 쾅 찍는다 */

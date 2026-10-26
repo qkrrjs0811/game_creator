@@ -74,7 +74,7 @@ test('홈 타이머 카드는 꼭 필요한 것만 — 넓어진 장면', async 
   await expect(page.getByTestId('focus-pick')).toBeVisible()
   await expect(page.getByTestId('toggle')).toHaveText('운동 시작')
   await expect(page.getByTestId('today')).toHaveText('오늘 0분')
-  // 미션·주간·다짐은 접혀 있고, 00:00 숫자도 켜기 전엔 없다
+  // 미션은 접혀 있고, 00:00 숫자도 켜기 전엔 없다
   await expect(page.getByTestId('today-more')).toBeHidden()
   await expect(page.getByTestId('timer')).toBeHidden()
   // 장면이 화면의 반 넘게 차지하고, 카드는 아래 탭 위에서 끝난다

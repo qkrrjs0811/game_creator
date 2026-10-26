@@ -1,6 +1,6 @@
 import { test, expect } from 'vitest'
 import { WINNABLE_MAX } from '../core/coach'
-import { autoRunCard, awayAdventure, awayCard, formatElapsed, formatMinutes, goalText, objectJosa, quoteJosa, subjectJosa, weekDoneText, weekGoalText, sessionSummary, topicJosa, weekTotalText, bestDayText, dayDetail, pageRangeText, dexShadowText, dexNewText, missionChip, achievementValueText, farAchievementIds, achievementToast, focusText, focusChipLabel, focusPickLabel, focusDoneText, letterCard, bestBrokenText, newPropText, pledgeText, weakAdviceText } from './format'
+import { autoRunCard, awayAdventure, awayCard, formatElapsed, formatMinutes, goalText, objectJosa, quoteJosa, subjectJosa, weekDoneText, weekGoalText, sessionSummary, topicJosa, weekTotalText, bestDayText, dayDetail, pageRangeText, dexShadowText, dexNewText, missionChip, achievementValueText, farAchievementIds, achievementToast, focusText, focusChipLabel, focusPickLabel, focusDoneText, letterCard, bestBrokenText, newPropText, weakAdviceText } from './format'
 import { ACHIEVEMENTS, achievementProgress } from '../core/achievements'
 import { AUTO_RUN_MAX } from '../core/autorun'
 import type { Cosmetic } from '../core/cosmetics'
@@ -323,13 +323,6 @@ test('새 소품 배지는 이름, 여럿이면 외 N개', () => {
   expect(newPropText([])).toBeNull()
   expect(newPropText([c('연필꽂이')])).toBe('🎁 새 소품: 연필꽂이')
   expect(newPropText([c('연필꽂이'), c('찻잔'), c('아령')])).toBe('🎁 새 소품: 연필꽂이 외 2개')
-})
-
-test('다짐 줄: 없으면 정하기, 채우는 중이면 활동·분·진행, 채웠으면 지켰어요', () => {
-  expect(pledgeText(null)).toBe('✍️ 오늘의 다짐 정하기')
-  const p = { activity: 'study' as const, goal: 30, minutes: 12, remaining: 18, ratio: 0.4, done: false }
-  expect(pledgeText(p)).toBe('✍️ 공부 30분 · 12 / 30')
-  expect(pledgeText({ ...p, minutes: 34, remaining: 0, ratio: 1, done: true })).toBe('✅ 지켰어요 · 공부 30분')
 })
 
 test('weakAdviceText: 진 결과 카드의 약점 활동 안내', () => {
