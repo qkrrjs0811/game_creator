@@ -31,7 +31,8 @@ test('보스만 크게 서서 왕관·망토·후광을 두르고, 발은 땅에
 })
 
 test('보스 전투: 올린 HP 막대에 커진 보스 머리가 닿지 않는다', async ({ page }) => {
-  test.setTimeout(90_000)
+  // 전체 검사에서는 기기 부하로 시계 한 칸이 느려지므로 넉넉히 기다린다
+  test.setTimeout(180_000)
   await page.clock.install({ time: new Date('2026-10-26T08:00:00+09:00') })
   await page.addInitScript((s) => localStorage.setItem('growth-game:save', s), save(9))
   await page.goto('./')
@@ -46,7 +47,7 @@ test('보스 전투: 올린 HP 막대에 커진 보스 머리가 닿지 않는�
     .poll(async () => {
       await page.clock.runFor(10)
       return phase()
-    }, { intervals: [0], timeout: 30_000 })
+    }, { intervals: [0], timeout: 120_000 })
     .toBe('slam lunge')
   // 뛰어오른 한가운데
   await page.clock.runFor(40)

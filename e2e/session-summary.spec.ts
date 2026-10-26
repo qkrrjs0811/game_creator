@@ -4,6 +4,8 @@ test('운동을 그만하면 이번에 얻은 경험치와 능력치를 보여 �
   // 자정을 넘기지 않도록 아침에서 시작한다
   await page.clock.install({ time: new Date('2026-10-25T08:00:00+09:00') })
   await page.goto('./')
+  // 시계를 멈춰 둔다: 전체 검사가 느리면 요약이 6초 뒤 저절로 닫혀 닫기 버튼을 누르기 전에 사라진다
+  await page.clock.pauseAt(new Date('2026-10-25T08:00:30+09:00'))
   await page.getByTestId('toggle').click()
   await expect(page.getByTestId('session-summary')).toBeHidden()
   await page.clock.fastForward('32:00')
@@ -11,6 +13,7 @@ test('운동을 그만하면 이번에 얻은 경험치와 능력치를 보여 �
 
   const summary = page.getByTestId('session-summary')
   await expect(summary).toBeVisible()
+  await page.clock.runFor(1000)
   await expect(page.getByTestId('session-summary-title')).toHaveText('🎉 운동 32분 했어요!')
   await expect(page.getByTestId('session-summary-detail')).toHaveText('EXP +320 · 💪 힘 +3 · ❤️ 체력 +3')
   // 요약이 떠 있어도 모험·꾸미기 버튼은 바로 누를 수 있다
@@ -26,7 +29,7 @@ test('운동을 그만하면 이번에 얻은 경험치와 능력치를 보여 �
   const canvas = (await page.locator('canvas').boundingBox())!
   expect(Math.abs(canvas.height - scene.height)).toBeLessThanOrEqual(1)
   expect(scene.y + feet).toBeLessThanOrEqual(box.y)
-  await page.waitForTimeout(700)
+  await page.clock.runFor(700)
   await page.screenshot({ path: 'test-results/screens/session-summary.png' })
 
   // 닫기 버튼으로 닫고, 다시 시작하면 지난 요약은 남지 않는다

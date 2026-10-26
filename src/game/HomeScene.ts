@@ -9,6 +9,7 @@ import { keepChatIndex, nextChatIndex } from '../core/chatter'
 import { stepSound } from '../core/sound'
 import { playSound } from '../ui/sound'
 import { contactAt, finishDelay, hitImpact, hpTrail, isFinalBlow, type Impact } from '../core/impact'
+import { comboText, playerMoves, type PlayerMove, type StepMove } from '../core/attackMove'
 import { skillFxSize, skillFxTiming, stepSkillFx, type SkillFxKind, type SkillStyle } from '../core/skillfx'
 import { weakHitText } from '../core/traits'
 import { drawMonsterBody, drawMonsterFace } from './monsterArt'
@@ -540,6 +541,8 @@ export class HomeScene extends Phaser.Scene {
     delay: number
     /** 말랑이가 배운 스킬과 회피가 오는 곳. 걸음마다 스킬 연출을 고른다 */
     style: SkillStyle
+    /** 걸음마다 말랑이 공격 동작(박치기·점프 찍기·회전 돌진)과 연속 명중 수 */
+    moves: StepMove[]
     timer?: Phaser.Time.TimerEvent
     /** [말랑이, 몬스터] 머리 위 HP 막대. 이긴 쪽 막대는 주인과 같이 뛴다 */
     bars: [Phaser.GameObjects.Graphics, Phaser.GameObjects.Graphics]
@@ -783,6 +786,7 @@ export class HomeScene extends Phaser.Scene {
       next: 0,
       delay,
       style,
+      moves: playerMoves(timeline.steps),
       bars: [this.add.graphics(), this.add.graphics()],
       hp: [1, 1],
       trail: [1, 1],
@@ -797,6 +801,8 @@ export class HomeScene extends Phaser.Scene {
     this.game.canvas.parentElement?.setAttribute('data-skill-fx', '')
     this.game.canvas.parentElement?.setAttribute('data-weak-hits', '')
     this.game.canvas.parentElement?.setAttribute('data-weak-hit', '')
+    this.game.canvas.parentElement?.setAttribute('data-player-moves', '')
+    this.game.canvas.parentElement?.setAttribute('data-combo', '0')
     this.layout(this.scale.width, this.scale.height)
     const entrance = bossEntrance(foe, delay)
     if (entrance) this.bossIntro(this.battle, entrance, foe)
@@ -926,6 +932,8 @@ export class HomeScene extends Phaser.Scene {
       this.tweens.killTweensOf(who)
       who.setAlpha(1).setScale(1).setAngle(0)
     }
+    // 건너뛰어 공격 동작(점프 찍기·회전 돌진) 중에 끝나도 몸이 기울거나 뒤집힌 채 남지 않게 한다
+    this.tweens.killTweensOf(this.mascotBody.setPosition(0, 0).setScale(1).setAngle(0))
     this.game.canvas.parentElement?.setAttribute('data-final', '0')
     if (this.homeLook) this.setMonster(this.homeLook)
     this.layout(this.scale.width, this.scale.height)
@@ -1251,6 +1259,8 @@ export class HomeScene extends Phaser.Scene {
     const dir = s.actor === 'player' ? 1 : -1
     // 지난 걸음의 밀림·찌그러짐이 남지 않게 제자리·제모양으로 돌린다
     for (const who of [this.mascot, this.monster]) this.tweens.killTweensOf(who.setScale(1).setAngle(0).setAlpha(1))
+    this.tweens.killTweensOf(this.mascotBody.setPosition(0, 0).setScale(1).setAngle(0))
+    this.tweens.killTweensOf(b.bars[0].setY(0))
     this.layout(this.scale.width, this.scale.height)
     // 쓰러뜨리는 마지막 한 방은 느린 동작으로 크게 보여 준다
     const final = isFinalBlow(s, b.next >= b.steps.length)
@@ -1281,6 +1291,9 @@ export class HomeScene extends Phaser.Scene {
     })
     // 예비 동작: 살짝 뒤로 움츠렸다가 앞으로 튀어 나간다
     this.tweens.add({ targets: attacker, x: home.attacker - fx.pull * dir, scaleX: 0.92, scaleY: 1.06, duration: fx.windup, ease: 'Sine.easeOut' })
+    // 말랑이는 공격마다 박치기·점프 찍기·회전 돌진을 돌아가며 몸에 더한다
+    const move = b.moves[b.next - 1]
+    if (move?.move) this.playerMove(move.move, fx, dir)
     this.time.delayedCall(fx.windup, () => {
       if (!live()) return
       this.markImpact('lunge')
@@ -1290,6 +1303,7 @@ export class HomeScene extends Phaser.Scene {
     const bar = s.actor === 'player' ? this.monsterBarY(this.scale.height) : this.mascotBarY(this.scale.height)
     const recover = () => {
       this.tweens.add({ targets: attacker, x: home.attacker, scaleX: 1, scaleY: 1, duration: fx.back, ease: 'Quad.easeOut' })
+      if (move?.move) this.tweens.add({ targets: this.mascotBody, y: 0, angle: 0, scaleX: 1, scaleY: 1, duration: fx.back, ease: 'Quad.easeOut' })
       if (monsterPlan.length) this.poseMonster(REST_POSE, fx.back, 'Quad.easeOut')
     }
     this.time.delayedCall(contactAt(fx), () => {
@@ -1321,6 +1335,8 @@ export class HomeScene extends Phaser.Scene {
       } else if (s.crit) this.floatText(target.x, `치명타! -${s.damage}`, '#f0a020', bar, 28)
       else this.floatText(target.x, `-${s.damage}`, s.actor === 'player' ? '#ff8a5b' : '#e0607e', bar)
       this.drawBars(s.playerHp, s.enemyHp)
+      const combo = move && comboText(move.combo)
+      if (move && combo) this.comboText(combo, move.combo)
       // 히트스톱: 부딪힌 채로 아주 잠깐 멈췄다가, 맞은 쪽이 찌그러지며 밀리고 때린 쪽은 돌아온다
       this.time.delayedCall(fx.hitstop, () => {
         if (!live()) return
@@ -1344,6 +1360,60 @@ export class HomeScene extends Phaser.Scene {
       b.timer?.remove()
       this.time.delayedCall(finishDelay(fx), () => this.battle === b && this.finish())
     }
+  }
+
+  /**
+   * 말랑이 공격 동작을 몸(mascotBody)에 더한다. 박치기는 앞으로 숙이고, 점프 찍기는 움츠릴 때 높이 떴다가
+   * 튀어 나가며 내려찍고, 회전 돌진은 빙글 뒤집히며 나간다. 부딪히는 순간(움츠림 + 튀어 나감)에 끝난다
+   */
+  private playerMove(move: PlayerMove, fx: Impact, dir: number) {
+    const host = this.game.canvas.parentElement
+    host?.setAttribute('data-player-move', move)
+    host?.setAttribute('data-player-moves', `${host.getAttribute('data-player-moves') ?? ''} ${move}`.trim())
+    const body = this.mascotBody
+    const b = this.battle
+    const live = () => this.battle === b && !b?.ended
+    if (move === 'tackle') {
+      this.tweens.add({ targets: body, angle: 14 * dir, duration: fx.windup + fx.lunge, ease: 'Quad.easeIn' })
+      return
+    }
+    if (move === 'hop') {
+      // 머리 위 HP 막대도 같이 떠서 머리가 막대를 뚫고 올라가지 않는다
+      const bar = b?.bars[0]
+      this.tweens.add({ targets: body, y: -38, angle: -10 * dir, scaleX: 0.92, scaleY: 1.1, duration: fx.windup, ease: 'Sine.easeOut' })
+      if (bar) this.tweens.add({ targets: bar, y: -38, duration: fx.windup, ease: 'Sine.easeOut' })
+      this.time.delayedCall(fx.windup, () => {
+        if (!live()) return
+        this.tweens.add({ targets: body, y: 0, angle: 18 * dir, scaleX: 1.12, scaleY: 0.88, duration: fx.lunge, ease: 'Quad.easeIn' })
+        if (bar) this.tweens.add({ targets: bar, y: 0, duration: fx.lunge, ease: 'Quad.easeIn' })
+      })
+      return
+    }
+    // 가로로 뒤집혔다 돌아와 빙글 도는 것처럼 보이고, 뒤로 민트 고리가 남는다
+    this.tweens.add({ targets: body, scaleX: -1, duration: fx.windup, ease: 'Sine.easeInOut' })
+    this.time.delayedCall(fx.windup, () => {
+      if (!live()) return
+      this.tweens.add({ targets: body, scaleX: 1, duration: fx.lunge, ease: 'Sine.easeInOut' })
+      const at = this.bodyOf(false)
+      for (let i = 0; i < 2; i++) {
+        const ring = this.add.ellipse(at.x - dir * (10 + i * 14), at.y, at.rx * 1.6, at.ry * 0.5).setStrokeStyle(3, 0x8fd6c4).setFillStyle(0xffffff, 0)
+        this.tweens.add({ targets: ring, alpha: { from: 0.9, to: 0 }, scaleX: 1.3, delay: i * 40, duration: fx.lunge + fx.back / 2, ease: 'Quad.easeOut', onComplete: () => ring.destroy() })
+      }
+    })
+  }
+
+  /** 연속으로 맞히면 두 캐릭터 사이 위에 "N 콤보!"가 톡 튀어 오른다. 맞은 숫자와 겹치지 않는 가운데 자리다 */
+  private comboText(text: string, combo: number) {
+    const host = this.game.canvas.parentElement
+    host?.setAttribute('data-combo', String(combo))
+    const y = Math.min(this.mascotBarY(this.scale.height), this.monsterBarY(this.scale.height)) - 6
+    const t = this.add
+      .text(this.scale.width * 0.5, y, text, { fontFamily: FONT, fontSize: `${Math.min(30, 20 + combo)}px`, color: '#ff8a5b', fontStyle: 'bold', stroke: '#ffffff', strokeThickness: 6 })
+      .setOrigin(0.5, 1)
+      .setAngle(-6)
+      .setScale(0.4)
+    this.tweens.add({ targets: t, scale: 1, duration: 160, ease: 'Back.easeOut' })
+    this.tweens.add({ targets: t, y: y - 18, alpha: 0, delay: 420, duration: 320, ease: 'Quad.easeIn', onComplete: () => t.destroy() })
   }
 
   /** 부딪힌 순간: 맞은 쪽이 하얗게 번쩍이고 별·조각이 튄다. 치명타면 화면이 흔들리고 진동한다 */
@@ -1599,6 +1669,8 @@ export class HomeScene extends Phaser.Scene {
     this.monsterFace = monsterEndFace(b.win)
     for (const who of [this.mascot, this.monster]) this.tweens.killTweensOf(who)
     this.restMonsterBody()
+    this.tweens.killTweensOf(this.mascotBody.setPosition(0, 0).setScale(1).setAngle(0))
+    this.tweens.killTweensOf(b.bars[0].setY(0))
     const winner = b.win ? this.mascot : this.monster
     const loser = b.win ? this.monster : this.mascot
     // 마지막 한 방에 밀려난 쪽은 그 자리에서 쓰러진다

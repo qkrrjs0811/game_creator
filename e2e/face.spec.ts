@@ -28,6 +28,8 @@ async function shootMascot(page: Page, name: string) {
 test('가만히 있는 말랑이는 몇 초마다 눈을 깜빡이고, 누르면 기뻐함', async ({ page }) => {
   await page.clock.install({ time: new Date('2026-10-26T08:00:00+09:00') })
   await page.goto('./')
+  // 시계를 멈춰 runFor로만 흘린다: 전체 검사가 느리면 잠깐 기뻐하는 얼굴이 확인 전에 실제 시간으로 지나간다
+  await page.clock.pauseAt(new Date('2026-10-26T08:05:00+09:00'))
   const host = page.getByTestId('scene')
   await expect(host).toHaveAttribute('data-face', /idle|blink/)
   await watchFaces(page)
@@ -96,6 +98,8 @@ test('휴식을 많이 한 말랑이는 졸린 눈', async ({ page }) => {
 })
 
 test('전투: 때릴 땐 집중, 이기면 승리 표정 / 지면 맞은 표정', async ({ page }) => {
+  // 전투를 두 번 끝까지 보므로 전체 검사의 기기 부하에서도 끝나게 넉넉히 기다린다
+  test.setTimeout(150_000)
   await page.goto('./')
   const host = page.getByTestId('scene')
   await watchFaces(page)
