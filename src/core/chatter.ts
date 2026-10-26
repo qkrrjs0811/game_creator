@@ -8,7 +8,6 @@ import { computeProgress, dayKey } from './progression'
 import { restedYesterday, restStreak } from './rest'
 import { upcomingRewards, type RewardKind, type UpcomingReward } from './rewards'
 import type { ActivityRecord } from './types'
-import { weekGoal } from './week'
 
 /**
  * 말랑이 한마디: 타이머가 꺼져 있을 때 장면 말풍선에 띄울 후보를 중요한 순서로 고른다.
@@ -21,7 +20,7 @@ export const CHAT_MAX_CHARS = 18
 /** 마지막으로 본 뒤 이만큼 지났으면 "보고 싶었어" */
 export const MISSED_MS = 24 * 60 * 60_000
 
-export type ChatKind = 'rested' | 'welcome' | 'missed' | 'goal' | 'pledge' | 'mission' | 'pledgeAsk' | 'allDone' | 'reward' | 'best' | 'winnable' | 'streak' | 'week' | 'cheer'
+export type ChatKind = 'rested' | 'welcome' | 'missed' | 'goal' | 'pledge' | 'mission' | 'pledgeAsk' | 'allDone' | 'reward' | 'best' | 'winnable' | 'streak' | 'cheer'
 
 export interface ChatLine {
   kind: ChatKind
@@ -143,14 +142,7 @@ export function chatLines({ records, stageProgress, skills, now, lastSeen, pledg
     lines.push({ kind: 'streak', text: goal.done ? `🔥 ${streak}일째 같이 하는 중!` : `🔥 오늘 하면 ${streak + 1}일째야!` })
   }
 
-  const week = weekGoal(records, now)
-  if (week.done) lines.push({ kind: 'week', text: '🏅 이번 주 목표 채웠어!' })
-  else {
-    const need = week.goal - week.stamped
-    const left = week.days.filter((d) => !d.stamped && (d.today || d.future)).length
-    if (need <= left) lines.push({ kind: 'week', text: `📅 이번 주 ${need}일만 더!` })
-  }
-
+  // 이번 주 목표는 도장판에서만 보여 준다(목표 장치를 하루 목표·집중 목표 둘로 합침)
   lines.push(CHEER_LINE)
   return lines
 }

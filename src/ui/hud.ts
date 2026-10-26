@@ -1,10 +1,9 @@
-import { focusChipLabel, focusDoneText, focusPickLabel, focusText, formatElapsed, goalText, missionChip, objectJosa, pledgeText, topicJosa, weekChip } from './format'
+import { focusChipLabel, focusDoneText, focusPickLabel, focusText, formatElapsed, goalText, missionChip, objectJosa, pledgeText, topicJosa } from './format'
 import type { PledgeProgress } from '../core/pledge'
 import { ACTIVITIES } from '../core/activities'
 import { FOCUS_TARGETS, type FocusProgress } from '../core/focus'
 import type { TodayGoal } from '../core/goal'
 import type { TodayMission } from '../core/mission'
-import type { WeekGoal } from '../core/week'
 import type { ActivityId } from '../core/types'
 
 export interface HudView {
@@ -28,8 +27,6 @@ export interface HudView {
   saveFailed: boolean
   /** 모든 활동을 합친 오늘 목표 진행 */
   goal: TodayGoal
-  /** 이번 주(월~일) 도장 찍은 날 */
-  week: WeekGoal
   /** 날마다 바뀌는 오늘의 미션 */
   mission: TodayMission
   /** 이름 옆에 단 칭호 이름. 없으면 null */
@@ -143,14 +140,12 @@ export function createHud(
       <div class="today-more" id="today-more" data-testid="today-more" hidden>
         <div class="today-more-chips">
           <span class="mission" data-testid="mission"></span>
-          <span class="goal-week" data-testid="goal-week"></span>
         </div>
         <button type="button" class="pledge-line" data-testid="pledge">
           <span class="pledge-text" data-testid="pledge-text"></span>
         </button>
       </div>
       <div class="stamp" data-testid="stamp" role="status" hidden>🌟 오늘 도장 쾅!</div>
-      <div class="stamp week-stamp" data-testid="week-stamp" role="status" hidden>🏅 이번 주 목표 달성!</div>
       <div class="stamp mission-stamp" data-testid="mission-stamp" role="status" hidden>📜 미션 완료!</div>
       <div class="stamp focus-stamp" data-testid="focus-stamp" role="status" hidden></div>
       <div class="stamp grow-stamp" data-testid="grow-stamp" role="status" hidden></div>
@@ -263,26 +258,13 @@ export function createHud(
   const goalBar = q('goal-bar')
   const stamp = q('stamp')
   let stampTimer: ReturnType<typeof setTimeout> | undefined
-  const weekStamp = q('week-stamp')
   const mission = q('mission')
   const missionStamp = q('mission-stamp')
-  const goalWeek = q('goal-week')
-  let weekTimer: ReturnType<typeof setTimeout> | undefined
-  const popWeek = () => {
-    stamp.hidden = true
-    missionStamp.hidden = true
-    weekStamp.hidden = true
-    void weekStamp.offsetWidth
-    weekStamp.hidden = false
-    yieldFocus()
-    clearTimeout(weekTimer)
-    weekTimer = setTimeout(() => (weekStamp.hidden = true), 3500)
-  }
   let missionTimer: ReturnType<typeof setTimeout> | undefined
   const popMission = () => {
     clearTimeout(missionTimer)
-    // 오늘·주간 도장이 떠 있으면 그게 사라진 뒤에 찍는다(겹치지 않게)
-    if (!stamp.hidden || !weekStamp.hidden) {
+    // 오늘 도장이 떠 있으면 그게 사라진 뒤에 찍는다(겹치지 않게)
+    if (!stamp.hidden) {
       missionTimer = setTimeout(popMission, 600)
       return
     }
@@ -298,7 +280,7 @@ export function createHud(
   const popGrow = () => {
     clearTimeout(growTimer)
     // 오늘·주간·미션 도장이나 쉼표 배지가 떠 있으면 그게 사라진 뒤에 찍는다(겹치지 않게)
-    if (!stamp.hidden || !weekStamp.hidden || !missionStamp.hidden || !restStamp.hidden || !bestStamp.hidden || !propStamp.hidden || !pledgeStamp.hidden) {
+    if (!stamp.hidden || !missionStamp.hidden || !restStamp.hidden || !bestStamp.hidden || !propStamp.hidden || !pledgeStamp.hidden) {
       growTimer = setTimeout(popGrow, 600)
       return
     }
@@ -313,7 +295,7 @@ export function createHud(
   const popRest = () => {
     clearTimeout(restTimer)
     // 오늘·주간·미션 도장이나 자람 배지가 떠 있으면 그게 사라진 뒤에 찍는다(겹치지 않게)
-    if (!stamp.hidden || !weekStamp.hidden || !missionStamp.hidden || !growStamp.hidden || !bestStamp.hidden || !propStamp.hidden || !pledgeStamp.hidden) {
+    if (!stamp.hidden || !missionStamp.hidden || !growStamp.hidden || !bestStamp.hidden || !propStamp.hidden || !pledgeStamp.hidden) {
       restTimer = setTimeout(popRest, 600)
       return
     }
@@ -328,7 +310,7 @@ export function createHud(
   const popBest = () => {
     clearTimeout(bestTimer)
     // 오늘·주간·미션 도장이나 자람·쉼표 배지가 떠 있으면 그게 사라진 뒤에 찍는다(겹치지 않게)
-    if (!stamp.hidden || !weekStamp.hidden || !missionStamp.hidden || !growStamp.hidden || !restStamp.hidden || !propStamp.hidden || !pledgeStamp.hidden) {
+    if (!stamp.hidden || !missionStamp.hidden || !growStamp.hidden || !restStamp.hidden || !propStamp.hidden || !pledgeStamp.hidden) {
       bestTimer = setTimeout(popBest, 600)
       return
     }
@@ -343,7 +325,7 @@ export function createHud(
   const popProp = () => {
     clearTimeout(propTimer)
     // 같은 자리의 다른 도장·배지가 떠 있으면 그게 사라진 뒤에 찍는다(겹치지 않게)
-    if (!stamp.hidden || !weekStamp.hidden || !missionStamp.hidden || !growStamp.hidden || !restStamp.hidden || !bestStamp.hidden || !pledgeStamp.hidden) {
+    if (!stamp.hidden || !missionStamp.hidden || !growStamp.hidden || !restStamp.hidden || !bestStamp.hidden || !pledgeStamp.hidden) {
       propTimer = setTimeout(popProp, 600)
       return
     }
@@ -357,7 +339,7 @@ export function createHud(
   const popPledge = () => {
     clearTimeout(pledgeTimer)
     // 같은 자리의 다른 도장·배지가 떠 있으면 그게 사라진 뒤에 찍는다(겹치지 않게)
-    if (!stamp.hidden || !weekStamp.hidden || !missionStamp.hidden || !growStamp.hidden || !restStamp.hidden || !bestStamp.hidden || !propStamp.hidden) {
+    if (!stamp.hidden || !missionStamp.hidden || !growStamp.hidden || !restStamp.hidden || !bestStamp.hidden || !propStamp.hidden) {
       pledgeTimer = setTimeout(popPledge, 600)
       return
     }
@@ -374,7 +356,7 @@ export function createHud(
   const popFocus = () => {
     clearTimeout(focusTimer)
     if (!focusPending) return
-    if (!stamp.hidden || !weekStamp.hidden || !missionStamp.hidden || !growStamp.hidden || !restStamp.hidden || !bestStamp.hidden || !propStamp.hidden || !pledgeStamp.hidden) {
+    if (!stamp.hidden || !missionStamp.hidden || !growStamp.hidden || !restStamp.hidden || !bestStamp.hidden || !propStamp.hidden || !pledgeStamp.hidden) {
       focusTimer = setTimeout(popFocus, 600)
       return
     }
@@ -525,8 +507,6 @@ export function createHud(
       goalLabel.textContent = goalText(v.goal)
       goalBar.style.width = `${Math.min(100, (v.goal.minutes / v.goal.goal) * 100)}%`
       goal.classList.toggle('done', v.goal.done)
-      goalWeek.textContent = weekChip(v.week)
-      goalWeek.classList.toggle('done', v.week.done)
       mission.textContent = missionChip(v.mission)
       mission.classList.toggle('done', v.mission.done)
       // 다짐은 채우기 전까지만 바꿀 수 있어 채운 뒤엔 누를 수 없게 한다
@@ -571,7 +551,6 @@ export function createHud(
     showMissionDone: popMission,
     /** 오늘 목표를 채운 순간 타이머 카드에 도장을 쾅 찍는다 */
     showStamp() {
-      weekStamp.hidden = true
       missionStamp.hidden = true
       stamp.hidden = true
       void stamp.offsetWidth
@@ -579,15 +558,6 @@ export function createHud(
       yieldFocus()
       clearTimeout(stampTimer)
       stampTimer = setTimeout(() => (stamp.hidden = true), 3500)
-    },
-    /**
-     * 이번 주 목표(5일)를 채운 순간 같은 자리에 주간 도장을 찍는다.
-     * 오늘 도장과 함께 채우면 오늘 도장을 잠깐 보여 준 뒤 바꿔 찍는다(둘이 겹치지 않게)
-     */
-    showWeekDone() {
-      clearTimeout(weekTimer)
-      if (stamp.hidden) popWeek()
-      else weekTimer = setTimeout(popWeek, 1800)
     },
     /** 켜 둔 타이머가 집중 목표에 닿은 순간 카드에 배지를 찍고, 되면 진동한다. 타이머는 계속 흐른다 */
     showFocusDone(target: number) {

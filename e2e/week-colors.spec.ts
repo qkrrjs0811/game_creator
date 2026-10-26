@@ -29,7 +29,7 @@ test('주간 목표를 처음 채우면 레몬 말랑을 얻고, 4·12번 색은
   // 오늘 30분을 채우면 다섯째 도장 → 이번 주 목표 달성 → 레몬 말랑
   await page.getByTestId('toggle').click()
   await page.clock.fastForward('30:00')
-  await expect(page.getByTestId('goal-week')).toHaveText('🏅 5/5')
+  await expect(page.getByTestId('stamp')).toBeVisible()
   await page.getByTestId('open-cosmetics').click()
   await page.getByTestId('cosmetic-tab-color').click()
   await expect(page.getByTestId('cosmetic-color-week1')).toHaveAttribute('data-state', 'owned')

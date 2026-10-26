@@ -71,19 +71,13 @@ describe('말랑이 한마디', () => {
     expect(kinds(input({ records: [exerciseOn('2026-10-20', 30)] }))).not.toContain('streak')
   })
 
-  test('이번 주 목표: 남은 날 안에 채울 수 있으면 며칠 더인지', () => {
-    // 2026-10-26(월)~ 주. 수요일 저녁에 월·화 도장 → 3일 더, 수·목·금·토·일 5일 남음
+  test('이번 주 목표는 도장판에서만 보여 주고 말랑이는 말하지 않는다', () => {
+    // 수요일 저녁에 월·화 도장(3일 더면 채울 수 있음), 또는 이번 주를 이미 채운 때
     const wed = kst('2026-10-28T20:00:00')
     const records = [exerciseOn('2026-10-26', 30), exerciseOn('2026-10-27', 30)]
-    expect(texts(input({ records, now: wed, lastSeen: wed }))).toContain('📅 이번 주 3일만 더!')
-  })
-
-  test('이번 주 목표를 이제 못 채우면 말하지 않고, 채웠으면 축하한다', () => {
-    // 일요일 저녁, 이번 주 도장 0 → 1일밖에 안 남음
-    expect(kinds(input({}))).not.toContain('week')
+    expect(kinds(input({ records, now: wed, lastSeen: wed }))).not.toContain('week')
     const days = ['2026-10-19', '2026-10-20', '2026-10-21', '2026-10-22', '2026-10-23']
-    const t = texts(input({ records: days.map((d) => exerciseOn(d, 30)) }))
-    expect(t).toContain('🏅 이번 주 목표 채웠어!')
+    expect(kinds(input({ records: days.map((d) => exerciseOn(d, 30)) }))).not.toContain('week')
   })
 
   test('이길 만한 스테이지가 있으면 모험을 권한다', () => {
