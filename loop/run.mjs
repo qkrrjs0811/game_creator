@@ -29,7 +29,9 @@ mkdirSync(LOGS, { recursive: true })
 const stamp = () => new Date().toISOString().replace(/[:.]/g, '-')
 const today = () => new Date().toLocaleDateString('sv-SE') // YYYY-MM-DD
 const log = (msg) => console.log(`[${new Date().toLocaleString('ko-KR')}] ${msg}`)
-const git = (...a) => execFileSync('git', a, { cwd: ROOT, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }).trim()
+// trim 하지 않은 출력. status --porcelain 은 첫 줄이 공백으로 시작할 수 있어 trim 하면 경로 첫 글자가 잘린다
+const gitRaw = (...a) => execFileSync('git', a, { cwd: ROOT, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] })
+const git = (...a) => gitRaw(...a).trim()
 const record = (entry) => appendFileSync(join(LOGS, 'runs.jsonl'), JSON.stringify(entry) + '\n')
 
 /** 위험한 상태라 사람이 봐야 할 때: STOP 에 이유를 적고, 푸시하지 않고 끝낸다 */
@@ -106,7 +108,7 @@ function moveFeedbackAndCommit() {
 
 /** 사용자 파일을 뺀 남은 변경을 stash 로 치운다(되살릴 수 있게). reset·clean 은 쓰지 않는다 */
 function cleanup() {
-  const paths = leftoverPaths(git('status', '--porcelain', '-z', '-uall'), USER_FILES)
+  const paths = leftoverPaths(gitRaw('status', '--porcelain', '-z', '-uall'), USER_FILES)
   if (paths.length === 0) return null
   const message = `loop-leftover-${stamp()}`
   git('stash', 'push', '-u', '-m', message, '--', ...paths)
