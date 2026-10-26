@@ -89,7 +89,7 @@ test('켜기 전 집중 목표를 고르면 켜 둔 동안 남은 분과 막대�
   await page.clock.fastForward('03:00')
   await expect(page.getByTestId('focus-live')).toBeHidden()
   await expect(page.getByTestId('timer-label')).toBeVisible()
-  await expect(page.getByTestId('timer-label')).toHaveText('운동 중 · 경험치가 쌓이고 있어요')
+  await expect(page.getByTestId('timer-label')).toHaveText('운동 중 · 힘·체력이 오르고 있어요')
 
   // 목표는 보여 줄 값일 뿐 기록은 실제로 켜 둔 시간만
   await page.getByTestId('toggle').click()

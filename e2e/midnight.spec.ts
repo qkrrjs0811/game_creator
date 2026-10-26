@@ -43,7 +43,7 @@ test('어제 상한에 닿은 채 자정을 넘기면 오늘 경험치가 다시
   await page.clock.fastForward('30:00')
   // 00:10 — 새 날이라 다시 쌓인다
   await expect(page.getByTestId('today')).toHaveText(/^오늘 (9|10)분$/)
-  await expect(page.getByTestId('timer-label')).toHaveText('운동 중 · 경험치가 쌓이고 있어요')
+  await expect(page.getByTestId('timer-label')).toHaveText('운동 중 · 힘·체력이 오르고 있어요')
   await expect(page.getByTestId('today')).not.toHaveClass(/full/)
   await expect(page.getByTestId('cap-toast')).toBeHidden()
   await page.screenshot({ path: 'test-results/screens/midnight-after-cap.png' })

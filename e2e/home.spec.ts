@@ -64,3 +64,25 @@ test('아래 탭 글자가 칸 가운데에 옴', async ({ page }) => {
   for (const o of offsets) expect(o.diff, o.label).toBeLessThanOrEqual(3)
   await page.locator('nav.tabs').screenshot({ path: 'test-results/screens/tabs.png' })
 })
+
+test('홈 타이머 카드는 꼭 필요한 것만 — 넓어진 장면', async ({ page }) => {
+  await page.goto('./')
+  await expect(page.getByTestId('level')).toHaveText('Lv.1')
+  // 오늘 목표 하나, 활동 안내, 이번 목표 버튼, 시작 버튼, 오늘 한 시간만 보인다
+  await expect(page.getByTestId('goal-text')).toHaveText('🎯 오늘 목표 0 / 30분')
+  await expect(page.getByTestId('timer-label')).toHaveText('운동하는 동안 힘·체력이 올라요')
+  await expect(page.getByTestId('focus-pick')).toBeVisible()
+  await expect(page.getByTestId('toggle')).toHaveText('운동 시작')
+  await expect(page.getByTestId('today')).toHaveText('오늘 0분')
+  // 미션·주간·다짐은 접혀 있고, 00:00 숫자도 켜기 전엔 없다
+  await expect(page.getByTestId('today-more')).toBeHidden()
+  await expect(page.getByTestId('timer')).toBeHidden()
+  // 장면이 화면의 반 넘게 차지하고, 카드는 아래 탭 위에서 끝난다
+  const scene = (await page.getByTestId('scene').boundingBox())!
+  expect(scene.height).toBeGreaterThan(844 / 2)
+  const card = (await page.locator('section.timer-card').boundingBox())!
+  const tabs = (await page.locator('nav.tabs').boundingBox())!
+  expect(card.y + card.height).toBeLessThanOrEqual(tabs.y)
+  expect(card.y).toBeGreaterThanOrEqual(scene.y + scene.height)
+  await page.screenshot({ path: 'test-results/screens/home-simple.png' })
+})
