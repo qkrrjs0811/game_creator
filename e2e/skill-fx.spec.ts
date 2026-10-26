@@ -12,8 +12,8 @@ const rec = (activity: string, date: string, m: number) => ({
 const ALL = ['blur', 'bolt', 'calm', 'dash', 'fist', 'shield']
 
 test('스킬 연출: 펀치 주먹 궤적, 날쌘 발 잔상, 지능 치명타 번개, 단단한 몸 방패, 날쌘 발·집중 회피 잔상이 전투에서 보인다', async ({ page }) => {
-  // 멈춘 시계로 조금씩 흘리며 보므로 넉넉히 기다린다
-  test.setTimeout(90_000)
+  // 멈춘 시계로 조금씩 흘리며 보므로 넉넉히 기다린다(전체 검사로 느려지면 90초를 넘기곤 한다)
+  test.setTimeout(180_000)
   await page.clock.install({ time: new Date('2026-10-26T08:00:00+09:00') })
   // 운동 9시간·공부 4시간·독서 2시간, 펀치 2·몸 1·발 1을 배웠고 34스테이지까지 깼다
   const save = {

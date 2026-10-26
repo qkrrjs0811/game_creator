@@ -158,6 +158,7 @@ test('집중 목표에 닿는 순간 배지를 한 번 찍고 진동하며, 타�
 })
 
 test('닫아 둔 사이 집중 목표에 닿았으면 다시 열 때 오늘 도장 다음에 한 번 찍는다', async ({ context }) => {
+  test.setTimeout(120_000)
   await context.addInitScript(countVibrate)
   await context.clock.install({ time: new Date('2026-10-25T08:00:00+09:00') })
   let page = await context.newPage()
@@ -169,18 +170,19 @@ test('닫아 둔 사이 집중 목표에 닿았으면 다시 열 때 오늘 도�
   await page.close()
 
   page = await context.newPage()
-  await page.clock.fastForward('40:00')
+  // 40분 뒤에 시계를 멈춰 연다. 느린 검사에서도 3.5초짜리 오늘 도장이 확인 전에 지나가지 않는다
+  await page.clock.pauseAt(new Date('2026-10-25T08:40:05+09:00'))
   await page.goto('./')
   const badge = page.getByTestId('focus-stamp')
   // 같은 자리의 오늘 도장이 먼저 찍히고, 그게 사라진 뒤 목표 배지가 찍힌다(겹치지 않는다)
   await expect(page.getByTestId('stamp')).toBeVisible()
   await expect(badge).toBeHidden()
-  // 시계가 실제 시간으로도 흘러 검사가 느리면 3.5초 배지를 지나칠 수 있으므로 조금씩 넘기며 기다린다
+  // 멈춘 시계를 1초씩 넘기며 기다린다(3.5초 배지를 건너뛰지 않는다). 느린 검사에선 한 번 넘기는 데도 오래 걸린다
   await expect
     .poll(async () => {
-      await page.clock.runFor(300)
+      await page.clock.runFor(1000)
       return badge.isVisible()
-    }, { timeout: 20_000 })
+    }, { timeout: 60_000 })
     .toBe(true)
   await expect(page.getByTestId('stamp')).toBeHidden()
   await expect(badge).toHaveText('⏰ 목표 25분 채웠어요!')

@@ -360,23 +360,11 @@ body {
 }
 .today-more[hidden] { display: none; }
 .today-more-chips { display: flex; justify-content: center; gap: 6px; }
-.today-more-chips .goal-week { padding: 4px 12px; font-size: 13px; font-weight: 700; }
 .goal-text { white-space: nowrap; }
 .goal-bar { flex: 1; height: 10px; border-radius: 999px; background: var(--track); overflow: hidden; }
 .goal-bar i { display: block; height: 100%; width: 0; border-radius: 999px; background: #ffd36b; transition: width 0.4s; }
 .goal.done { color: var(--accent); }
 .goal.done .goal-bar i { background: var(--accent); }
-/* 오늘 목표 줄 끝의 작은 이번 주 칩 */
-.goal-week {
-  flex: none;
-  padding: 1px 8px;
-  border-radius: 999px;
-  background: var(--chip);
-  color: var(--ink);
-  font-size: 12px;
-  white-space: nowrap;
-}
-.goal-week.done { background: #ffe1a6; color: var(--accent); }
 /* 시작 버튼과 오늘 한 시간 칩을 한 줄에(줄이 하나 줄어 장면이 넓어진다) */
 .toggle-row { display: flex; align-items: center; justify-content: center; gap: 10px; }
 .toggle-row .toggle { flex: none; padding: 12px 22px; }
@@ -423,19 +411,6 @@ body {
 .pledge-hint { min-height: 20px; margin: 4px 0 10px; font-weight: 700; color: #3f6f9c; }
 .sheet.pledge .sheet-btn { width: 100%; }
 .sheet.pledge .sheet-btn:disabled { opacity: 0.45; }
-/* 주간 도장은 오늘 도장보다 노랗게, 반대로 기운다 */
-.stamp.week-stamp {
-  background: #ffc94d;
-  color: var(--ink);
-  box-shadow: 0 3px 0 #e8a92f;
-  transform: rotate(6deg);
-  animation-name: week-stamp-pop;
-}
-@keyframes week-stamp-pop {
-  0% { transform: rotate(6deg) scale(2.2); opacity: 0; }
-  60% { transform: rotate(6deg) scale(0.9); opacity: 1; }
-  100% { transform: rotate(6deg) scale(1); }
-}
 /* 오늘 목표를 채운 순간 카드 오른쪽 위에 찍히는 도장 */
 .stamp {
   position: absolute;

@@ -12,7 +12,8 @@ test('앱을 닫아 둔 채 자정을 넘겨도 타이머가 흐르고, 오늘 �
   // 앱을 닫아 둔 사이에도 시간은 흐른다
   await page.close()
   page = await context.newPage()
-  await page.clock.fastForward('40:00')
+  // 40분 뒤(00:30)에 시계를 멈춰 연다. 느린 검사에서도 실제 시간만큼 타이머가 더 흐르지 않는다
+  await page.clock.pauseAt(new Date(2026, 9, 26, 0, 30, 3))
   await page.goto('./')
 
   // 00:30 — 어제 30분 + 오늘 30분이 모두 인정되고, 오늘 분은 자정부터 센다

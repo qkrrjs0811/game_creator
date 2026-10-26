@@ -519,18 +519,6 @@ function rememberStampDay(day: string) {
   }
 }
 
-// 이번 주 목표 달성 연출도 주마다 한 번만(그 주 월요일 키를 남긴다)
-const WEEK_DONE_KEY = `${SAVE_KEY}:week-done`
-let weekDone = readKey(WEEK_DONE_KEY)
-
-function rememberWeekDone(week: string) {
-  weekDone = week
-  try {
-    kv.setItem(WEEK_DONE_KEY, week)
-  } catch {
-    // 못 남기면 다시 열 때 한 번 더 축하할 뿐이다
-  }
-}
 
 // 오늘의 미션 완료 연출도 하루 한 번만
 const MISSION_DAY_KEY = `${SAVE_KEY}:mission-day`
@@ -707,11 +695,6 @@ function render() {
     rememberStampDay(dayKey(now))
     hud.showStamp()
   }
-  const week = weekGoal(records, now)
-  if (week.done && weekDone !== week.week) {
-    rememberWeekDone(week.week)
-    hud.showWeekDone()
-  }
   const mission = todayMission(records, now)
   if (mission.done && missionDay !== dayKey(now)) {
     rememberMissionDay(dayKey(now))
@@ -753,7 +736,6 @@ function render() {
     skillPoints: remainingSkillPoints(p.level, save.skills),
     saveFailed: !saveOk,
     goal,
-    week,
     mission,
     title: wornTitle({ records, worn: save.worn })?.titleName ?? null,
     focusTarget: focusDefault,
