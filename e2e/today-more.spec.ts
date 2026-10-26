@@ -4,7 +4,7 @@ async function box(l: Locator) {
   return (await l.boundingBox())!
 }
 
-test('홈 타이머 카드는 시작 버튼·오늘 한 시간·오늘 목표만 두고, 목표 줄을 누르면 미션·다짐이 펼쳐진다', async ({ page }) => {
+test('홈 타이머 카드는 시작 버튼·오늘 한 시간·오늘 목표만 두고, 목표 줄을 누르면 미션·이번 주·다짐이 펼쳐진다', async ({ page }) => {
   // 2026-10-25는 휴식 10분 미션
   await page.clock.install({ time: new Date('2026-10-25T08:00:00+09:00') })
   await page.goto('./')
@@ -14,6 +14,7 @@ test('홈 타이머 카드는 시작 버튼·오늘 한 시간·오늘 목표만
   // 기본은 접혀 있다
   await expect(more).toBeHidden()
   await expect(page.getByTestId('mission')).toBeHidden()
+  await expect(page.getByTestId('goal-week')).toBeHidden()
   await expect(page.getByTestId('pledge')).toBeHidden()
   await expect(goal).toHaveAttribute('aria-expanded', 'false')
   await expect(page.getByTestId('goal-more')).toHaveText('더 보기 ▾')
@@ -36,8 +37,7 @@ test('홈 타이머 카드는 시작 버튼·오늘 한 시간·오늘 목표만
   await expect(goal).toHaveAttribute('aria-expanded', 'true')
   await expect(page.getByTestId('goal-more')).toHaveText('접기 ▴')
   await expect(page.getByTestId('mission')).toHaveText('📜 휴식 0 / 10분')
-  // 이번 주 목표는 도장판에서만 보여 준다
-  await expect(page.getByTestId('goal-week')).toHaveCount(0)
+  await expect(page.getByTestId('goal-week')).toHaveText('📅 0/5')
   await expect(page.getByTestId('pledge-text')).toHaveText('✍️ 오늘의 다짐 정하기')
   const m = await box(more)
   const card = await box(page.locator('.timer-card'))
