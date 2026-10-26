@@ -12,6 +12,8 @@ export interface BattleResultView {
   damage: number
   /** 장 보스를 처음 깨서 새로 열린 장 번호. 있으면 카드 위에 배지를 단다 */
   chapter: number | null
+  /** 지면 약점 활동 안내 한 줄("📖 공부 25분이면 이길 만해요"). 없으면 숨긴다 */
+  weak?: string | null
   /** 도감 알림 한 줄("📚 도감에 새 몬스터 +N"). 없으면 숨긴다 */
   dex?: string | null
   /** 자동 진행처럼 여러 판을 묶어 보여 줄 때 쓰는 제목·설명·띠 글자. 없으면 한 판 결과 글자를 쓴다 */
@@ -36,7 +38,10 @@ export function createBattleBar(scene: HTMLElement, h: { onSkip(): void; onLeave
       <span class="battle-result-damage-text" data-testid="battle-result-damage-text"></span>
       <span class="battle-result-damage-bar"><i></i></span>
     </span>
-    <span class="battle-result-note" data-testid="battle-result-note"></span>
+    <span class="battle-result-note">
+      <span class="battle-result-note-text" data-testid="battle-result-note"></span>
+      <span class="battle-result-weak" data-testid="battle-result-weak" hidden></span>
+    </span>
     <span class="battle-result-reward" data-testid="battle-result-reward"></span>
     <span class="battle-result-dex" data-testid="battle-result-dex" hidden></span>`
 
@@ -74,7 +79,10 @@ export function createBattleBar(scene: HTMLElement, h: { onSkip(): void; onLeave
     end(r: BattleResultView) {
       const { win } = r
       q(card, 'battle-result-title').textContent = r.title ?? (win ? '🎉 승리!' : '💧 아쉬워요')
-      q(card, 'battle-result-detail').textContent = r.detail ?? (win ? `${r.rounds}번 주고받아 이겼어요` : '말랑이가 지쳐 버렸어요')
+      const detail = q(card, 'battle-result-detail')
+      detail.textContent = r.detail ?? (win ? `${r.rounds}번 주고받아 이겼어요` : '말랑이가 지쳐 버렸어요')
+      // 약점 활동 줄이 붙으면 카드가 HP 막대까지 내려오지 않게 설명 줄을 숨긴다
+      detail.hidden = !!r.weak
       // 졌을 때만 몬스터를 얼마나 깎았는지 보여 준다(다음엔 더 깎을 수 있게)
       const damage = q(card, 'battle-result-damage')
       damage.hidden = win
@@ -82,6 +90,9 @@ export function createBattleBar(scene: HTMLElement, h: { onSkip(): void; onLeave
       q(card, 'battle-result-damage-text').textContent = `💥 ${r.foe} 체력을 ${r.damage}% 깎았어요`
       damage.querySelector<HTMLElement>('i')!.style.width = `${r.damage}%`
       q(card, 'battle-result-note').textContent = r.note
+      const weak = q(card, 'battle-result-weak')
+      weak.textContent = r.weak ?? ''
+      weak.hidden = !r.weak
       const reward = q(card, 'battle-result-reward')
       reward.textContent = r.reward ?? ''
       reward.hidden = r.reward === null

@@ -35,6 +35,13 @@ export function formatMinutes(minutes: number): string {
   return m === 0 ? `${h}시간` : `${h}시간 ${m}분`
 }
 
+const WEAK_ICONS: Partial<Record<ActivityId, string>> = { study: '📖', reading: '📚' }
+
+/** 진 결과 카드에서 운동 안내 아래 붙는 약점 활동 안내("📖 공부 25분이면 이길 만해요") */
+export function weakAdviceText(a: { activity: ActivityId; minutes: number }): string {
+  return `${WEAK_ICONS[a.activity] ?? '✨'} ${ACTIVITIES[a.activity].label} ${formatMinutes(a.minutes)}이면 이길 만해요`
+}
+
 /**
  * 도감 그림자 칸: 그 몬스터를 운동 몇 분 더 하면 이길 만한지(0이면 지금도, null이면 찾는 범위 밖).
  * 칸이 좁아 ❔ 는 그림자 그림 위에 따로 얹는다

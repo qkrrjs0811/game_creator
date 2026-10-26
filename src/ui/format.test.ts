@@ -1,6 +1,6 @@
 import { test, expect } from 'vitest'
 import { WINNABLE_MAX } from '../core/coach'
-import { autoRunCard, awayAdventure, awayCard, formatElapsed, formatMinutes, goalText, objectJosa, weekChip, weekDoneText, weekGoalText, sessionSummary, topicJosa, weekTotalText, bestDayText, dayDetail, pageRangeText, dexShadowText, dexNewText, missionChip, achievementValueText, farAchievementIds, achievementToast, focusText, focusChipLabel, focusDoneText, letterCard, bestBrokenText, newPropText, pledgeText } from './format'
+import { autoRunCard, awayAdventure, awayCard, formatElapsed, formatMinutes, goalText, objectJosa, weekChip, weekDoneText, weekGoalText, sessionSummary, topicJosa, weekTotalText, bestDayText, dayDetail, pageRangeText, dexShadowText, dexNewText, missionChip, achievementValueText, farAchievementIds, achievementToast, focusText, focusChipLabel, focusDoneText, letterCard, bestBrokenText, newPropText, pledgeText, weakAdviceText } from './format'
 import { ACHIEVEMENTS, achievementProgress } from '../core/achievements'
 import { AUTO_RUN_MAX } from '../core/autorun'
 import type { Cosmetic } from '../core/cosmetics'
@@ -326,4 +326,9 @@ test('다짐 줄: 없으면 정하기, 채우는 중이면 활동·분·진행, 
   const p = { activity: 'study' as const, goal: 30, minutes: 12, remaining: 18, ratio: 0.4, done: false }
   expect(pledgeText(p)).toBe('✍️ 공부 30분 · 12 / 30')
   expect(pledgeText({ ...p, minutes: 34, remaining: 0, ratio: 1, done: true })).toBe('✅ 지켰어요 · 공부 30분')
+})
+
+test('weakAdviceText: 진 결과 카드의 약점 활동 안내', () => {
+  expect(weakAdviceText({ activity: 'study', minutes: 25 })).toBe('📖 공부 25분이면 이길 만해요')
+  expect(weakAdviceText({ activity: 'reading', minutes: 90 })).toBe('📚 독서 1시간 30분이면 이길 만해요')
 })

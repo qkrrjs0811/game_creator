@@ -1026,7 +1026,7 @@ body {
 .battle-result .battle-result-note {
   margin-top: 4px;
   padding: 6px 14px;
-  border-radius: 999px;
+  border-radius: 18px;
   background: var(--chip);
   color: var(--ink);
   font-weight: 700;
@@ -1053,6 +1053,19 @@ body {
   line-height: 1.4;
 }
 .battle-result .battle-result-dex[hidden] { display: none; }
+/* 운동 안내 알약 안의 글 줄. 약점 활동 줄이 붙으면 같은 알약에 두 줄로 쌓는다 */
+.battle-result .battle-result-note .battle-result-note-text {
+  display: block;
+  font-size: inherit;
+  color: inherit;
+}
+.battle-result .battle-result-note .battle-result-weak {
+  display: block;
+  font-size: 12px;
+  color: #7a62a8;
+}
+.battle-result .battle-result-note .battle-result-weak[hidden],
+.battle-result [data-testid='battle-result-detail'][hidden] { display: none; }
 .battle-result .battle-result-damage {
   margin-top: 2px;
   width: 100%;

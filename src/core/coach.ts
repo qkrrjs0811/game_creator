@@ -2,6 +2,7 @@ import { playerFighter, simulateBattle, type Fighter } from './battle'
 import { statsFromMinutes } from './progression'
 import { ACTIVITIES } from './activities'
 import { stageEnemy, targetMinutes } from './endless'
+import { TRAITS, stageTrait } from './traits'
 import type { ActivityId } from './types'
 
 /** 이길 만한지 보려고 돌려 보는 시험 전투 수. 절반 이상 이기면 이길 만하다고 본다 */
@@ -44,6 +45,26 @@ export function minutesToWin(
  */
 export function stageMinutesToWin(minutes: Partial<Record<ActivityId, number>>, skills: string[], no: number): number | null {
   return minutesToWin(minutes, skills, stageEnemy(no), Math.max(SEARCH_MINUTES, Math.ceil(targetMinutes(no) * 2)))
+}
+
+/**
+ * 진 뒤 운동 대신 그 몬스터의 약점 활동(단단함 → 공부, 날쌤 → 독서)을 하면 몇 분이면 이길 만한지.
+ * 운동(exerciseToWin)보다 짧을 때만 돌려준다. 무난한 몬스터·지금도 이길 만할 때는 null.
+ * 화면에 보여 줄 값일 뿐이다
+ */
+export function weakActivityAdvice(
+  minutes: Partial<Record<ActivityId, number>>,
+  skills: string[],
+  no: number,
+  exerciseToWin: number | null,
+): { activity: ActivityId; minutes: number } | null {
+  if (exerciseToWin === 0) return null
+  const activity = TRAITS[stageTrait(no)].activity
+  if (!activity) return null
+  // 운동보다 짧은 것만 쓸모 있으니 그 앞까지만 찾는다
+  const max = exerciseToWin === null ? Math.max(SEARCH_MINUTES, Math.ceil(targetMinutes(no) * 2)) : exerciseToWin - 1
+  const m = minutesToWin(minutes, skills, stageEnemy(no), max, activity)
+  return m === null || m === 0 ? null : { activity, minutes: m }
 }
 
 /**

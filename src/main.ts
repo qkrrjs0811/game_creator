@@ -34,8 +34,8 @@ import { applyBattleResult, type BattleOutcome } from './core/result'
 import { cosmeticCatalog, ownedCosmetics, ownedPropIds, parseSeenProps, propsNow, toggleWear, wornCosmetics } from './core/cosmetics'
 import { createCosmetics } from './ui/cosmetics'
 import { statRows } from './core/stats'
-import { nextStageAdvice, stageMinutesToWin, winnableStages } from './core/coach'
-import { achievementToast, autoRunCard, awayAdventure, awayCard, bestBrokenText, dexNewText, formatMinutes, letterCard, newPropText, sessionSummary } from './ui/format'
+import { nextStageAdvice, stageMinutesToWin, weakActivityAdvice, winnableStages } from './core/coach'
+import { achievementToast, autoRunCard, awayAdventure, awayCard, bestBrokenText, dexNewText, formatMinutes, letterCard, newPropText, sessionSummary, weakAdviceText } from './ui/format'
 import { autoRun } from './core/autorun'
 import { parseSoundOn, serializeSoundOn } from './core/sound'
 import { playSound, setSoundOn, soundOn } from './ui/sound'
@@ -436,11 +436,15 @@ const stages = createStages(app, {
       persist()
     }
     const reward = outcome.reward ? `🎁 새 꾸미기 · ${outcome.reward.icon} ${outcome.reward.name}` : null
+    const toWin = result.win ? null : stageMinutesToWin(p.creditedMinutes, save.skills, no)
+    const weak = result.win ? null : weakActivityAdvice(p.creditedMinutes, save.skills, no, toWin)
     const view = {
       win: result.win,
       rounds: result.rounds,
       // 지면 얼마나 더 키우면 되는지 알려 다시 운동하러 가게 한다(화면에 보여 줄 값일 뿐)
-      note: resultNote(outcome, result.win, result.win ? null : stageMinutesToWin(p.creditedMinutes, save.skills, no)),
+      note: resultNote(outcome, result.win, toWin),
+      // 운동보다 약점 활동이 더 빠르면 그것도 알려 다른 활동을 해 볼 거리를 준다
+      weak: weak ? weakAdviceText(weak) : null,
       reward,
       foe: foe.name,
       damage: enemyDamagePercent(enemy, result),

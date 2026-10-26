@@ -1,5 +1,6 @@
 import { describe, test, expect } from 'vitest'
-import { WINNABLE_MAX, likelyWin, minutesToWin, nextStageAdvice, stageMinutesToWin, winnableStages } from './coach'
+import { WINNABLE_MAX, likelyWin, minutesToWin, nextStageAdvice, stageMinutesToWin, weakActivityAdvice, winnableStages } from './coach'
+import { TRAITS, stageTrait } from './traits'
 import { playerFighter } from './battle'
 import { stageEnemy, targetMinutes } from './endless'
 import { statsFromMinutes } from './progression'
@@ -91,5 +92,38 @@ describe('winnableStages', () => {
 
   test('아주 많이 키웠어도 WINNABLE_MAX까지만 센다', () => {
     expect(winnableStages({ exercise: 200_000 }, [], 0)).toBe(WINNABLE_MAX)
+  })
+})
+
+describe('weakActivityAdvice', () => {
+  // 운동 분과 약점 활동 분을 견줘 볼 스테이지들(1~2장)
+  const stages = Array.from({ length: 19 }, (_, i) => i + 2)
+
+  test('약점 활동이 운동보다 짧을 때만 그 활동과 분을 알려 준다', () => {
+    let found = 0
+    for (const no of stages) {
+      const ex = stageMinutesToWin({ exercise: 0 }, [], no)
+      const a = weakActivityAdvice({ exercise: 0 }, [], no, ex)
+      if (!a) continue
+      found++
+      expect(a.activity).toBe(TRAITS[stageTrait(no)].activity)
+      expect(a.minutes).toBeGreaterThan(0)
+      if (ex !== null) expect(a.minutes).toBeLessThan(ex)
+      // 약점 활동을 그만큼 하면 정말 이길 만하다
+      const stats = statsFromMinutes({ exercise: 0, [a.activity]: a.minutes })
+      expect(likelyWin(playerFighter(stats, []), stageEnemy(no))).toBe(true)
+    }
+    expect(found).toBeGreaterThan(0)
+  })
+
+  test('무난한 몬스터·지금도 이길 만할 때는 알려 주지 않는다', () => {
+    const plain = stages.find((no) => stageTrait(no) === 'plain')!
+    expect(weakActivityAdvice({ exercise: 0 }, [], plain, stageMinutesToWin({ exercise: 0 }, [], plain))).toBeNull()
+    expect(weakActivityAdvice({ exercise: 0 }, [], 1, 0)).toBeNull()
+  })
+
+  test('약점 활동이 운동보다 짧지 않으면 알려 주지 않는다', () => {
+    const weak = stages.find((no) => stageTrait(no) !== 'plain')!
+    expect(weakActivityAdvice({ exercise: 0 }, [], weak, 1)).toBeNull()
   })
 })
