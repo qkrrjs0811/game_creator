@@ -8,11 +8,51 @@ async function useSave(page: Page, save: object) {
   await page.reload()
 }
 
+/** 도감은 홈 "🎁 모음" 창의 도감 칸에 있다 */
 async function openDex(page: Page) {
-  await page.getByTestId('open-stages').click()
-  await page.getByTestId('open-dex').click()
+  await page.getByTestId('open-cosmetics').click()
+  await page.getByTestId('cosmetics').getByTestId('collect-tab-dex').click()
   await expect(page.getByTestId('dex')).toBeVisible()
+  await expect(page.getByTestId('cosmetics')).toBeHidden()
 }
+
+test('모음 창: 꾸미기와 도감 칸을 오가고, 모험 지도에는 도감 버튼이 없음', async ({ page }) => {
+  await useSave(page, { ...base, stageProgress: 3, cosmetics: ['hat-sprout'] })
+  await expect(page.getByTestId('open-cosmetics')).toHaveText('🎁 모음')
+  await page.getByTestId('open-cosmetics').click()
+  await expect(page.getByTestId('cosmetics')).toBeVisible()
+  const tabs = page.getByTestId('cosmetics').getByTestId('collect-tabs')
+  await expect(tabs.getByTestId('collect-tab-cosmetics')).toHaveAttribute('aria-selected', 'true')
+  await expect(tabs.getByTestId('collect-tab-dex')).toHaveAttribute('aria-selected', 'false')
+  // 칸 버튼은 손가락으로 누르기 충분하고 화면 안에 있다
+  for (const t of ['cosmetics', 'dex']) {
+    const box = (await tabs.getByTestId(`collect-tab-${t}`).boundingBox())!
+    expect(box.height).toBeGreaterThanOrEqual(44)
+    expect(box.x).toBeGreaterThanOrEqual(0)
+    expect(box.x + box.width).toBeLessThanOrEqual(390)
+  }
+  const close = (await page.getByTestId('cosmetics-close').boundingBox())!
+  expect(close.y + close.height).toBeLessThanOrEqual(844)
+  await page.screenshot({ path: 'test-results/screens/collection-cosmetics.png' })
+
+  await tabs.getByTestId('collect-tab-dex').click()
+  await expect(page.getByTestId('dex')).toBeVisible()
+  await expect(page.getByTestId('cosmetics')).toBeHidden()
+  await expect(page.getByTestId('dex').getByTestId('collect-tab-dex')).toHaveAttribute('aria-selected', 'true')
+  await expect(page.getByTestId('dex-count')).toHaveText('📚 모은 몬스터 3')
+  await page.screenshot({ path: 'test-results/screens/collection-dex.png' })
+
+  // 다시 꾸미기 칸으로
+  await page.getByTestId('dex').getByTestId('collect-tab-cosmetics').click()
+  await expect(page.getByTestId('cosmetics')).toBeVisible()
+  await expect(page.getByTestId('dex')).toBeHidden()
+  await page.getByTestId('cosmetics-close').click()
+
+  // 모험 지도에서는 도감 버튼을 뺐다
+  await page.getByTestId('open-stages').click()
+  await expect(page.getByTestId('stages')).toBeVisible()
+  await expect(page.getByTestId('open-dex')).toHaveCount(0)
+})
 
 test('아직 못 깼으면 도감은 비어 있고 다음에 만날 그림자 칸만 보임', async ({ page }) => {
   await useSave(page, base)
@@ -32,10 +72,10 @@ test('아직 못 깼으면 도감은 비어 있고 다음에 만날 그림자 �
   await expect(page.getByTestId('dex-next')).toBeDisabled()
   await page.screenshot({ path: 'test-results/screens/dex-empty.png' })
 
-  // 닫으면 모험 지도로 돌아온다
+  // 닫으면 홈으로 돌아온다
   await page.getByTestId('dex-close').click()
   await expect(page.getByTestId('dex')).toBeHidden()
-  await expect(page.getByTestId('stages')).toBeVisible()
+  await expect(page.getByTestId('stages')).toBeHidden()
 })
 
 test('모은 몬스터를 장별로 넘겨 보고, 지금 장 끝에 그림자 칸', async ({ page }) => {
@@ -75,6 +115,6 @@ test('모은 몬스터를 장별로 넘겨 보고, 지금 장 끝에 그림자 �
 
   // 다시 열면 지금 장부터
   await page.getByTestId('dex-close').click()
-  await page.getByTestId('open-dex').click()
+  await openDex(page)
   await expect(page.getByTestId('dex-chapter')).toHaveText('3장 · 몽실 나라')
 })

@@ -893,22 +893,23 @@ body {
   cursor: pointer;
 }
 .auto-run[hidden] { display: none; }
-/* 모험 지도 아래 줄: 도감 버튼과 닫기 */
-.sheet-foot { display: flex; justify-content: center; gap: 10px; }
-.dex-open {
-  margin-top: 12px;
-  min-height: 44px;
-  padding: 0 22px;
+/* 모음 창 맨 위: 꾸미기·도감 칸을 오가는 큰 둥근 버튼 두 개 */
+.sheet h2.collect-title { margin-bottom: 10px; }
+.collect-tabs { display: flex; gap: 10px; margin: 0 0 10px; }
+.collect-tab {
+  flex: 1;
+  min-height: 46px;
   border: 0;
-  border-radius: 999px;
+  border-radius: 18px;
   background: #fff;
-  color: var(--accent);
+  color: var(--ink-soft);
   font: inherit;
-  font-size: 14px;
+  font-size: 16px;
   font-weight: 700;
   box-shadow: 0 3px 0 var(--track);
   cursor: pointer;
 }
+.collect-tab.on { background: var(--accent); color: #fff; box-shadow: 0 3px 0 #e9764a; }
 
 /* 몬스터 도감: 둥근 칸 세 줄 격자. 많아져도 닫기 버튼은 화면 안에 두고 격자만 넘긴다 */
 .dex-count {
@@ -928,7 +929,7 @@ body {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 8px;
-  max-height: calc(92dvh - 250px);
+  max-height: calc(92dvh - 310px);
   overflow-y: auto;
 }
 .dex-cell {
@@ -1197,7 +1198,7 @@ body {
   grid-template-columns: repeat(3, 1fr);
   align-content: start;
   gap: 8px;
-  max-height: calc(92dvh - 360px);
+  max-height: calc(92dvh - 420px);
   min-height: 186px;
   overflow-y: auto;
 }

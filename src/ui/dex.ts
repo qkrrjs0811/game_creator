@@ -2,6 +2,7 @@ import { dexPage, type DexEntry, type MonsterLook } from '../core/dex'
 import { chapterName } from '../core/endless'
 import type { MonsterShape } from '../core/monsters'
 import { dexShadowText } from './format'
+import { bindCollectionTabs, collectionHead, type CollectionTab } from './collection'
 
 const INK = '#3d2a63'
 const CROWN = '#ffd36b'
@@ -88,7 +89,7 @@ function shadowCell(e: DexEntry & { toWin: number | null }): string {
     </li>`
 }
 
-/** 몬스터 도감 창: 모은 몬스터를 장별로 둥근 칸 격자로, 지금 장 끝에는 다음에 만날 그림자 칸 */
+/** 몬스터 도감 창(모음의 도감 칸): 모은 몬스터를 장별로 둥근 칸 격자로, 지금 장 끝에는 다음에 만날 그림자 칸 */
 export function createDex(
   root: HTMLElement,
   h: {
@@ -96,6 +97,7 @@ export function createDex(
     count(): number
     /** 다음에 만날 새 몬스터와 운동 몇 분 더 하면 이길 만한지(dexShadows) */
     shadows(): (DexEntry & { toWin: number | null })[]
+    onTab(tab: CollectionTab): void
   },
 ) {
   const wrap = document.createElement('div')
@@ -104,7 +106,7 @@ export function createDex(
   wrap.dataset.testid = 'dex'
   wrap.innerHTML = `
     <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="dex-title">
-      <h2 id="dex-title">몬스터 도감</h2>
+      ${collectionHead('dex', 'dex-title')}
       <p class="dex-count" data-testid="dex-count"></p>
       <div class="chapter-nav">
         <button type="button" class="chapter-step" data-testid="dex-prev" aria-label="앞 장">◀</button>
@@ -150,6 +152,10 @@ export function createDex(
   prev.addEventListener('click', () => turn(-1))
   next.addEventListener('click', () => turn(1))
   const close = () => (wrap.hidden = true)
+  bindCollectionTabs(wrap, 'dex', (tab) => {
+    close()
+    h.onTab(tab)
+  })
   q('dex-close').addEventListener('click', close)
   wrap.addEventListener('click', (e) => e.target === wrap && close())
 

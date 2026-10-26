@@ -51,8 +51,8 @@ test('처음 보는 몬스터를 이기면 결과 카드에 도감 알림이 붙
   expect(s.records).toEqual([])
 
   await page.getByTestId('battle-action').click()
-  await page.getByTestId('open-stages').click()
-  await page.getByTestId('open-dex').click()
+  await page.getByTestId('open-cosmetics').click()
+  await page.getByTestId('cosmetics').getByTestId('collect-tab-dex').click()
   await expect(page.getByTestId('dex-count')).toContainText('1')
 })
 

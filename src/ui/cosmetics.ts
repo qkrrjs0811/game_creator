@@ -2,6 +2,7 @@ import type { Cosmetic, CosmeticKind, Worn } from '../core/cosmetics'
 import { ACTIVITIES } from '../core/activities'
 import { endlessStage } from '../core/endless'
 import { stageLabel } from './stages'
+import { bindCollectionTabs, collectionHead, type CollectionTab } from './collection'
 
 export interface CosmeticsView {
   /** 보여 줄 꾸미기(가진 것과 다음에 얻을 것) */
@@ -31,17 +32,20 @@ function tint(c: Cosmetic): string {
 }
 
 /**
- * 꾸미기 창: 가진 모자·색을 골라 말랑이에게 입히고, 소품을 골라 장면에 놓는다. 아직 없는 건 얻는 곳을 알려 준다.
+ * 꾸미기 창(모음의 꾸미기 칸): 가진 모자·색을 골라 말랑이에게 입히고, 소품을 골라 장면에 놓는다. 아직 없는 건 얻는 곳을 알려 준다.
  * 꾸미기가 많아도 고르기 쉽게 모자·색·소품 칸으로 나눠 보고, 지금 입은(놓은) 것을 위에 보여 준다.
  */
-export function createCosmetics(root: HTMLElement, h: { view(): CosmeticsView; onWear(id: string): void }) {
+export function createCosmetics(
+  root: HTMLElement,
+  h: { view(): CosmeticsView; onWear(id: string): void; onTab(tab: CollectionTab): void },
+) {
   const wrap = document.createElement('div')
   wrap.className = 'sheet-backdrop'
   wrap.hidden = true
   wrap.dataset.testid = 'cosmetics'
   wrap.innerHTML = `
     <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="cosmetics-title">
-      <h2 id="cosmetics-title">말랑이 꾸미기</h2>
+      ${collectionHead('cosmetics', 'cosmetics-title')}
       <p class="sheet-desc" data-testid="cosmetics-desc"></p>
       <div class="cosmetic-worn" data-testid="cosmetic-worn"></div>
       <div class="cosmetic-tabs" role="tablist" data-testid="cosmetic-tabs"></div>
@@ -138,6 +142,10 @@ export function createCosmetics(root: HTMLElement, h: { view(): CosmeticsView; o
     if (btn) pick(btn.dataset.kind as CosmeticKind)
   })
   const close = () => (wrap.hidden = true)
+  bindCollectionTabs(wrap, 'cosmetics', (tab) => {
+    close()
+    h.onTab(tab)
+  })
   q('cosmetics-close').addEventListener('click', close)
   wrap.addEventListener('click', (e) => e.target === wrap && close())
 
@@ -146,5 +154,6 @@ export function createCosmetics(root: HTMLElement, h: { view(): CosmeticsView; o
       wrap.hidden = false
       pick(shown)
     },
+    close,
   }
 }

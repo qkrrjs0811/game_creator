@@ -125,7 +125,7 @@ export function createHud(
         <button type="button" class="toast-close" data-testid="session-summary-close" aria-label="닫기">✕</button>
       </div>
       <span class="monster-trait" data-testid="monster-trait" hidden></span>
-      <button type="button" class="adventure dress" data-testid="open-cosmetics">🎀 꾸미기</button>
+      <button type="button" class="adventure dress" data-testid="open-cosmetics">🎁 모음</button>
       <button type="button" class="adventure" data-testid="open-stages">⚔️ 모험</button>
     </section>
     <section class="timer-card">

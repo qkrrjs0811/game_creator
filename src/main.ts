@@ -282,6 +282,11 @@ const cosmetics = createCosmetics(app, {
     persist()
     render()
   },
+  // 모음 창의 도감 칸으로 간다
+  onTab: () => {
+    pullSave()
+    dex.open()
+  },
 })
 
 const homeScene = () => {
@@ -398,11 +403,6 @@ const stages = createStages(app, {
   advice: () => nextStageAdvice(currentProgress().creditedMinutes, save.skills, save.stageProgress),
   winnable: () => winnableStages(currentProgress().creditedMinutes, save.skills, save.stageProgress),
   onAutoRun: () => startAutoRun(),
-  // 도감은 모험 지도 위에 띄우고, 닫으면 지도로 돌아온다
-  onDex: () => {
-    pullSave()
-    dex.open()
-  },
   onChallenge(no) {
     pullSave()
     const s = endlessStage(no)
@@ -452,11 +452,13 @@ const stages = createStages(app, {
   },
 })
 
-// 모험 지도보다 나중에 붙여 지도 위에 뜨게 한다. 깬 스테이지에서 계산만 하고 저장은 바꾸지 않는다
+// 모음 창의 도감 칸. 깬 스테이지에서 계산만 하고 저장은 바꾸지 않는다
 const dex = createDex(app, {
   progress: () => save.stageProgress,
   count: () => monsterDex(save.stageProgress).count,
   shadows: () => dexShadows(currentProgress().creditedMinutes, save.skills, save.stageProgress),
+  // 모음 창의 꾸미기 칸으로 간다
+  onTab: () => cosmetics.open(),
 })
 
 // 상한 안내는 운동 중에 닿았을 때 하루 한 번만 띄운다

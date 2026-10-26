@@ -25,7 +25,6 @@ export function createStages(
     winnable(): number
     onChallenge(no: number): void
     onAutoRun(): void
-    onDex(): void
   },
 ) {
   const wrap = document.createElement('div')
@@ -44,10 +43,7 @@ export function createStages(
       <button type="button" class="auto-run" data-testid="auto-run" hidden></button>
       <ul class="stage-list" data-testid="stage-list"></ul>
       <p class="sheet-msg" data-testid="stage-msg" role="status"></p>
-      <div class="sheet-foot">
-        <button type="button" class="dex-open" data-testid="open-dex">📚 도감</button>
-        <button type="button" class="sheet-close" data-testid="stages-close">닫기</button>
-      </div>
+      <button type="button" class="sheet-close" data-testid="stages-close">닫기</button>
     </div>`
   root.append(wrap)
 
@@ -121,7 +117,6 @@ export function createStages(
     showOpen()
   }
   autoBtn.addEventListener('click', () => h.onAutoRun())
-  q('open-dex').addEventListener('click', () => h.onDex())
   prev.addEventListener('click', () => turn(-1))
   next.addEventListener('click', () => turn(1))
 
