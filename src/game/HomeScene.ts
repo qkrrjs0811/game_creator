@@ -10,6 +10,8 @@ import { stepSound } from '../core/sound'
 import { playSound } from '../ui/sound'
 import { contactAt, finishDelay, hitImpact, hpTrail, isFinalBlow, type Impact } from '../core/impact'
 import { comboText, playerMoves, type PlayerMove, type StepMove } from '../core/attackMove'
+import { SKILL_CUTIN_NAME, skillCutinTiming, skillDebuts } from '../core/skillCutin'
+import type { SkillId } from '../core/skills'
 import { skillFxSize, skillFxTiming, stepSkillFx, type SkillFxKind, type SkillStyle } from '../core/skillfx'
 import { weakHitText } from '../core/traits'
 import { drawMonsterBody, drawMonsterFace } from './monsterArt'
@@ -41,6 +43,8 @@ function groundY(h: number): number {
   return Phaser.Math.Clamp(h - BELOW_FEET - FEET, h * 0.52, h * 0.68)
 }
 const HP_ENEMY = 0xff9fbf
+/** 스킬 발동 띠 색: 펀치 주황·몸 하늘·발 민트(스킬 연출과 같은 색 계열) */
+const SKILL_CUTIN_COLOR: Record<SkillId, number> = { punch: 0xff9a6b, tough: 0x8cc4f5, quick: 0x7fd6b4 }
 /** 깎인 뒤 천천히 따라 줄어드는 옅은 막대. 빈 칸(베이지)과 구별되게 연노랑으로 한다 */
 const HP_PLAYER_TRAIL = 0xffe28f
 const HP_ENEMY_TRAIL = 0xffe28f
@@ -543,6 +547,10 @@ export class HomeScene extends Phaser.Scene {
     style: SkillStyle
     /** 걸음마다 말랑이 공격 동작(박치기·점프 찍기·회전 돌진)과 연속 명중 수 */
     moves: StepMove[]
+    /** 걸음마다 그 전투에서 처음 나가는 스킬(발동 장면) */
+    debuts: (SkillId | null)[]
+    /** 지금 보이는 발동 장면(어두운 막·띠·빛줄기). 전투가 끝나면 치운다 */
+    cutin?: Phaser.GameObjects.GameObject[]
     timer?: Phaser.Time.TimerEvent
     /** [말랑이, 몬스터] 머리 위 HP 막대. 이긴 쪽 막대는 주인과 같이 뛴다 */
     bars: [Phaser.GameObjects.Graphics, Phaser.GameObjects.Graphics]
@@ -787,6 +795,7 @@ export class HomeScene extends Phaser.Scene {
       delay,
       style,
       moves: playerMoves(timeline.steps),
+      debuts: skillDebuts(timeline.steps, style),
       bars: [this.add.graphics(), this.add.graphics()],
       hp: [1, 1],
       trail: [1, 1],
@@ -803,6 +812,8 @@ export class HomeScene extends Phaser.Scene {
     this.game.canvas.parentElement?.setAttribute('data-weak-hit', '')
     this.game.canvas.parentElement?.setAttribute('data-player-moves', '')
     this.game.canvas.parentElement?.setAttribute('data-combo', '0')
+    this.game.canvas.parentElement?.setAttribute('data-skill-cutins', '')
+    this.game.canvas.parentElement?.setAttribute('data-skill-cutin', '')
     this.layout(this.scale.width, this.scale.height)
     const entrance = bossEntrance(foe, delay)
     if (entrance) this.bossIntro(this.battle, entrance, foe)
@@ -921,6 +932,7 @@ export class HomeScene extends Phaser.Scene {
     if (!b) return
     b.timer?.remove()
     this.endIntro(b)
+    this.clearCutin(b)
     for (const t of b.trailTween) t?.stop()
     for (const bar of b.bars) {
       this.tweens.killTweensOf(bar)
@@ -1275,6 +1287,9 @@ export class HomeScene extends Phaser.Scene {
       const t = skillFxTiming(k, fx)
       this.time.delayedCall(t.start, () => live() && this.skillFx(k, t.duration, fx, dir))
     }
+    // 배운 스킬이 이 전투에서 처음 나가면 화면이 잠깐 어두워지고 이름 띠와 빛줄기가 지나간다
+    const debut = b.debuts[b.next - 1]
+    if (debut) this.skillCutin(b, debut)
     this.battleFace = 'focus'
     this.monsterFace = 'idle'
     this.markImpact('windup')
@@ -1400,6 +1415,67 @@ export class HomeScene extends Phaser.Scene {
         this.tweens.add({ targets: ring, alpha: { from: 0.9, to: 0 }, scaleX: 1.3, delay: i * 40, duration: fx.lunge + fx.back / 2, ease: 'Quad.easeOut', onComplete: () => ring.destroy() })
       }
     })
+  }
+
+  /**
+   * 스킬 발동 장면: 뒤 배경이 살짝 어두워지고(말랑이·몬스터·타격 연출은 밝은 채), 스킬 색 띠가 옆에서 쓱 들어와
+   * 이름을 보여 주고, 하얀 빛줄기가 띠를 따라 지나간다. 다음 걸음 전에 모두 사라진다
+   */
+  private skillCutin(b: NonNullable<HomeScene['battle']>, id: SkillId) {
+    this.clearCutin(b)
+    const { width: w, height: h } = this.scale
+    const host = this.game.canvas.parentElement
+    host?.setAttribute('data-skill-cutin', id)
+    host?.setAttribute('data-skill-cutins', `${host.getAttribute('data-skill-cutins') ?? ''} ${id}`.trim())
+    const t = skillCutinTiming(b.delay)
+    const color = SKILL_CUTIN_COLOR[id]
+    // 어두운 막은 두 캐릭터 뒤에 깐다
+    const dim = this.add.rectangle(0, 0, w, h, 0x3b2a4a).setOrigin(0).setAlpha(0)
+    const lowest = this.children.getIndex(this.mascot) < this.children.getIndex(this.monster) ? this.mascot : this.monster
+    this.children.moveBelow(dim as Phaser.GameObjects.GameObject, lowest as Phaser.GameObjects.GameObject)
+    // 띠: 둥근 스킬 색 판에 흰 테두리, 가운데 큰 이름
+    const y = Math.max(48, h * 0.2)
+    const label = this.add
+      .text(0, 0, SKILL_CUTIN_NAME[id], { fontFamily: FONT, fontSize: '24px', color: '#ffffff', fontStyle: 'bold', stroke: '#5a4636', strokeThickness: 5 })
+      .setOrigin(0.5)
+    const bw = Math.min(w - 24, label.width + 64)
+    const bg = this.add.graphics()
+    bg.fillStyle(color, 0.95).fillRoundedRect(-bw / 2, -26, bw, 52, 26)
+    bg.lineStyle(4, 0xffffff).strokeRoundedRect(-bw / 2, -26, bw, 52, 26)
+    // 띠 위를 비스듬히 훑고 지나가는 하얀 빛 두 줄(띠 밖으로는 안 보이게 띠 안에서만 움직인다)
+    const shine = this.add.graphics()
+    shine.fillStyle(0xffffff, 0.6).fillRoundedRect(-8, -20, 16, 40, 8)
+    shine.fillStyle(0xffffff, 0.4).fillRoundedRect(14, -18, 7, 36, 3.5)
+    shine.setAngle(18).setX(-bw / 2 + 30).setAlpha(0)
+    const band = this.add.container(-w, y, [bg, shine, label]).setDepth(3)
+    // 스킬 색 빛살: 띠 아래로 화면을 가로지르는 긴 빛줄기
+    const streak = this.add.graphics().setDepth(2)
+    streak.fillStyle(color, 0.55).fillRoundedRect(-w * 0.6, -6, w * 1.2, 12, 6)
+    streak.fillStyle(0xffffff, 0.7).fillRoundedRect(-w * 0.45, -2, w * 0.9, 4, 2)
+    streak.setPosition(w / 2, y + 36).setAngle(-6).setScale(0, 1)
+    b.cutin = [dim, band, streak]
+    const live = () => this.battle === b && !b.ended && b.cutin?.[0] === dim
+    this.tweens.add({ targets: dim, alpha: t.dimAlpha, duration: t.dim })
+    this.tweens.add({ targets: band, x: w / 2, duration: t.dim + 60, ease: 'Back.easeOut' })
+    this.tweens.add({ targets: streak, scaleX: 1, duration: t.dim + 80, ease: 'Quad.easeOut' })
+    // 빛은 지나가는 동안만 보이고 양 끝에서는 사라져 이름을 가리지 않는다
+    this.tweens.add({ targets: shine, x: bw / 2 - 40, delay: t.dim, duration: Math.round(t.hold * 0.7), ease: 'Sine.easeInOut' })
+    this.tweens.add({ targets: shine, alpha: 1, delay: t.dim, duration: Math.round(t.hold * 0.35), yoyo: true, ease: 'Sine.easeInOut' })
+    this.time.delayedCall(t.dim + t.hold, () => {
+      if (!live()) return
+      this.tweens.add({ targets: [dim, streak], alpha: 0, duration: t.fade })
+      this.tweens.add({ targets: band, x: w * 1.5, alpha: 0, duration: t.fade, ease: 'Quad.easeIn', onComplete: () => live() && this.clearCutin(b) })
+    })
+  }
+
+  /** 발동 장면을 바로 치운다 */
+  private clearCutin(b: NonNullable<HomeScene['battle']>) {
+    for (const o of b.cutin ?? []) {
+      this.tweens.killTweensOf(o)
+      o.destroy()
+    }
+    if (b.cutin) this.game.canvas.parentElement?.setAttribute('data-skill-cutin', '')
+    b.cutin = undefined
   }
 
   /** 연속으로 맞히면 두 캐릭터 사이 위에 "N 콤보!"가 톡 튀어 오른다. 맞은 숫자와 겹치지 않는 가운데 자리다 */
@@ -1665,6 +1741,7 @@ export class HomeScene extends Phaser.Scene {
     b.ended = true
     b.timer?.remove()
     this.endIntro(b)
+    this.clearCutin(b)
     this.battleFace = endFace(b.win)
     this.monsterFace = monsterEndFace(b.win)
     for (const who of [this.mascot, this.monster]) this.tweens.killTweensOf(who)
