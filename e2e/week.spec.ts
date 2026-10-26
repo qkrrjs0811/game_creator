@@ -22,10 +22,9 @@ test('이번 주 목표를 홈·도장판에 보여 주고, 채우는 순간 한
   await page.evaluate((s) => localStorage.setItem('growth-game:save', JSON.stringify(s)), { ...base, records })
   await page.reload()
 
-  // 홈 오늘 목표 줄 끝에 작은 칩. 줄은 한 줄로 카드 안에
+  // 홈 오늘 목표 줄을 눌러 펼친 칸에 작은 칩. 카드 안에
   await expect(page.getByTestId('goal-week')).toHaveText('📅 4/5')
-  const row = (await page.getByTestId('goal').boundingBox())!
-  expect(row.height).toBeLessThan(24)
+  await page.getByTestId('goal').click()
   const chip = (await page.getByTestId('goal-week').boundingBox())!
   expect(chip.x + chip.width).toBeLessThanOrEqual(390 - 14)
 

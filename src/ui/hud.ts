@@ -135,10 +135,19 @@ export function createHud(
       <button type="button" class="adventure" data-testid="open-stages">⚔️ 모험</button>
     </section>
     <section class="timer-card">
-      <div class="goal" data-testid="goal">
+      <button type="button" class="goal" data-testid="goal" aria-expanded="false" aria-controls="today-more">
         <span class="goal-text" data-testid="goal-text"></span>
         <span class="goal-bar"><i data-testid="goal-bar"></i></span>
-        <span class="goal-week" data-testid="goal-week"></span>
+        <span class="goal-more" data-testid="goal-more">더 보기 ▾</span>
+      </button>
+      <div class="today-more" id="today-more" data-testid="today-more" hidden>
+        <div class="today-more-chips">
+          <span class="mission" data-testid="mission"></span>
+          <span class="goal-week" data-testid="goal-week"></span>
+        </div>
+        <button type="button" class="pledge-line" data-testid="pledge">
+          <span class="pledge-text" data-testid="pledge-text"></span>
+        </button>
       </div>
       <div class="stamp" data-testid="stamp" role="status" hidden>🌟 오늘 도장 쾅!</div>
       <div class="stamp week-stamp" data-testid="week-stamp" role="status" hidden>🏅 이번 주 목표 달성!</div>
@@ -149,10 +158,6 @@ export function createHud(
       <div class="stamp best-stamp" data-testid="best-stamp" role="status" hidden></div>
       <div class="stamp prop-stamp" data-testid="prop-stamp" role="status" hidden></div>
       <div class="stamp pledge-stamp" data-testid="pledge-stamp" role="status" hidden>✍️ 다짐 지켰어요!</div>
-      <div class="today-row">
-        <span class="today" data-testid="today"></span>
-        <span class="mission" data-testid="mission"></span>
-      </div>
       <div class="timer-label" data-testid="timer-label"></div>
       <div class="focus-live" data-testid="focus-live" hidden>
         <span class="focus-text" data-testid="focus-text"></span>
@@ -167,9 +172,7 @@ export function createHud(
       </div>
       <div class="toggle-row">
         <button class="toggle" data-testid="toggle" type="button">운동 시작</button>
-        <button type="button" class="pledge-line" data-testid="pledge">
-          <span class="pledge-text" data-testid="pledge-text"></span>
-        </button>
+        <span class="today" data-testid="today"></span>
       </div>
     </section>
     <nav class="tabs">
@@ -232,6 +235,15 @@ export function createHud(
   for (const tab of activityTabs) tab.addEventListener('click', () => onSelect(tab.dataset.activity as ActivityId))
   const toastDetail = toast.querySelector('span')!
   const goal = q('goal')
+  // 미션·이번 주·다짐은 오늘 목표 줄을 눌러 펼치는 "오늘 더 보기"에 둔다(기본은 접힘)
+  const todayMore = q('today-more')
+  const goalMore = q('goal-more')
+  goal.addEventListener('click', () => {
+    const open = todayMore.hidden
+    todayMore.hidden = !open
+    goal.setAttribute('aria-expanded', String(open))
+    goalMore.textContent = open ? '접기 ▴' : '더 보기 ▾'
+  })
   const goalLabel = q('goal-text')
   const goalBar = q('goal-bar')
   const stamp = q('stamp')

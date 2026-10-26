@@ -7,15 +7,22 @@ async function box(l: Locator) {
   return (await l.boundingBox())!
 }
 
-/** 다짐 줄이 시작 버튼 오른쪽에 겹치지 않게 카드 안에 들어가고, 누르기 충분하며 글자가 잘리지 않는다 */
+/** 다짐은 오늘 목표 줄을 눌러 펼친 칸에 있다(접혀 있으면 펼친다) */
+async function openMore(page: Page) {
+  if (await page.getByTestId('today-more').isHidden()) await page.getByTestId('goal').click()
+  await expect(page.getByTestId('pledge')).toBeVisible()
+}
+
+/** 다짐 줄이 시작 버튼 위에 겹치지 않게 카드 안에 들어가고, 누르기 충분하며 글자가 잘리지 않는다 */
 async function expectFits(page: Page) {
+  await openMore(page)
   const l = await box(page.getByTestId('pledge'))
   const toggle = await box(page.getByTestId('toggle'))
   expect(l.height).toBeGreaterThanOrEqual(44)
   expect(l.width).toBeGreaterThanOrEqual(44)
-  expect(toggle.x + toggle.width).toBeLessThanOrEqual(l.x)
+  expect(l.x).toBeGreaterThanOrEqual(14)
   expect(l.x + l.width).toBeLessThanOrEqual(390 - 14)
-  expect(Math.abs(l.y + l.height / 2 - (toggle.y + toggle.height / 2))).toBeLessThan(2)
+  expect(l.y + l.height).toBeLessThanOrEqual(toggle.y)
   const label = page.getByTestId('pledge-text')
   expect((await box(label)).width).toBeLessThanOrEqual(l.width - 8)
   const tabs = await box(page.locator('.tabs'))
@@ -99,6 +106,7 @@ test('이미 상한까지 채운 활동은 고를 시간이 없고 다짐할 수
     { ...base, records: [{ id: 'relax-1', activity: 'relax', startedAt: start, endedAt: start + 30 * 60_000 }] },
   )
   await page.reload()
+  await openMore(page)
   await page.getByTestId('pledge').click()
   await page.getByTestId('pledge-activity-relax').click()
   for (const m of [10, 20, 30, 60]) await expect(page.getByTestId(`pledge-minutes-${m}`)).toBeDisabled()
@@ -152,7 +160,7 @@ test('다짐을 채우는 순간 지킴 배지를 한 번 띄우고, 그 전엔 
   const b = await box(badge)
   expect(b.x).toBeGreaterThanOrEqual(0)
   expect(b.x + b.width).toBeLessThanOrEqual(390)
-  for (const id of ['toggle', 'pledge', 'tab-reading']) {
+  for (const id of ['toggle', 'tab-reading']) {
     const r = await box(page.getByTestId(id))
     expect(b.y + b.height <= r.y || b.y >= r.y + r.height).toBe(true)
   }
