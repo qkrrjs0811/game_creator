@@ -72,6 +72,10 @@ function hasBatchim(word: string): boolean {
 export const objectJosa = (word: string) => (hasBatchim(word) ? '을' : '를')
 /** 받침이 있으면 "은", 없으면 "는"(운동은 · 공부는) */
 export const topicJosa = (word: string) => (hasBatchim(word) ? '은' : '는')
+/** 받침이 있으면 "이", 없으면 "가"(콩떡이 · 말랑이가) */
+export const subjectJosa = (word: string) => (hasBatchim(word) ? '이' : '가')
+/** 받침이 있으면 "이라고", 없으면 "라고"(콩떡이라고 · 말랑이라고) */
+export const quoteJosa = (word: string) => (hasBatchim(word) ? '이라고' : '라고')
 
 /** 홈 타이머 카드의 하루 목표 글자. 30분을 넘겨도 실제 분을 보여 준다 */
 export function goalText(g: TodayGoal): string {

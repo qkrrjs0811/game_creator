@@ -31,6 +31,8 @@ export interface HudView {
   mission: TodayMission
   /** 이름 옆에 단 칭호 이름. 없으면 null */
   title: string | null
+  /** 말랑이 이름(지은 이름, 없으면 말랑이) */
+  name: string
   /** 다음에 켤 때 쓸 집중 목표 분(고른 칩). 0 = 없음 */
   focusTarget: number
   /** 켜 둔 타이머의 집중 목표 진행. 목표 없이 켰거나 꺼져 있으면 null */
@@ -75,7 +77,7 @@ export function createHud(
   root.innerHTML = `
     <header class="top">
       <div class="top-row">
-        <span class="who"><b data-testid="level">Lv.1</b> <span data-testid="char-name">말랑이</span><span class="char-title" data-testid="char-title" hidden></span></span>
+        <span class="who"><b data-testid="level">Lv.1</b> <span class="char-name" data-testid="char-name">말랑이</span><span class="char-title" data-testid="char-title" hidden></span></span>
         <span class="exp-text" data-testid="exp-text"></span>
         <button type="button" class="gear" data-testid="open-settings" aria-label="설정">⚙</button>
       </div>
@@ -187,6 +189,7 @@ export function createHud(
   const level = q('level')
   const expText = q('exp-text')
   const charTitle = q('char-title')
+  const charName = q('char-name')
   const expBar = q('exp-bar')
   const label = q('timer-label')
   const timer = q('timer')
@@ -452,6 +455,7 @@ export function createHud(
     render(v: HudView) {
       level.textContent = `Lv.${v.level}`
       expText.textContent = `EXP ${v.expIntoLevel} / ${v.expForNextLevel}`
+      charName.textContent = v.name
       charTitle.hidden = !v.title
       charTitle.textContent = v.title ? `🏅 ${v.title}` : ''
       expBar.style.width = `${Math.min(100, (v.expIntoLevel / v.expForNextLevel) * 100)}%`

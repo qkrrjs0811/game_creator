@@ -1,6 +1,6 @@
 import { test, expect } from 'vitest'
 import { WINNABLE_MAX } from '../core/coach'
-import { autoRunCard, awayAdventure, awayCard, formatElapsed, formatMinutes, goalText, objectJosa, weekDoneText, weekGoalText, sessionSummary, topicJosa, weekTotalText, bestDayText, dayDetail, pageRangeText, dexShadowText, dexNewText, missionChip, achievementValueText, farAchievementIds, achievementToast, focusText, focusChipLabel, focusPickLabel, focusDoneText, letterCard, bestBrokenText, newPropText, pledgeText, weakAdviceText } from './format'
+import { autoRunCard, awayAdventure, awayCard, formatElapsed, formatMinutes, goalText, objectJosa, quoteJosa, subjectJosa, weekDoneText, weekGoalText, sessionSummary, topicJosa, weekTotalText, bestDayText, dayDetail, pageRangeText, dexShadowText, dexNewText, missionChip, achievementValueText, farAchievementIds, achievementToast, focusText, focusChipLabel, focusPickLabel, focusDoneText, letterCard, bestBrokenText, newPropText, pledgeText, weakAdviceText } from './format'
 import { ACHIEVEMENTS, achievementProgress } from '../core/achievements'
 import { AUTO_RUN_MAX } from '../core/autorun'
 import type { Cosmetic } from '../core/cosmetics'
@@ -62,6 +62,8 @@ test('마침 요약에 집중 목표: 채웠으면 ✓, 못 채웠으면 몇 분
 test('받침에 맞춰 을/를, 은/는을 고른다', () => {
   expect(['운동', '공부', '독서', '휴식'].map(objectJosa)).toEqual(['을', '를', '를', '을'])
   expect(['운동', '공부', '독서', '휴식'].map(topicJosa)).toEqual(['은', '는', '는', '은'])
+  expect(['콩떡', '말랑이', 'Momo'].map(subjectJosa)).toEqual(['이', '가', '가'])
+  expect(['콩떡', '말랑이'].map(quoteJosa)).toEqual(['이라고', '라고'])
 })
 
 test('경험치를 못 얻었으면 까닭을 알려 줌', () => {

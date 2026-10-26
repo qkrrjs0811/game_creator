@@ -619,6 +619,39 @@ body {
   box-shadow: 0 2px 0 #e9764a;
 }
 .tab-badge[hidden] { display: none; }
+/* 위쪽 말랑이 이름: 길면 말줄임(경험치 글자를 밀어내지 않게) */
+.char-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+/* 나 창 이름 짓기 줄: 둥근 입력 칸과 짓기 버튼 */
+.name-row { display: flex; align-items: center; gap: 8px; margin: 4px 0 2px; }
+.name-label { flex: none; font-size: 14px; font-weight: bold; color: var(--ink); }
+.name-input {
+  flex: 1;
+  min-width: 0;
+  min-height: 44px;
+  padding: 0 16px;
+  border: 2px solid #f3d9c4;
+  border-radius: 999px;
+  background: #fff;
+  color: var(--ink);
+  font: inherit;
+  font-size: 16px;
+}
+.name-input:focus { outline: none; border-color: var(--accent); }
+.name-save {
+  flex: none;
+  min-width: 72px;
+  min-height: 44px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--accent);
+  color: #fff;
+  font: inherit;
+  font-weight: bold;
+  box-shadow: 0 3px 0 #e06f42;
+}
+.name-hint { margin: 0 0 6px; font-size: 12px; color: var(--ink-soft); }
+.name-hint[data-state='ok'] { color: #4f9a3f; }
+.name-hint[data-state='error'] { color: #d0574a; }
 /* 나 창 맨 위 지금 모습 줄: 이름과 다음 단계까지 남은 레벨 */
 .look-card {
   display: flex;

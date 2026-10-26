@@ -42,6 +42,7 @@ import { playSound, setSoundOn, soundOn } from './ui/sound'
 import { awaySummary, shouldShowAway } from './core/away'
 import { sessionGain } from './core/gain'
 import { GROWTH_STAGES, grownStage, lookLine, malangLook, restoreSeenStage } from './core/look'
+import { charName, checkName, renameMalang } from './core/name'
 import { chatLines } from './core/chatter'
 import { upcomingRewards } from './core/rewards'
 import { canChangePledge, parsePledge, pledgeCelebrateNow, pledgeOptions, pledgeProgress, serializePledge } from './core/pledge'
@@ -239,6 +240,7 @@ const skills = createSkills(app, {
       missions: missionStars(records),
     }
     return {
+      name: charName(save),
       points: remainingSkillPoints(p.level, save.skills),
       ranks: skillRanks(save.skills),
       stats,
@@ -276,6 +278,18 @@ const skills = createSkills(app, {
     save = { ...save, worn: next.worn }
     persist()
     render()
+  },
+  // 이름은 부르는 글자만 바꾼다(기록·성장과 무관)
+  onRename(input) {
+    pullSave()
+    const r = checkName(input)
+    const next = renameMalang(save, input)
+    if (next) {
+      save = next
+      persist()
+      render()
+    }
+    return r
   },
 })
 
@@ -388,7 +402,7 @@ function startAutoRun() {
     if (done) return
     const b = run.battles[i]
     const s = endlessStage(b.no)
-    battleBar.start(`자동 진행 ${i + 1}/${total} · ${stageLabel(s)}`, s.monster.name)
+    battleBar.start(`자동 진행 ${i + 1}/${total} · ${stageLabel(s)}`, s.monster.name, charName(save))
     battleStageNo = b.no
     paintBackdrop()
     const scene = homeScene()
@@ -453,7 +467,7 @@ const stages = createStages(app, {
     }
     stages.close()
     hud.hideToasts()
-    battleBar.start(`${stageLabel(s)} · ${s.name}`, foe.name)
+    battleBar.start(`${stageLabel(s)} · ${s.name}`, foe.name, charName(save))
     battleStageNo = no
     paintBackdrop()
     // 장 보스를 처음 깼으면 결과 카드에 배지를 달고 장면에서 색종이가 터진다(연출일 뿐)
@@ -738,6 +752,7 @@ function render() {
     goal,
     mission,
     title: wornTitle({ records, worn: save.worn })?.titleName ?? null,
+    name: charName(save),
     focusTarget: focusDefault,
     focus,
     pledge: pledgeNow,

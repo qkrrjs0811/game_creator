@@ -23,6 +23,8 @@ export interface SaveData {
   cosmetics: string[]
   /** 입은 꾸미기 id(종류마다 하나). 이전 형식에는 없어서 읽을 때 []로 채운다 */
   worn: string[]
+  /** 지은 말랑이 이름(1~8자). 짓지 않았거나 이전 형식이면 없다(말랑이로 부른다) */
+  name?: string
 }
 
 export interface Progress {

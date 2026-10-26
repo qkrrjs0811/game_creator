@@ -1,4 +1,5 @@
 import { SKILLS, type SkillId } from '../core/skills'
+import { NAME_MAX, type NameCheck } from '../core/name'
 import type { StatRow } from '../core/stats'
 import type { StampCalendar } from '../core/goal'
 import type { WeekGoal } from '../core/week'
@@ -8,9 +9,11 @@ import type { ActivityId } from '../core/types'
 import type { AchievementKind, AchievementProgress } from '../core/achievements'
 import type { UpcomingReward } from '../core/rewards'
 import type { PersonalBests } from '../core/best'
-import { achievementValueText, bestDayText, dayDetail, farAchievementIds, formatMinutes, pageRangeText, weekDoneText, weekGoalText, weekTotalText, type letterCard } from './format'
+import { achievementValueText, bestDayText, dayDetail, farAchievementIds, formatMinutes, pageRangeText, quoteJosa, weekDoneText, weekGoalText, weekTotalText, type letterCard } from './format'
 
 export interface SkillsView {
+  /** 말랑이 이름(짓지 않았으면 말랑이) */
+  name: string
   points: number
   ranks: Record<SkillId, number>
   stats: StatRow[]
@@ -183,6 +186,8 @@ export function bestsHtml(b: PersonalBests): string {
   return `<small class="best-cap">한 번에 가장 길게</small><ul class="best-session">${session}</ul><ul class="best-rows">${rows}</ul>`
 }
 
+const NAME_HINT = `이름을 지어 주면 위쪽과 전투에서 불러요 (1~${NAME_MAX}자)`
+
 /** 받침이 있으면 '을', 없으면 '를' */
 export function objectParticle(word: string): string {
   const code = word.charCodeAt(word.length - 1) - 0xac00
@@ -190,7 +195,14 @@ export function objectParticle(word: string): string {
 }
 
 /** 나 창: 운동으로 오른 능력치, 남은 포인트와 스킬 3종, 골라서 배우기 */
-export function createSkills(root: HTMLElement, h: { view(): SkillsView; onLearn(id: SkillId): void; onTitle(titleId: string): void }) {
+export function createSkills(root: HTMLElement, h: {
+    view(): SkillsView
+    onLearn(id: SkillId): void
+    onTitle(titleId: string): void
+    /** 이름 짓기. 틀린 이름이면 저장하지 않고 이유를 돌려준다 */
+    onRename(input: string): NameCheck
+  },
+) {
   const wrap = document.createElement('div')
   wrap.className = 'sheet-backdrop'
   wrap.hidden = true
@@ -198,6 +210,12 @@ export function createSkills(root: HTMLElement, h: { view(): SkillsView; onLearn
   wrap.innerHTML = `
     <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="skills-title">
       <h2 id="skills-title">나의 말랑이</h2>
+      <form class="name-row" data-testid="name-form">
+        <label class="name-label" for="name-input">이름</label>
+        <input id="name-input" class="name-input" data-testid="name-input" type="text" maxlength="${NAME_MAX * 2}" autocomplete="off" enterkeyhint="done" />
+        <button type="submit" class="name-save" data-testid="name-save">짓기</button>
+      </form>
+      <p class="name-hint" data-testid="name-hint">${NAME_HINT}</p>
       <div class="look-card" data-testid="look-card">
         <b data-testid="look-name"></b>
         <small data-testid="look-next"></small>
@@ -290,8 +308,17 @@ export function createSkills(root: HTMLElement, h: { view(): SkillsView; onLearn
   let page = 0
   let picked: string | null = null
 
+  const nameInput = q('name-input') as HTMLInputElement
+  const nameHint = q('name-hint')
+  /** 마지막으로 칸에 채운 이름. 쓰는 중에는 매초 다시 그려도 칸을 덮지 않는다 */
+  let lastName = ''
+
   const draw = () => {
     const v = h.view()
+    if (v.name !== lastName && document.activeElement !== nameInput) {
+      lastName = v.name
+      nameInput.value = v.name
+    }
     if (v.points < 1) asking = null
     // 매초 다시 그리므로 바뀐 게 있을 때만 칸을 새로 만든다(칸이 깜빡이거나 사라졌다 생기지 않게)
     const stats = v.stats
@@ -450,8 +477,25 @@ export function createSkills(root: HTMLElement, h: { view(): SkillsView; onLearn
   })
   q('hist-prev').addEventListener('click', () => turn(1))
   q('hist-next').addEventListener('click', () => turn(-1))
+  q('name-form').addEventListener('submit', (e) => {
+    e.preventDefault()
+    const r = h.onRename(nameInput.value)
+    nameHint.dataset.state = r.ok ? 'ok' : 'error'
+    if (r.ok) {
+      lastName = r.name
+      nameInput.value = r.name
+      nameInput.blur()
+      nameHint.textContent = `✨ 이제 ${r.name}${quoteJosa(r.name)} 불러요`
+    } else {
+      nameHint.textContent = r.reason === 'empty' ? '이름을 한 글자 이상 써 주세요' : `이름은 ${NAME_MAX}자까지 지을 수 있어요`
+    }
+  })
+
   const close = () => {
     asking = null
+    lastName = ''
+    delete nameHint.dataset.state
+    nameHint.textContent = NAME_HINT
     page = 0
     picked = null
     letterOpen = false

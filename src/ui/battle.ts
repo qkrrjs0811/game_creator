@@ -1,3 +1,5 @@
+import { subjectJosa } from './format'
+
 /** 전투가 끝나면 장면 위쪽에 띄우는 결과 카드 내용 */
 export interface BattleResultView {
   win: boolean
@@ -63,11 +65,15 @@ export function createBattleBar(scene: HTMLElement, h: { onSkip(): void; onLeave
   const status = q(bar, 'battle-status')
   const action = q(bar, 'battle-action')
   action.addEventListener('click', () => (bar.dataset.state === 'playing' ? h.onSkip() : h.onLeave()))
+  /** 이번 전투의 말랑이 이름(지면 결과 카드에서 부른다) */
+  let player = '말랑이'
 
   return {
-    start(name: string, foe: string) {
+    /** me: 말랑이 이름(지은 이름) */
+    start(name: string, foe: string, me = '말랑이') {
+      player = me
       title.textContent = `⚔️ ${name}`
-      status.textContent = `말랑이 vs ${foe}`
+      status.textContent = `${me} vs ${foe}`
       action.textContent = '건너뛰기'
       bar.dataset.state = 'playing'
       delete bar.dataset.win
@@ -80,7 +86,7 @@ export function createBattleBar(scene: HTMLElement, h: { onSkip(): void; onLeave
       const { win } = r
       q(card, 'battle-result-title').textContent = r.title ?? (win ? '🎉 승리!' : '💧 아쉬워요')
       const detail = q(card, 'battle-result-detail')
-      detail.textContent = r.detail ?? (win ? `${r.rounds}번 주고받아 이겼어요` : '말랑이가 지쳐 버렸어요')
+      detail.textContent = r.detail ?? (win ? `${r.rounds}번 주고받아 이겼어요` : `${player}${subjectJosa(player)} 지쳐 버렸어요`)
       // 약점 활동 줄이 붙으면 카드가 HP 막대까지 내려오지 않게 설명 줄을 숨긴다
       detail.hidden = !!r.weak
       // 졌을 때만 몬스터를 얼마나 깎았는지 보여 준다(다음엔 더 깎을 수 있게)

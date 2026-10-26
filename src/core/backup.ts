@@ -1,4 +1,5 @@
 import { ACTIVITIES } from './activities'
+import { checkName, DEFAULT_NAME } from './name'
 import { computeProgress } from './progression'
 import { liveRecords } from './session'
 import type { ActiveSession, ActivityId, ActivityRecord, SaveData } from './types'
@@ -75,6 +76,9 @@ export function toSave(v: unknown): SaveData | null {
   // 입은 꾸미기는 나중에 생긴 필드라 없으면 아무것도 안 입은 것으로 본다
   const worn = v.worn === undefined ? [] : v.worn
   if (!isStringList(worn)) return null
+  // 말랑이 이름도 나중에 생긴 필드다. 글자가 아니면 틀린 저장이고, 길이만 틀리면 기록은 살리고 이름만 기본으로 둔다
+  if (v.name !== undefined && typeof v.name !== 'string') return null
+  const named = typeof v.name === 'string' ? checkName(v.name) : null
   return {
     version: 1,
     records: records as ActivityRecord[],
@@ -83,5 +87,6 @@ export function toSave(v: unknown): SaveData | null {
     stageProgress: stageProgress as number,
     cosmetics: [...cosmetics],
     worn: [...worn],
+    ...(named?.ok && named.name !== DEFAULT_NAME ? { name: named.name } : {}),
   }
 }
