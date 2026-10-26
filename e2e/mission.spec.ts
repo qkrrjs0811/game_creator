@@ -18,8 +18,7 @@ test('홈에 오늘의 미션을 보여 주고, 그 활동으로 채우면 미�
   await page.getByTestId('toggle').click()
   await page.clock.fastForward('04:00')
   await expect(page.getByTestId('mission')).toHaveText('📜 휴식 4 / 10분')
-  // 미션 칩은 오늘 목표 줄을 눌러 펼친 칸 안에 있다
-  await page.getByTestId('goal').click()
+  // 미션 한 마디는 오늘 목표 줄 안에 바로 보인다
   const chip = (await page.getByTestId('mission').boundingBox())!
   expect(chip.x).toBeGreaterThanOrEqual(14)
   expect(chip.x + chip.width).toBeLessThanOrEqual(390 - 14)

@@ -12,7 +12,7 @@ test('홈에 오늘 목표를 보여 주고, 여러 활동을 합쳐 채우면 �
   await expect(page.getByTestId('goal-text')).toHaveText('🎯 오늘 목표 12 / 30분')
   const bar = (await page.getByTestId('goal-bar').boundingBox())!
   expect(bar.width).toBeGreaterThan(0)
-  // 목표 줄은 카드 안에서 한 줄(누르면 더 보기가 펼쳐지는 버튼이라 손가락 크기)
+  // 목표 줄은 카드 안에서 한 줄(미션 한 마디까지 한 줄)
   const row = (await page.getByTestId('goal').boundingBox())!
   expect(row.height).toBeGreaterThanOrEqual(44)
   expect(row.height).toBeLessThan(52)

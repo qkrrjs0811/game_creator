@@ -321,47 +321,22 @@ body {
 .board-chip.board-mission { background: #efe4ff; color: #7a5aa8; }
 /* 쉼표: 이어 온 날을 지켜 주는 하늘색 */
 .board-chip.board-rest { background: #dff3f7; color: #3f7f8c; }
-/* 모든 활동을 합친 오늘 목표. 카드 맨 위 한 줄이고, 누르면 아래로 "오늘 더 보기"가 펼쳐진다 */
+/* 모든 활동을 합친 오늘 목표. 카드 맨 위 한 줄이고, 오른쪽 끝에 오늘의 미션 한 마디가 붙는다 */
 .goal {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   width: 100%;
   min-height: 44px;
   margin: -6px 0 0;
-  padding: 0;
-  border: 0;
-  background: none;
   color: var(--ink);
-  font: inherit;
   font-size: 13px;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
-  cursor: pointer;
 }
-.goal-more {
-  flex: none;
-  padding: 2px 10px;
-  border-radius: 999px;
-  background: var(--chip);
-  color: var(--ink-soft);
-  font-size: 12px;
-  white-space: nowrap;
-}
-/* 오늘 더 보기: 오늘의 미션 칩. 기본은 접혀 있다 */
-.today-more {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  margin: 2px 0 8px;
-  padding: 10px;
-  border-radius: 18px;
-  background: #fff6ec;
-}
-.today-more[hidden] { display: none; }
-.today-more-chips { display: flex; justify-content: center; gap: 6px; }
+.goal .mission { flex: none; padding: 3px 10px; font-size: 12px; }
 .goal-text { white-space: nowrap; }
-.goal-bar { flex: 1; height: 10px; border-radius: 999px; background: var(--track); overflow: hidden; }
+.goal-bar { flex: 1; min-width: 24px; height: 10px; border-radius: 999px; background: var(--track); overflow: hidden; }
 .goal-bar i { display: block; height: 100%; width: 0; border-radius: 999px; background: #ffd36b; transition: width 0.4s; }
 .goal.done { color: var(--accent); }
 .goal.done .goal-bar i { background: var(--accent); }
@@ -576,6 +551,22 @@ body {
   box-shadow: 0 2px 0 #e9764a;
 }
 .tab-badge[hidden] { display: none; }
+/* 오늘의 미션 활동 탭의 작은 별 */
+.tab-mission {
+  position: absolute;
+  top: -6px;
+  right: 6px;
+  width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  background: #efe4ff;
+  font-size: 12px;
+  font-style: normal;
+  line-height: 22px;
+  text-align: center;
+  box-shadow: 0 2px 0 #d6c4f2;
+}
+.tab-mission[hidden] { display: none; }
 /* 위쪽 말랑이 이름: 길면 말줄임(경험치 글자를 밀어내지 않게) */
 .char-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 /* 나 창 이름 짓기 줄: 둥근 입력 칸과 짓기 버튼 */

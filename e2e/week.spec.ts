@@ -22,11 +22,9 @@ test('이번 주 목표는 도장판에서만 보여 주고, 채워도 홈에 �
   await page.evaluate((s) => localStorage.setItem('growth-game:save', JSON.stringify(s)), { ...base, records })
   await page.reload()
 
-  // 홈에는 이번 주 칩·배지가 없다(펼친 칸에도)
-  await page.getByTestId('goal').click()
+  // 홈에는 이번 주 칩·배지가 없다
   await expect(page.getByTestId('goal-week')).toHaveCount(0)
   await expect(page.getByTestId('week-stamp')).toHaveCount(0)
-  await page.getByTestId('goal').click()
 
   await page.getByTestId('tab-me').click()
   await expect(page.getByTestId('week-goal-text')).toHaveText('📅 이번 주 4 / 5일')

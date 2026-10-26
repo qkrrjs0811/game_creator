@@ -129,15 +129,10 @@ export function createHud(
       <button type="button" class="adventure" data-testid="open-stages">⚔️ 모험</button>
     </section>
     <section class="timer-card">
-      <button type="button" class="goal" data-testid="goal" aria-expanded="false" aria-controls="today-more">
+      <div class="goal" data-testid="goal">
         <span class="goal-text" data-testid="goal-text"></span>
         <span class="goal-bar"><i data-testid="goal-bar"></i></span>
-        <span class="goal-more" data-testid="goal-more">더 보기 ▾</span>
-      </button>
-      <div class="today-more" id="today-more" data-testid="today-more" hidden>
-        <div class="today-more-chips">
-          <span class="mission" data-testid="mission"></span>
-        </div>
+        <span class="mission" data-testid="mission"></span>
       </div>
       <div class="stamp" data-testid="stamp" role="status" hidden>🌟 오늘 도장 쾅!</div>
       <div class="stamp mission-stamp" data-testid="mission-stamp" role="status" hidden>📜 미션 완료!</div>
@@ -172,7 +167,7 @@ export function createHud(
           t.activity ? ` data-activity="${t.activity}"` : ''
         }>${t.label}${ready ? '' : '<small>준비 중</small>'}${
           t.activity ? `<small class="tab-live" data-testid="tab-live-${t.activity}" hidden>⏱ 켜짐</small>` : ''
-        }${t.testid === 'tab-me' ? '<em class="tab-badge" data-testid="skill-badge" hidden></em>' : ''}</button>`
+        }${t.activity ? `<em class="tab-mission" data-testid="tab-mission-${t.activity}" hidden>⭐</em>` : ''}${t.testid === 'tab-me' ? '<em class="tab-badge" data-testid="skill-badge" hidden></em>' : ''}</button>`
       }).join('')}
     </nav>`
 
@@ -236,15 +231,6 @@ export function createHud(
   for (const tab of activityTabs) tab.addEventListener('click', () => onSelect(tab.dataset.activity as ActivityId))
   const toastDetail = toast.querySelector('span')!
   const goal = q('goal')
-  // 미션은 오늘 목표 줄을 눌러 펼치는 "오늘 더 보기"에 둔다(기본은 접힘)
-  const todayMore = q('today-more')
-  const goalMore = q('goal-more')
-  goal.addEventListener('click', () => {
-    const open = todayMore.hidden
-    todayMore.hidden = !open
-    goal.setAttribute('aria-expanded', String(open))
-    goalMore.textContent = open ? '접기 ▴' : '더 보기 ▾'
-  })
   const goalLabel = q('goal-text')
   const goalBar = q('goal-bar')
   const stamp = q('stamp')
@@ -477,6 +463,8 @@ export function createHud(
         tab.classList.toggle('on', id === v.activity)
         tab.setAttribute('aria-pressed', String(id === v.activity))
         tab.querySelector<HTMLElement>('.tab-live')!.hidden = v.live !== id
+        // 오늘의 미션 활동 탭에 작은 별. 채우면 뗀다
+        tab.querySelector<HTMLElement>('.tab-mission')!.hidden = v.mission.done || v.mission.activity !== id
       }
       skillBadge.hidden = v.skillPoints < 1
       skillBadge.textContent = String(v.skillPoints)

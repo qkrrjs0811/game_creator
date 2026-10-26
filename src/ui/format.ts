@@ -88,7 +88,7 @@ export function weekGoalText(w: WeekCount): string {
   return w.done ? `🏅 이번 주 목표 달성 ${w.stamped} / ${w.goal}일` : `📅 이번 주 ${w.stamped} / ${w.goal}일`
 }
 
-/** 홈 오늘 분 칩 옆의 작은 오늘의 미션 칩 */
+/** 홈 오늘 목표 줄 끝에 붙는 오늘의 미션 한 마디 */
 export function missionChip(m: TodayMission): string {
   const name = ACTIVITIES[m.activity].label
   return m.done ? `📜 ${name} 완료!` : `📜 ${name} ${Math.min(m.minutes, m.goal)} / ${m.goal}분`
