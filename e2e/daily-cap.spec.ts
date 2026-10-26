@@ -4,15 +4,22 @@ test('오늘 운동 시간을 보여 주고, 상한에 닿으면 안내', async 
   // 자정을 넘기지 않도록 아침에서 시작한다
   await page.clock.install({ time: new Date('2026-10-25T08:00:00+09:00') })
   await page.goto('./')
-  await expect(page.getByTestId('today')).toHaveText('오늘 0분 / 180분')
+  // 상한이 멀면 오늘 한 시간만 보인다
+  await expect(page.getByTestId('today')).toHaveText('오늘 0분')
 
   await page.getByTestId('toggle').click()
   await page.clock.fastForward('42:00')
-  await expect(page.getByTestId('today')).toHaveText('오늘 42분 / 180분')
+  await expect(page.getByTestId('today')).toHaveText('오늘 42분')
   await expect(page.getByTestId('cap-toast')).toBeHidden()
   await page.screenshot({ path: 'test-results/screens/today-42.png' })
 
-  await page.clock.fastForward('02:18:00')
+  // 상한의 3/4(135분)부터 상한이 함께 보인다
+  await page.clock.fastForward('01:33:00')
+  await expect(page.getByTestId('today')).toHaveText('오늘 135분 / 180분')
+  await expect(page.getByTestId('today')).toHaveClass(/near/)
+  await page.screenshot({ path: 'test-results/screens/cap-near.png' })
+
+  await page.clock.fastForward('45:00')
   // 느린 실행에서 재고 찍는 동안 안내가 저절로 닫히지 않게 시계를 멈춘다(아래 fastForward는 그대로 흐른다)
   // (안내는 6초 떠 있다. 묻고 멈추는 사이에도 시계가 흐르니 1초 뒤로 멈춘다)
   await page.clock.pauseAt((await page.evaluate(() => Date.now())) + 1000)

@@ -300,6 +300,7 @@ body {
   font-weight: 700;
   font-variant-numeric: tabular-nums;
 }
+.today.near { background: #fff0d6; color: #c07a2c; }
 .today.full { background: #ffe2d4; color: var(--accent); }
 /* 오늘 분 칩과 오늘의 미션 칩이 한 줄로 나란히 */
 .today-row { display: flex; justify-content: center; gap: 6px; flex-wrap: nowrap; }

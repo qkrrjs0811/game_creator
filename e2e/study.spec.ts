@@ -7,7 +7,7 @@ test('공부 탭에서 공부 타이머를 켜면 지능이 오르고, 그동안
   await page.getByTestId('tab-study').click()
   await expect(page.getByTestId('tab-study')).toHaveAttribute('aria-pressed', 'true')
   await expect(page.getByTestId('toggle')).toHaveText('공부 시작')
-  await expect(page.getByTestId('today')).toHaveText('오늘 0분 / 120분')
+  await expect(page.getByTestId('today')).toHaveText('오늘 0분')
   await expect(page.getByTestId('timer-label')).toHaveText('공부하는 동안 지능이 올라요')
 
   await page.getByTestId('toggle').click()
@@ -25,7 +25,7 @@ test('공부 탭에서 공부 타이머를 켜면 지능이 오르고, 그동안
   await expect(page.getByTestId('toggle')).toBeDisabled()
   await expect(page.getByTestId('timer-label')).toHaveText('공부 중이에요 · 그만하면 운동을 켤 수 있어요')
   await expect(page.getByTestId('timer')).toHaveText('00:00')
-  await expect(page.getByTestId('today')).toHaveText('오늘 0분 / 180분')
+  await expect(page.getByTestId('today')).toHaveText('오늘 0분')
   await page.screenshot({ path: 'test-results/screens/study-busy.png' })
   expect((await page.evaluate(() => window.__debug.getSave().active))?.activity).toBe('study')
 
@@ -68,7 +68,7 @@ test('공부는 하루 2시간까지, 다 채우면 안내하고 운동은 따�
   await expect(page.getByTestId('toggle')).toBeEnabled()
   await page.getByTestId('toggle').click()
   await page.clock.fastForward('10:00')
-  await expect(page.getByTestId('today')).toHaveText('오늘 10분 / 180분')
+  await expect(page.getByTestId('today')).toHaveText('오늘 10분')
   await page.getByTestId('toggle').click()
   await page.getByTestId('tab-me').click()
   await expect(page.getByTestId('stat-value-int')).toHaveText('29')

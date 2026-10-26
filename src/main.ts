@@ -1,7 +1,7 @@
 import Phaser from 'phaser'
 import './style.css'
 import { HomeScene, HOME_READY } from './game/HomeScene'
-import { computeProgress, dayKey, todayStatus } from './core/progression'
+import { capNear, computeProgress, dayKey, todayStatus } from './core/progression'
 import { stampCalendar, stampCount, todayGoal } from './core/goal'
 import { lastWeekLetter, letterNow, parseSeenLetter } from './core/letter'
 import { bestValues, bestsNow, parseSeenBests, personalBests, type SeenBests } from './core/best'
@@ -749,6 +749,7 @@ function render() {
     todayMinutes: today.minutes,
     todayCap: today.cap,
     capReached: today.reached,
+    capNear: capNear(today),
     skillPoints: remainingSkillPoints(p.level, save.skills),
     saveFailed: !saveOk,
     goal,

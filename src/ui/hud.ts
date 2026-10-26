@@ -21,6 +21,8 @@ export interface HudView {
   todayMinutes: number
   todayCap: number
   capReached: boolean
+  /** 하루 상한이 가까운지. 이때만 상한을 함께 보여 준다 */
+  capNear: boolean
   skillPoints: number
   /** 브라우저 저장소에 저장하지 못했으면 true */
   saveFailed: boolean
@@ -444,7 +446,9 @@ export function createHud(
       charTitle.hidden = !v.title
       charTitle.textContent = v.title ? `🏅 ${v.title}` : ''
       expBar.style.width = `${Math.min(100, (v.expIntoLevel / v.expForNextLevel) * 100)}%`
-      today.textContent = `오늘 ${v.todayMinutes}분 / ${v.todayCap}분`
+      // 상한은 가까워졌을 때만 함께 보여 준다(멀 때는 오늘 한 시간만)
+      today.textContent = v.capNear ? `오늘 ${v.todayMinutes}분 / ${v.todayCap}분` : `오늘 ${v.todayMinutes}분`
+      today.classList.toggle('near', v.capNear && !v.capReached)
       today.classList.toggle('full', v.capReached)
       const name = ACTIVITIES[v.activity].label
       // 다른 활동 타이머가 켜져 있으면 동시에 켤 수 없어 시작 버튼을 막는다

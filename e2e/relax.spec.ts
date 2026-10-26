@@ -7,7 +7,7 @@ test('휴식 탭에서 휴식 타이머를 켜면 체력이 조금 오르고, �
   await page.getByTestId('tab-relax').click()
   await expect(page.getByTestId('tab-relax')).toHaveAttribute('aria-pressed', 'true')
   await expect(page.getByTestId('toggle')).toHaveText('휴식 시작')
-  await expect(page.getByTestId('today')).toHaveText('오늘 0분 / 30분')
+  await expect(page.getByTestId('today')).toHaveText('오늘 0분')
   await expect(page.getByTestId('timer-label')).toHaveText('푹 쉬는 동안 체력이 조금 올라요')
   // 다섯 탭이 모두 폰 화면 안에 들어가고 누르기 충분히 크다
   for (const id of ['exercise', 'study', 'reading', 'relax']) {

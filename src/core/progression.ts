@@ -65,6 +65,11 @@ export function todayStatus(records: ActivityRecord[], activity: ActivityId, now
   return { minutes, cap, reached: minutes >= cap }
 }
 
+/** 하루 상한이 가까운지(상한의 3/4부터). 홈은 이때만 상한을 보여 준다 */
+export function capNear(status: TodayStatus): boolean {
+  return status.reached || status.minutes * 4 >= status.cap * 3
+}
+
 /** 활동별 인정 분으로 정해지는 능력치. 없는 활동은 0분으로 본다 */
 export function statsFromMinutes(minutes: Partial<Record<ActivityId, number>>): Record<StatId, number> {
   const ids = Object.keys(ACTIVITIES) as ActivityId[]

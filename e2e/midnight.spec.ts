@@ -7,7 +7,7 @@ test('앱을 닫아 둔 채 자정을 넘겨도 타이머가 흐르고, 오늘 �
   await page.goto('./')
   await page.getByTestId('toggle').click()
   await page.clock.fastForward('20:00')
-  await expect(page.getByTestId('today')).toHaveText('오늘 20분 / 180분')
+  await expect(page.getByTestId('today')).toHaveText('오늘 20분')
 
   // 앱을 닫아 둔 사이에도 시간은 흐른다
   await page.close()
@@ -18,7 +18,7 @@ test('앱을 닫아 둔 채 자정을 넘겨도 타이머가 흐르고, 오늘 �
   // 00:30 — 어제 30분 + 오늘 30분이 모두 인정되고, 오늘 분은 자정부터 센다
   await expect(page.getByTestId('toggle')).toHaveText('그만하기')
   await expect(page.getByTestId('timer')).toHaveText(/^(59:5\d|1:00:0\d)$/)
-  await expect(page.getByTestId('today')).toHaveText(/^오늘 (29|30)분 \/ 180분$/)
+  await expect(page.getByTestId('today')).toHaveText(/^오늘 (29|30)분$/)
   await page.screenshot({ path: 'test-results/screens/midnight.png' })
 
   await page.getByTestId('toggle').click()
@@ -42,7 +42,7 @@ test('어제 상한에 닿은 채 자정을 넘기면 오늘 경험치가 다시
 
   await page.clock.fastForward('30:00')
   // 00:10 — 새 날이라 다시 쌓인다
-  await expect(page.getByTestId('today')).toHaveText(/^오늘 (9|10)분 \/ 180분$/)
+  await expect(page.getByTestId('today')).toHaveText(/^오늘 (9|10)분$/)
   await expect(page.getByTestId('timer-label')).toHaveText('운동 중 · 경험치가 쌓이고 있어요')
   await expect(page.getByTestId('today')).not.toHaveClass(/full/)
   await expect(page.getByTestId('cap-toast')).toBeHidden()

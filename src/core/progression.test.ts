@@ -1,5 +1,5 @@
 import { describe, test, expect } from 'vitest'
-import { computeProgress, creditedMinutes, expToNext, todayStatus } from './progression'
+import { capNear, computeProgress, creditedMinutes, expToNext, todayStatus } from './progression'
 
 const kst = (s: string) => Date.parse(`${s}+09:00`)
 const rec = (a: string, b: string, id = a) => ({ id, activity: 'exercise' as const, startedAt: kst(a), endedAt: kst(b) })
@@ -67,6 +67,22 @@ describe('todayStatus', () => {
 
   test('기록이 없으면 0분', () => {
     expect(todayStatus([], 'exercise', kst('2026-10-25T13:00:00'))).toEqual({ minutes: 0, cap: 180, reached: false })
+  })
+})
+
+describe('capNear', () => {
+  test('상한의 3/4에 닿기 전에는 상한을 보이지 않는다', () => {
+    expect(capNear({ minutes: 0, cap: 180, reached: false })).toBe(false)
+    expect(capNear({ minutes: 134, cap: 180, reached: false })).toBe(false)
+    expect(capNear({ minutes: 89, cap: 120, reached: false })).toBe(false)
+    expect(capNear({ minutes: 22, cap: 30, reached: false })).toBe(false)
+  })
+
+  test('상한의 3/4부터와 상한에 닿았을 때는 보인다', () => {
+    expect(capNear({ minutes: 135, cap: 180, reached: false })).toBe(true)
+    expect(capNear({ minutes: 90, cap: 120, reached: false })).toBe(true)
+    expect(capNear({ minutes: 23, cap: 30, reached: false })).toBe(true)
+    expect(capNear({ minutes: 180, cap: 180, reached: true })).toBe(true)
   })
 })
 

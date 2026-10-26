@@ -7,7 +7,7 @@ test('독서 탭에서 독서 타이머를 켜면 집중이 오르고, 그동안
   await page.getByTestId('tab-reading').click()
   await expect(page.getByTestId('tab-reading')).toHaveAttribute('aria-pressed', 'true')
   await expect(page.getByTestId('toggle')).toHaveText('독서 시작')
-  await expect(page.getByTestId('today')).toHaveText('오늘 0분 / 120분')
+  await expect(page.getByTestId('today')).toHaveText('오늘 0분')
   await expect(page.getByTestId('timer-label')).toHaveText('독서하는 동안 집중이 올라요')
 
   await page.getByTestId('toggle').click()
