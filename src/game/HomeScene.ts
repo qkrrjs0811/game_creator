@@ -19,6 +19,7 @@ import { BOSS_BAR_RAISE, bossLook, monsterScale, monsterTop } from '../core/boss
 import { bossDropOffset, bossEntrance, bossNameTag, type BossEntrance } from '../core/bossEntrance'
 import { monsterChapter, monsterDecor } from '../core/monsterDecor'
 import { monsterEndFace, monsterStepFace, type MonsterFace } from '../core/monsterLook'
+import { monsterHits, type MonsterBit, type MonsterHit } from '../core/monsterHitFx'
 import { MONSTER_ATTACK, MONSTER_BOTTOM, MONSTER_IDLE, REST_POSE, attackPlan, poseY, type Pose } from '../core/monsterMotion'
 import { BLINK_MS, HAPPY_MS, blinkGap, endFace, moodFace, pickFace, stepFace, type Face, type Mood } from '../core/face'
 
@@ -549,6 +550,10 @@ export class HomeScene extends Phaser.Scene {
     moves: StepMove[]
     /** 걸음마다 그 전투에서 처음 나가는 스킬(발동 장면) */
     debuts: (SkillId | null)[]
+    /** 걸음마다 몬스터가 맞힐 때 튀는 그 종의 조각과 보스 큰 공격 */
+    foeHits: (MonsterHit | null)[]
+    /** 몬스터 몸 색과 그늘 색(조각 색) */
+    foeColor: [number, number]
     /** 지금 보이는 발동 장면(어두운 막·띠·빛줄기). 전투가 끝나면 치운다 */
     cutin?: Phaser.GameObjects.GameObject[]
     timer?: Phaser.Time.TimerEvent
@@ -796,6 +801,8 @@ export class HomeScene extends Phaser.Scene {
       style,
       moves: playerMoves(timeline.steps),
       debuts: skillDebuts(timeline.steps, style),
+      foeHits: monsterHits(timeline.steps, foe.shape, foe.boss),
+      foeColor: [foe.color, foe.shade],
       bars: [this.add.graphics(), this.add.graphics()],
       hp: [1, 1],
       trail: [1, 1],
@@ -814,6 +821,8 @@ export class HomeScene extends Phaser.Scene {
     this.game.canvas.parentElement?.setAttribute('data-combo', '0')
     this.game.canvas.parentElement?.setAttribute('data-skill-cutins', '')
     this.game.canvas.parentElement?.setAttribute('data-skill-cutin', '')
+    this.game.canvas.parentElement?.setAttribute('data-monster-hits', '')
+    this.game.canvas.parentElement?.setAttribute('data-boss-slams', '0')
     this.layout(this.scale.width, this.scale.height)
     const entrance = bossEntrance(foe, delay)
     if (entrance) this.bossIntro(this.battle, entrance, foe)
@@ -1342,6 +1351,8 @@ export class HomeScene extends Phaser.Scene {
         return
       }
       this.contact(fx, s.actor === 'player', dir)
+      const foeHit = b.foeHits[b.next - 1]
+      if (foeHit) this.monsterHitFx(b, foeHit, fx, dir, bar)
       // 약점이 통하면(방어를 뚫은 치명타·집중으로 맞힘) 그 글자와 연출을, 치명타(지능)는 노란 글자로 더 크게 알린다
       const weak = weakHitText(s)
       if (weak) {
@@ -1466,6 +1477,80 @@ export class HomeScene extends Phaser.Scene {
       this.tweens.add({ targets: [dim, streak], alpha: 0, duration: t.fade })
       this.tweens.add({ targets: band, x: w * 1.5, alpha: 0, duration: t.fade, ease: 'Quad.easeIn', onComplete: () => live() && this.clearCutin(b) })
     })
+  }
+
+  /**
+   * 몬스터가 말랑이를 맞힌 순간: 맞은 자리에서 그 종의 조각(잎사귀·포자·물방울·솜뭉치·돌 조각·보석)이
+   * 몬스터 색으로 말랑이 뒤쪽으로 튀었다 떨어진다. 보스 큰 공격은 땅에 충격파가 퍼지고 화면이 흔들리며 "쿵!"이 뜬다
+   */
+  private monsterHitFx(b: NonNullable<HomeScene['battle']>, hit: MonsterHit, fx: Impact, dir: number, barTop: number) {
+    const host = this.game.canvas.parentElement
+    host?.setAttribute('data-monster-hit', hit.bit)
+    host?.setAttribute('data-monster-hits', `${host.getAttribute('data-monster-hits') ?? ''} ${hit.bit}`.trim())
+    const body = this.bodyOf(false)
+    const [color, shade] = b.foeColor
+    const hx = body.x - dir * body.rx * 0.6
+    for (let i = 0; i < hit.count; i++) {
+      const spread = (Math.PI * 0.7 * i) / Math.max(1, hit.count - 1)
+      const a = -Math.PI / 2 + dir * (Math.PI * 0.1 + spread) + Phaser.Math.FloatBetween(-0.15, 0.15)
+      const dist = Phaser.Math.Between(hit.big ? 56 : 44, hit.big ? 100 : 72)
+      const bit = this.monsterBit(hit.bit, hx, body.y, i % 3 === 2 ? shade : color, shade)
+      const tx = hx + Math.cos(a) * dist
+      const ty = body.y + Math.sin(a) * dist
+      this.tweens.add({ targets: bit, x: tx, angle: Phaser.Math.Between(-200, 200), delay: fx.hitstop * 0.4, duration: 480, ease: 'Cubic.easeOut' })
+      // 튀어 오른 뒤 아래로 톡 떨어지며 사라진다
+      this.tweens.add({
+        targets: bit,
+        y: ty,
+        delay: fx.hitstop * 0.4,
+        duration: 220,
+        ease: 'Quad.easeOut',
+        onComplete: () =>
+          this.tweens.add({ targets: bit, y: ty + 22, alpha: 0, scale: 0.6, duration: 260, ease: 'Quad.easeIn', onComplete: () => bit.destroy() }),
+      })
+    }
+    if (!hit.big) return
+    host?.setAttribute('data-boss-slams', String(Number(host.getAttribute('data-boss-slams') ?? 0) + 1))
+    this.cameras.main.shake(hit.shake, hit.shakePx / Math.max(1, this.scale.width))
+    navigator.vibrate?.(40)
+    // 말랑이 발밑에서 몬스터 색 충격파 고리 두 겹이 퍼진다
+    const feet = body.y + body.ry
+    for (let i = 0; i < 2; i++) {
+      const ring = this.add.ellipse(body.x, feet, 60, 14).setStrokeStyle(4, i ? 0xffffff : shade).setFillStyle(color, i ? 0 : 0.25)
+      this.tweens.add({ targets: ring, scaleX: 2.6, scaleY: 1.8, alpha: { from: 0.9, to: 0 }, delay: i * 70, duration: 420, ease: 'Quad.easeOut', onComplete: () => ring.destroy() })
+    }
+    // 큰 "쿵!"은 데미지 숫자 위에 비스듬히 톡 커졌다 사라진다
+    const t = this.add
+      .text(body.x + 34, barTop - 30, hit.text ?? '', { fontFamily: FONT, fontSize: '30px', color: '#ffffff', fontStyle: 'bold', stroke: '#8a5ad0', strokeThickness: 7 })
+      .setOrigin(0.5, 1)
+      .setAngle(10)
+      .setScale(0.3)
+    this.tweens.add({ targets: t, scale: 1, duration: 150, ease: 'Back.easeOut' })
+    this.tweens.add({ targets: t, alpha: 0, y: t.y - 14, delay: 380, duration: 300, ease: 'Quad.easeIn', onComplete: () => t.destroy() })
+  }
+
+  /** 몬스터 종의 조각 하나. 모두 둥근 도형이다 */
+  private monsterBit(kind: MonsterBit, x: number, y: number, color: number, shade: number): Phaser.GameObjects.Graphics {
+    const g = this.add.graphics().setPosition(x, y)
+    g.fillStyle(color, 1).lineStyle(1.5, shade, 1)
+    if (kind === 'leaf') {
+      g.fillEllipse(0, 0, 13, 6).strokeEllipse(0, 0, 13, 6)
+      g.lineBetween(-5, 0, 5, 0)
+    } else if (kind === 'spore') {
+      g.fillCircle(0, 0, 4).strokeCircle(0, 0, 4)
+      g.fillStyle(0xffffff, 1).fillCircle(-1, -1, 1.4)
+    } else if (kind === 'droplet') {
+      g.fillTriangle(-4, 0, 4, 0, 0, -8).fillCircle(0, 1, 4.2)
+      g.fillStyle(0xffffff, 0.9).fillCircle(-1.4, 0, 1.3)
+    } else if (kind === 'puff') {
+      g.fillCircle(-4, 0, 4.5).fillCircle(3, -1, 5).fillCircle(0, 3, 4)
+    } else if (kind === 'pebble') {
+      g.fillRoundedRect(-5, -4, 10, 8, 3).strokeRoundedRect(-5, -4, 10, 8, 3)
+    } else {
+      g.fillPoints([new Phaser.Math.Vector2(0, -7), new Phaser.Math.Vector2(5, 0), new Phaser.Math.Vector2(0, 7), new Phaser.Math.Vector2(-5, 0)], true)
+      g.fillStyle(0xffffff, 0.9).fillCircle(-1, -2, 1.4)
+    }
+    return g
   }
 
   /** 발동 장면을 바로 치운다 */
