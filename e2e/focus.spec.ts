@@ -160,8 +160,10 @@ test('집중 목표에 닿는 순간 배지를 한 번 찍고 진동하며, 타�
 test('닫아 둔 사이 집중 목표에 닿았으면 다시 열 때 오늘 도장 다음에 한 번 찍는다', async ({ context }) => {
   test.setTimeout(120_000)
   await context.addInitScript(countVibrate)
-  await context.clock.install({ time: new Date('2026-10-25T08:00:00+09:00') })
+  await context.clock.install({ time: new Date('2026-10-25T07:59:00+09:00') })
   let page = await context.newPage()
+  // 시작 시각도 멈춰 둔다. 느린 검사에서 여는 데 몇 초 걸려도 기록이 40분에서 밀리지 않는다
+  await page.clock.pauseAt(new Date('2026-10-25T08:00:00+09:00'))
   await page.goto('./')
   await page.getByTestId('focus-pick').click()
   await page.getByTestId('focus-25').click()
