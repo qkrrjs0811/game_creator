@@ -2,7 +2,7 @@ import { defineConfig } from 'vite'
 import { VitePWA } from 'vite-plugin-pwa'
 
 export default defineConfig({
-  base: '/game_creator/',
+  base: '/grow_together/',
   // Phaser 한 덩어리(약 1.2MB)가 경고 기준을 넘는 건 의도된 것
   build: { chunkSizeWarningLimit: 1600 },
   plugins: [
@@ -18,8 +18,8 @@ export default defineConfig({
         background_color: '#fff6ec',
         display: 'standalone',
         orientation: 'portrait',
-        start_url: '/game_creator/',
-        scope: '/game_creator/',
+        start_url: '/grow_together/',
+        scope: '/grow_together/',
         icons: [
           { src: 'pwa-64x64.png', sizes: '64x64', type: 'image/png' },
           { src: 'pwa-192x192.png', sizes: '192x192', type: 'image/png' },

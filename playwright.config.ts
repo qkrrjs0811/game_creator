@@ -1,6 +1,6 @@
 import { defineConfig } from '@playwright/test'
 
-const baseURL = 'http://localhost:4173/game_creator/'
+const baseURL = 'http://localhost:4173/grow_together/'
 
 export default defineConfig({
   testDir: 'e2e',
